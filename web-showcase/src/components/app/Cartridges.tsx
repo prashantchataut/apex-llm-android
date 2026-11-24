@@ -11,7 +11,7 @@ const CTX_STEPS = [1024, 2048, 4096, 8192, 16384];
 const fmtCtx = (n: number) => `${n / 1024}k`;
 
 /** One collectible frosted-glass Modelfile cartridge with pointer-driven 3D tilt and a moving specular highlight. */
-function Cartridge3D({ c, active, onPick, onEdit }: { c: Cartridge; active: boolean; onPick: () => void; onEdit: () => void }) {
+export function Cartridge3D({ c, active, onPick, onEdit }: { c: Cartridge; active: boolean; onPick: () => void; onEdit?: () => void }) {
   const rx = useSpring(0, { stiffness: 260, damping: 22 });
   const ry = useSpring(0, { stiffness: 260, damping: 22 });
   const mx = useMotionValue(50);
@@ -60,11 +60,11 @@ function Cartridge3D({ c, active, onPick, onEdit }: { c: Cartridge; active: bool
             </span>
           </span>
         </RippleButton>
-        <button type="button" onClick={onEdit} aria-label={`Edit ${c.name}`} className="absolute right-1.5 top-3 z-10 grid h-11 w-11 place-items-center rounded-full text-white/80 active:scale-90">
+        {onEdit && <button type="button" onClick={onEdit} aria-label={`Edit ${c.name}`} className="absolute right-1.5 top-3 z-10 grid h-11 w-11 place-items-center rounded-full text-white/80 active:scale-90">
           <span className="grid h-7 w-7 place-items-center rounded-full bg-black/30 backdrop-blur">
             <Icon name="pencil" size={13} />
           </span>
-        </button>
+        </button>}
       </motion.div>
     </div>
   );

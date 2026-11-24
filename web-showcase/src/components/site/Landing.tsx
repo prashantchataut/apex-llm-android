@@ -5,6 +5,10 @@ import { Chip3D } from "@/components/ui/Glass";
 import { ApexLogo, ApexTile } from "@/components/brand/ApexLogo";
 import { Icon } from "@/components/ui/Icon";
 import { LiveLab } from "./LiveLab";
+import { ApkDownload } from "./ApkDownload";
+import { CartridgeShowcase } from "./CartridgeShowcase";
+import { CountUp, Reveal, Tilt } from "./Choreo";
+import { HeroDevice } from "./HeroDevice";
 import { ThemeButton } from "./ThemeButton";
 import { Archetypes } from "./Archetypes";
 import { Cutout, GridFrame, GridRow, Ph, ScriptNote } from "@/components/ui/Swiss";
@@ -31,6 +35,7 @@ export function Landing() {
               ["Try it", "#demo"],
               ["Lab", "#lab"],
               ["Looks", "#looks"],
+              ["Cartridges", "#cartridges"],
               ["API", "#api"],
             ].map(([l, h]) => (
               <a key={l} href={h} className="flex h-11 items-center rounded-full px-3.5 text-ink-2 transition-colors hover:bg-white/15">
@@ -40,9 +45,7 @@ export function Landing() {
           </div>
           <div className="relative z-[1] flex items-center gap-1">
             <ThemeButton />
-            <a href={RELEASES_URL} className="flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-[13px] font-semibold text-black transition-transform active:scale-[0.97]">
-              <Icon name="download" size={15} /> Get the APK
-            </a>
+            <ApkDownload variant="nav" label="Get the APK" />
           </div>
         </nav>
       </header>
@@ -55,10 +58,13 @@ export function Landing() {
             <Cutout tone="violet" icon="cpu" tilt={5} label="Chip" /> <Ph text="pocket." from={1} to={0.35} />
           </h1>
 
-          <div className="pointer-events-none absolute right-[4%] top-[34%] hidden lg:block">
-            <ScriptNote flip>no signal needed</ScriptNote>
+          <div className="absolute right-[6%] top-[12%] hidden flex-col items-center lg:flex">
+            <HeroDevice />
+            <div className="mt-4 pointer-events-none">
+              <ScriptNote flip>no signal needed</ScriptNote>
+            </div>
           </div>
-          <div className="absolute right-[5%] top-[14%] hidden flex-col items-start gap-5 md:flex">
+          <div className="absolute right-[5%] top-[14%] hidden flex-col items-start gap-5 md:flex lg:hidden">
             <Chip3D tilt="rotate(-7deg)">
               <span className="mono">Q4_K_M</span>
             </Chip3D>
@@ -72,16 +78,35 @@ export function Landing() {
 
           <p className="mt-10 max-w-[34ch] text-[19px] leading-snug text-ink-2">Runs on your phone. Not a server. Every model is sized to your hardware before you download.</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href="#demo" className="flex min-h-[48px] items-center gap-2 rounded-full bg-white px-6 text-[15px] font-semibold text-black transition-transform hover:scale-[1.03] active:scale-95">
-              Try it live <Icon name="arrow" size={17} strokeWidth={2.2} />
-            </a>
-            <a href={RELEASES_URL} className="glass flex min-h-[48px] items-center gap-2 px-6 text-[15px] font-semibold transition-transform hover:scale-[1.03] active:scale-95">
+            <ApkDownload variant="hero" />
+            <a href="#demo" className="glass flex min-h-[52px] items-center gap-2 px-6 text-[15px] font-semibold transition-transform hover:scale-[1.03] active:scale-95">
               <span className="relative z-[1] flex items-center gap-2">
-                <Icon name="download" size={17} /> Releases
+                Try it live <Icon name="arrow" size={17} strokeWidth={2.2} />
               </span>
             </a>
           </div>
+          <p className="mono mt-4 text-[11px] text-ink-3">ARM64 · Android 8.0+ · signed alpha · <a href={RELEASES_URL} className="underline decoration-white/30 underline-offset-4">all releases</a></p>
         </div>
+
+        <GridRow className="px-5 py-12 sm:px-10">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-8 lg:grid-cols-4">
+            {[
+              { n: 18.4, d: 1, u: "tok/s", l: "typical on an 8 GB phone*" },
+              { n: 4.6, d: 1, u: "GB", l: "RAM left for the model*" },
+              { n: 94, d: 0, u: "MB", l: "Instant Nano download" },
+              { n: 6, d: 0, u: "", l: "haptic signatures" },
+            ].map((c, i) => (
+              <Reveal key={c.l} delay={i * 0.08}>
+                <div className="display text-[clamp(38px,5.4vw,72px)] leading-none">
+                  <CountUp to={c.n} decimals={c.d} />
+                  <span className="ml-1 text-[0.36em] text-ink-3">{c.u}</span>
+                </div>
+                <div className="mono mt-2 text-[11px] uppercase tracking-[0.14em] text-ink-3">{c.l}</div>
+              </Reveal>
+            ))}
+          </div>
+          <p className="mt-6 text-[11px] text-ink-3">* Planning estimates for the 8 GB class, not a benchmark of one device.</p>
+        </GridRow>
 
         <GridRow id="demo" className="px-5 py-20 sm:px-10">
           <div className="grid items-center gap-14 lg:grid-cols-2">
@@ -92,6 +117,7 @@ export function Landing() {
               </h2>
               <p className="mt-5 max-w-[34ch] text-[17px] leading-snug text-ink-2">This is the real interface. Ask something, open a thought, then preview a 4 GB phone.</p>
               <div className="mt-12 max-w-[440px]">
+                <Tilt max={7} className="rounded-[28px]">
                 <FanStack
                   cards={[
                     { label: "Speed", value: "18.4", unit: "t/s" },
@@ -105,13 +131,16 @@ export function Landing() {
                   <div className="tnum mt-1 text-[28px] font-semibold tracking-tight">14,820 tokens</div>
                   <div className="text-[13px] text-ink-2">on this phone. $0 spent.</div>
                 </FanStack>
+                </Tilt>
                 <p className="mt-3 text-[11px] text-ink-3">Tap to fan. Sample numbers.</p>
               </div>
             </div>
             <div className="flex justify-center">
-              <PhoneFrame>
-                <AppShell />
-              </PhoneFrame>
+              <Tilt max={5} className="rounded-[56px]">
+                <PhoneFrame>
+                  <AppShell />
+                </PhoneFrame>
+              </Tilt>
             </div>
           </div>
         </GridRow>
@@ -121,7 +150,7 @@ export function Landing() {
           <h2 className="display mb-4 max-w-[18ch] text-[clamp(34px,5vw,64px)]">
             <Ph text="Touch the" from={1} to={1} /> <Ph text="real parts." from={1} to={0.35} />
           </h2>
-          <p className="mb-10 max-w-[44ch] text-[17px] leading-snug text-ink-2">Switch the look and the whole page morphs. Run the hardware scan. Open a thought, read the math, answer the quiz.</p>
+          <p className="mb-10 max-w-[44ch] text-[17px] leading-snug text-ink-2">Switch the look and the whole page morphs. Run the hardware scan. Open a thought, read the math, answer a clarifying question, and feel the haptics.</p>
           <LiveLab />
         </GridRow>
 
@@ -133,14 +162,25 @@ export function Landing() {
           <Archetypes />
         </GridRow>
 
+        <GridRow id="cartridges" className="px-5 py-20 sm:px-10">
+          <Reveal>
+            <div className="mono mb-4 text-[11px] uppercase tracking-[0.2em] text-ink-3">04 — Cartridges</div>
+            <h2 className="display mb-4 max-w-[16ch] text-[clamp(34px,5vw,64px)]">
+              <Ph text="Load a" from={1} to={1} /> <Ph text="personality." from={1} to={0.35} />
+            </h2>
+            <p className="mb-8 max-w-[44ch] text-[17px] leading-snug text-ink-2">Modelfile presets for the system prompt, temperature, top-p and context window. Tilt them, tap one to load it, or write your own.</p>
+          </Reveal>
+          <CartridgeShowcase />
+        </GridRow>
+
         <GridRow id="api" className="px-5 py-20 sm:px-10">
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
             <div>
-              <div className="mono mb-4 text-[11px] uppercase tracking-[0.2em] text-ink-3">04 — API</div>
+              <div className="mono mb-4 text-[11px] uppercase tracking-[0.2em] text-ink-3">05 — API</div>
               <h2 className="display text-[clamp(34px,5vw,64px)]">
                 <Ph text="Your phone." from={1} to={1} /> <Ph text="Your API." from={1} to={0.35} />
               </h2>
-              <p className="mt-5 max-w-[30ch] text-[17px] leading-snug text-ink-2">Ollama and OpenAI compatible. One switch to turn on.</p>
+              <p className="mt-5 max-w-[30ch] text-[17px] leading-snug text-ink-2">Ollama and OpenAI compatible. One switch, a QR code to pair, and a web console on :11434.</p>
             </div>
             <div className="bento overflow-hidden">
               <div className="flex items-center gap-1.5 border-b border-white/10 px-4 py-3" aria-hidden>
