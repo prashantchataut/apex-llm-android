@@ -8,7 +8,7 @@ import type { Downloads } from "./useDownloads";
 /** 1-tap starter: a verified <100 MB GGUF that downloads and loads in seconds. */
 export function NanoCard({ downloads, className = "" }: { downloads: Downloads; className?: string }) {
   const s = downloads.get(NANO_MODEL.id);
-  const mb = Math.round(NANO_MODEL.sizeGB * 1024);
+  const mb = Math.round(NANO_MODEL.sizeGB * 1000);
   return (
     <div className={`bento relative overflow-hidden p-4 ${className}`}>
       <div className="flex items-center gap-3">

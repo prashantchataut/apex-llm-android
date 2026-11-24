@@ -36,7 +36,7 @@ export function ChatScreen({ msgs, busy, onSend, model, cartridge, kvUsed }: { m
           {busy ? (
             <ShimmerBadge>Reasoning</ShimmerBadge>
           ) : (
-            <span className="mono tnum rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[11px] text-ink-2">{stats ? `${stats.tps.toFixed(1)} tok/s` : "18.4 tok/s"}</span>
+            <span className="mono tnum shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[11px] text-ink-2">{stats ? `${stats.tps.toFixed(1)} tok/s` : "18.4 tok/s"}</span>
           )}
         </div>
         <GuardPill className="mt-2.5" kvUsed={kvUsed} kvMax={cartridge.ctx} />
