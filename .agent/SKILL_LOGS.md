@@ -41,3 +41,7 @@
 
 ### [SKILL: rea-reverse-engineering]
 - Not used this session. HF model repos for the media catalog were found via the public HF API; sizes read from the tree endpoint.
+
+## Session 3 — Phase 1 (UI / brand / onboarding)
+- No skill-loader in this runtime; protocols applied manually (stated honestly).
+- `design-taste-frontend`, `hallmark-ui`, `open-design-skill`: new `ApexLogo` (Tensor Prism, 3 states), 4-scene onboarding (spring 320/26, blur-to-sharp reveals, SVG hairline draw-in, silicon scan + fan cards, live theme morph, flip key card), Replay onboarding in the Appearance sheet, bolt/sparkle glyphs removed from the icon set, launcher/favicon assets regenerated from the same facet geometry.

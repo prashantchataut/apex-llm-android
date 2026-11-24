@@ -199,7 +199,7 @@ export function StudioScreen({ dev, downloads, onBrowse }: { dev: DeviceProfile;
         disabled={!model || phase === "running"}
         className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white text-[14.5px] font-semibold text-black disabled:opacity-40"
       >
-        <Icon name="sparkle" size={17} />
+        <Icon name="prism" size={17} />
         {phase === "running" ? "Generating…" : kind === "image" ? "Generate image" : "Generate clip"}
       </RippleButton>
       {error && <p role="alert" className="mt-3 text-[12.5px] text-bad">{error}</p>}

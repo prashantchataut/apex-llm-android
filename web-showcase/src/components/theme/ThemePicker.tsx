@@ -106,7 +106,7 @@ export function ThemePicker({ compact = false }: { compact?: boolean }) {
 }
 
 /** Bottom sheet (spring in, drag-down to dismiss). `inline` anchors to the nearest positioned ancestor (phone frame). */
-export function ThemeSheet({ open, onClose, inline = false }: { open: boolean; onClose: () => void; inline?: boolean }) {
+export function ThemeSheet({ open, onClose, inline = false, onReplayOnboarding }: { open: boolean; onClose: () => void; inline?: boolean; onReplayOnboarding?: () => void }) {
   const { theme, resolved } = useTheme();
   const meta = THEMES.find((t) => t.id === theme) ?? THEMES[0];
 
@@ -170,6 +170,17 @@ export function ThemeSheet({ open, onClose, inline = false }: { open: boolean; o
               <div className="mt-6">
                 <ThemePicker />
               </div>
+              {onReplayOnboarding && (
+                <button onClick={onReplayOnboarding} className="bento mt-5 flex min-h-[56px] w-full items-center gap-3 px-4 text-left transition-transform active:scale-[0.97]">
+                  <span className="icon-pill">
+                    <Icon name="play" size={15} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-semibold tracking-tight">Replay onboarding</span>
+                    <span className="block text-[11.5px] text-ink-3">Awakening, silicon scan, looks and key ignition</span>
+                  </span>
+                </button>
+              )}
               <p className="mt-5 text-[12px] leading-relaxed text-ink-3">Saved on this device. “System” follows your phone’s light or dark setting.</p>
             </div>
           </motion.div>

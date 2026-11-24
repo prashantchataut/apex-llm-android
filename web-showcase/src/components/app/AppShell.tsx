@@ -21,7 +21,7 @@ type Tab = "home" | "chat" | "studio" | "hub" | "server";
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: "home", label: "Home", icon: "home" },
   { id: "chat", label: "Chat", icon: "chat" },
-  { id: "studio", label: "Studio", icon: "sparkle" },
+  { id: "studio", label: "Studio", icon: "prism" },
   { id: "hub", label: "Models", icon: "cube" },
   { id: "server", label: "Server", icon: "server" },
 ];
@@ -37,6 +37,7 @@ export function AppShell({ firstRun = false }: { firstRun?: boolean }) {
   const [dev, setDev] = useState<DeviceProfile>(DEVICES[1]);
   const [source, setSource] = useState<"native" | "browser" | "preset">("preset");
   const [onboarding, setOnboarding] = useState<OnboardingState | null>(null);
+  const [replay, setReplay] = useState(false);
   const chat = useDemoChat();
   const downloads = useDownloads();
 
@@ -56,6 +57,7 @@ export function AppShell({ firstRun = false }: { firstRun?: boolean }) {
   const finishOnboarding = useCallback((s: OnboardingState) => {
     saveOnboarding(s);
     setOnboarding(s);
+    setReplay(false);
     if (s.picks.length > 0) {
       setHubSection("text");
       setTab("hub");
@@ -71,7 +73,7 @@ export function AppShell({ firstRun = false }: { firstRun?: boolean }) {
     setHubSection(k);
     setTab("hub");
   };
-  const showOnboarding = firstRun && onboarding !== null && !onboarding.done;
+  const showOnboarding = replay || (firstRun && onboarding !== null && !onboarding.done);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-canvas text-white">
@@ -116,8 +118,16 @@ export function AppShell({ firstRun = false }: { firstRun?: boolean }) {
         </nav>
       </div>
 
-      <ThemeSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} inline />
-      <AnimatePresence>{showOnboarding && <Onboarding dev={dev} setDev={setDev} source={source} downloads={downloads} onFinish={finishOnboarding} />}</AnimatePresence>
+      <ThemeSheet
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        inline
+        onReplayOnboarding={() => {
+          setSettingsOpen(false);
+          setReplay(true);
+        }}
+      />
+      <AnimatePresence>{showOnboarding && <Onboarding dev={dev} setDev={setDev} source={source} downloads={downloads} onFinish={finishOnboarding} onKeyIssued={(k) => setKeys((c) => [k, ...c])} />}</AnimatePresence>
     </div>
   );
 }

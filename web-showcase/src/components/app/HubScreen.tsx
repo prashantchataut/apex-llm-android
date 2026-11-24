@@ -249,7 +249,7 @@ function MediaList({ kind, dev, downloads }: { kind: MediaKind; dev: DeviceProfi
     <>
       <SectionTitle>{kind === "image" ? "Image generation" : "Video generation"}</SectionTitle>
       <div className="bento mb-3 flex gap-3 p-3.5 text-[12.5px] leading-relaxed text-ink-2">
-        <Icon name="sparkle" size={16} className="mt-0.5 shrink-0 text-accent" />
+        <Icon name="prism" size={16} className="mt-0.5 shrink-0 text-accent" />
         <p>
           Runs offline through <span className="mono text-[11.5px]">stable-diffusion.cpp</span>. Models install and score today; the Android generation engine is still being wired in.
         </p>
