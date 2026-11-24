@@ -5,7 +5,7 @@
 ### Memory brain / docs
 `CLAUDE.md`, `RULES.md`, `ARCHITECTURE.md` (copy of `.agent/ARCHITECTURE.md`), `PROGRESS.md`, `README.md`, `.agent/{STATE,ARCHITECTURE,SKILLS_PROTOCOL,SKILL_LOGS}.md`
 
-### Rust workspace (`Cargo.toml`, 6 crates) — **WRITTEN, NOT COMPILED** (no cargo in the sandbox)
+### Rust workspace (`Cargo.toml`, 6 crates) — **`cargo check` + `cargo test --workspace` GREEN on Linux CI** (37 tests; verified via the Rust CI workflow after push; the authoring sandbox had no cargo). **Not built for Android, not clippy-checked, not rustfmt-ed.**
 - `cortex-hardware`: meminfo/cpuinfo parsers, `SystemSource` trait, `recommend()`, `profile()`, tests.
 - `cortex-hf-hub`: `HfClient` (search/tree), `scoring::score` (3-tier badge), `download` (Range segments, sidecar resume, sha256), tests.
 - `cortex-inference`: `Engine` trait + `ScriptedEngine`, `ThinkParser` (split-tag safe), `mcq_grammar`/`json_object_grammar`, `ChatTemplate` (ChatML/Llama3/Gemma). **No llama.cpp backend yet** (`llama` feature is empty).
@@ -20,15 +20,15 @@
 - Screens: `HomeScreen` (A), `ChatScreen` (D: `ThinkingAccordion`, KaTeX `Rich`, `OptionCards`), `HubScreen` (B: device simulator, scoring mirror `lib/compat.ts`, simulated resumable downloads, voice installer), `ServerScreen` (toggle, WebCrypto `sk-pocket-` keys, simulated live log, config generator, GitHub card).
 - Landing page with Swiss grid hero, progressive-opacity headlines, inline cutouts, tilted glass chips, fan-stack insight card, live phone demo.
 - All "model" behaviour in the browser is **scripted** (`lib/demo-script.ts`); downloads/traffic/dictation are **simulated**.
-- UI was type-checked and production-built but **never viewed in a browser** (no browser in sandbox) — do a visual QA pass.
+- UI was type-checked and production-built, and is **live** at https://prashantchataut.github.io/apex-llm-android/ (and `/app/`), but was **never viewed in a browser by the author** (no browser in the sandbox) — do a visual QA pass first.
 
 ### CI/CD
 `.github/workflows/deploy-pages.yml` (Next static export → Pages), `.github/workflows/rust-ci.yml` (cargo check + test).
 
 ## [NEXT PRIORITIES FOR SESSION 2]
 1. **Visual QA** the live site/app at 360–430 px and desktop; fix spacing/overflow; screenshot into `docs/`.
-2. `cargo check --workspace && cargo test --workspace` → fix every compile error / failing test (expect some; code was never compiled). Add `cargo clippy -D warnings`.
-3. Verify `web-showcase` CI deploy is green; confirm Pages URL.
+2. Add `cargo fmt --check` + `cargo clippy -D warnings` to Rust CI and fix findings; add `cargo check --target aarch64-linux-android` (needs NDK) to CI.
+3. Pages deploy is green (verified: `/` and `/app/` return 200). Keep it green; add a CI typecheck for `web-showcase`.
 4. **Inference backend**: benchmark `llama-cpp-2` vs `llama-crab` on a real arm64 phone; implement `Engine` behind `--features llama`; KV-cache shift; wire `ThinkParser` + `GenerationEvent` stream.
 5. **Android pipeline**: `cargo tauri android init`; NDK r26+; arm64 builds; two CPU variants selected from `CpuFeatures::cpu_variant()`; Vulkan feature; APK in Releases via workflow.
 6. **Tauri commands**: `device_profile` ✓, add `hf_search`, `hf_download` (Channel progress), `chat_stream` (Channel tokens), `server_start/stop`, key vault admin calls (`x-apex-admin` header); replace demo hooks (`useDemoChat`, simulated downloads) with `invoke`.

@@ -19,4 +19,4 @@
 - Primitives: `GlassPill`, `BentoCard`, `PromptBar`, `ShimmerBadge`, `OptionCard`, `Waveform`.
 
 ### [SKILL: native-rust-systems]
-- Wrote 6 crates with trait seams + unit tests. **Not compiled** (no cargo in sandbox).
+- Wrote 6 crates with trait seams + unit tests. Not compilable in the sandbox (no cargo); verified afterwards by the Rust CI workflow on GitHub (check + 37 tests green).

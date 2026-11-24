@@ -28,6 +28,6 @@ packages/design-system/   canonical design tokens (tokens.css) — mirrored into
 ## Laws (short form — full text in RULES.md)
 1. Update `.agent/STATE.md` and `PROGRESS.md` and push before ending **every** session.
 2. Never commit secrets. PATs are used via `Authorization` headers / `GIT_ASKPASS` only, never stored in remotes or files.
-3. No fake claims: if a thing is a stub, STATE.md must say `STUB`. Rust crates were not compiled in Session 1 (no toolchain in the sandbox) — first job of Session 2 is `cargo check --workspace`.
+3. No fake claims: if a thing is a stub, STATE.md must say `STUB`. Session 1 verified crates only via Linux CI (`cargo check` + `cargo test`); Android/Tauri builds are unverified.
 4. UI work must follow the four archetypes (A–D) in `.agent/SKILLS_PROTOCOL.md`. No generic "AI slop" gradients, no default Tailwind palettes.
 5. Hot paths (token streaming, download, ASR) are Rust; the WebView only renders.

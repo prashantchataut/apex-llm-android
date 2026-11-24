@@ -4,7 +4,7 @@ Run GGUF LLMs on your phone. Serve **Ollama- and OpenAI-compatible APIs** to you
 
 **Live UI + landing page:** https://prashantchataut.github.io/apex-llm-android/ *(deployed by `.github/workflows/deploy-pages.yml`)*
 
-> **Status: alpha foundation (Session 1).** The Rust crates are written with unit tests but **have not been compiled yet** (no toolchain in the authoring sandbox) — CI will tell. The web UI is real and runs a *scripted* demo model. The Android/NDK build and the llama.cpp backend are Session 2. See [`.agent/STATE.md`](.agent/STATE.md).
+> **Status: alpha foundation (Session 1).** All six Rust crates compile and their 37 unit tests pass on Linux in GitHub Actions (`Rust CI`). They have **not** been built for Android yet. The web UI is real but runs a *scripted* demo model. The Android/NDK build, the llama.cpp backend and the ASR backend are Session 2. See [`.agent/STATE.md`](.agent/STATE.md).
 
 ## What's here
 | Path | What |
