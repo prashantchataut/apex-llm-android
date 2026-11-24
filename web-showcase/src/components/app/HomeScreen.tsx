@@ -14,7 +14,7 @@ import { GuardPill } from "./GuardPill";
 import { NanoCard } from "./NanoCard";
 import { modelLabel } from "./useChat";
 import type { Downloads } from "./useDownloads";
-import { useVoiceDemo } from "./useVoice";
+import { useVoice } from "./useVoice";
 
 const ICONS: Record<string, IconName> = { quant: "cpu", math: "prism", rust: "code", repo: "github" };
 
@@ -35,7 +35,7 @@ export function HomeScreen({
   kvUsed: number;
 }) {
   const [value, setValue] = useState("");
-  const { voice, toggleVoice } = useVoiceDemo(setValue);
+  const { voice, toggleVoice } = useVoice(setValue);
 
   return (
     <div className="flex h-full flex-col">

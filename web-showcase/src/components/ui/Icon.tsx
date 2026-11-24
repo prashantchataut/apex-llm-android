@@ -1,6 +1,13 @@
 import type { SVGProps } from "react";
 
 const PATHS = {
+  refresh: "M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7",
+  share: "M12 3v12M7 8l5-5 5 5M5 14v6h14v-6",
+  columns: "M3 5h8v14H3zM13 5h8v14h-8z",
+  crown: "M3 8l4 4 5-7 5 7 4-4-2 11H5z",
+  layers: "M12 3l9 5-9 5-9-5zM3 13l9 5 9-5",
+  expand: "M4 14v6h6M20 10V4h-6M4 20l7-7M20 4l-7 7",
+  stop: "M7 7h10v10H7z",
   home: "M3 11l9-8 9 8M5 10v10h14V10",
   chat: "M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z",
   cube: "M12 2l9 5v10l-9 5-9-5V7l9-5zM12 12l9-5M12 12v10M12 12L3 7",

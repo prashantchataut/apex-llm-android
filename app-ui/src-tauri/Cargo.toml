@@ -21,7 +21,8 @@ serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 cortex-hardware = { path = "../../crates/cortex-hardware" }
 cortex-hf-hub = { path = "../../crates/cortex-hf-hub" }
-cortex-inference = { path = "../../crates/cortex-inference", features = ["llama"] }
+# Pure-Rust candle GGUF engine: no CMake / C++ in the Android cross-compile.
+cortex-inference = { path = "../../crates/cortex-inference", features = ["candle"] }
 cortex-voice = { path = "../../crates/cortex-voice" }
 cortex-server = { path = "../../crates/cortex-server" }
 cortex-integrations = { path = "../../crates/cortex-integrations" }
@@ -29,8 +30,8 @@ futures = "0.3"
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
 
 [features]
-# Statically link libc++ into the Android .so (no libc++_shared.so to package).
-android = ["cortex-inference/android-static-stdcxx"]
+# Kept for the CI invocation (`--features android`). The candle engine needs no C++ runtime, so this is a no-op marker.
+android = []
 
 [profile.release]
 lto = "thin"
@@ -39,9 +40,10 @@ opt-level = 3
 strip = true
 panic = "abort"
 
-# llama.cpp must be built optimised even in `cargo tauri android build --debug`, otherwise the cmake crate
-# selects CMAKE_BUILD_TYPE=Debug and inference is ~20x slower.
-[profile.dev.package.llama-cpp-sys-2]
+# candle's quantized matmul kernels must be optimised even in `cargo tauri android build --debug`.
+[profile.dev.package.candle-core]
 opt-level = 3
-[profile.dev.package.llama-cpp-2]
-opt-level = 2
+[profile.dev.package.candle-transformers]
+opt-level = 3
+[profile.dev.package.gemm]
+opt-level = 3

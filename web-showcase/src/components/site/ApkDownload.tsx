@@ -7,7 +7,7 @@ import { Icon } from "@/components/ui/Icon";
 import { haptic } from "@/lib/haptics";
 import { REPO, RELEASES_URL } from "@/lib/site";
 
-export const APK_VERSION = "v0.2.0-alpha";
+export const APK_VERSION = "v0.3.0-beta";
 const API = `https://api.github.com/repos/${REPO}/releases/tags/${APK_VERSION}`;
 
 interface Asset {
@@ -132,7 +132,7 @@ function Modal({ onClose }: { onClose: () => void }) {
         </a>
         <ol className="mt-5 space-y-1.5 text-[12.5px] leading-snug text-ink-3">
           <li>1. Open the file on your phone and allow “Install unknown apps” for your browser.</li>
-          <li>2. First launch: pick the Instant Nano model (under 100 MB) and start chatting offline.</li>
+          <li>2. First launch: pick the Instant Nano model (145 MB) and start chatting offline.</li>
           <li>3. Alpha builds are signed with a per-build key — uninstall the previous alpha before installing a newer one.</li>
         </ol>
       </motion.div>

@@ -1,7 +1,7 @@
 //! Process-wide runtime: the llama.cpp engine, the OpenAI/Ollama server, downloads.
 
 use cortex_hf_hub::download::{download, DownloadOptions};
-use cortex_inference::llama_engine::LlamaEngine;
+use cortex_inference::NativeEngine;
 use cortex_inference::template::{ChatTemplate, Message, APEX_SYSTEM_PROMPT};
 use cortex_inference::think::{ThinkEvent, ThinkParser};
 use cortex_inference::{Engine, GenerationStats, LoadParams, SamplingParams};
@@ -30,7 +30,7 @@ pub struct LocalModel {
 }
 
 struct Core {
-    engine: Mutex<LlamaEngine>,
+    engine: Mutex<NativeEngine>,
     loaded: Mutex<Option<String>>,
     dir: PathBuf,
 }
@@ -151,7 +151,7 @@ pub struct Runtime {
 impl Runtime {
     pub fn new(dir: PathBuf) -> Self {
         Self {
-            core: Arc::new(Core { engine: Mutex::new(LlamaEngine::new()), loaded: Mutex::new(None), dir }),
+            core: Arc::new(Core { engine: Mutex::new(NativeEngine::new()), loaded: Mutex::new(None), dir }),
             vault: Arc::new(KeyVault::new()),
             server: Mutex::new(None),
             downloads: Mutex::new(HashMap::new()),

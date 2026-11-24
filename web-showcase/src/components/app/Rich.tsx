@@ -4,7 +4,9 @@ import katex from "katex";
 import "katex/dist/katex.min.css";
 import { Fragment, useMemo, type ReactNode } from "react";
 import { parseAssistant, safePrefix, type Seg } from "@/lib/richtext";
+import { splitFences } from "@/lib/artifacts";
 import { ChoiceCards } from "./ChoiceCards";
+import { CodeBlock, type Artifact } from "./Artifacts";
 
 function tex(src: string, display: boolean): string {
   return katex.renderToString(src, { displayMode: display, throwOnError: false, output: "html", strict: "ignore" });
@@ -53,7 +55,7 @@ export function RichInline({ text }: { text: string }) {
   );
 }
 
-export function AssistantBody({ text, streaming, onChoice }: { text: string; streaming: boolean; onChoice?: (answer: string) => void }) {
+function AssistantProse({ text, streaming, onChoice }: { text: string; streaming: boolean; onChoice?: (answer: string) => void }) {
   const segs: Seg[] = useMemo(() => parseAssistant(streaming ? safePrefix(text) : text), [text, streaming]);
   const out: ReactNode[] = [];
   let group: ReactNode[] = [];
@@ -78,4 +80,21 @@ export function AssistantBody({ text, streaming, onChoice }: { text: string; str
   });
   flush("tail");
   return <div className="space-y-3 text-[15px] leading-[1.6] text-ink-2">{out}</div>;
+}
+
+/** Assistant message: prose with KaTeX + choice cards, and ``` fenced code blocks (with live-artifact pills). */
+export function AssistantBody({ text, streaming, onChoice, onOpenArtifact }: { text: string; streaming: boolean; onChoice?: (answer: string) => void; onOpenArtifact?: (a: Artifact) => void }) {
+  const parts = useMemo(() => splitFences(text), [text]);
+  if (!text.includes("```")) return <AssistantProse text={text} streaming={streaming} onChoice={onChoice} />;
+  return (
+    <div className="space-y-3">
+      {parts.map((p, i) =>
+        p.kind === "md" ? (
+          p.value.trim() ? <AssistantProse key={i} text={p.value} streaming={streaming && i === parts.length - 1} onChoice={onChoice} /> : null
+        ) : (
+          <CodeBlock key={i} lang={p.lang} code={p.code} closed={p.closed && !(streaming && i === parts.length - 1)} onOpen={onOpenArtifact} />
+        ),
+      )}
+    </div>
+  );
 }

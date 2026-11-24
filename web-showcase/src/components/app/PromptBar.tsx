@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Icon } from "@/components/ui/Icon";
 import { RippleButton } from "@/components/ui/Glass";
 import { Waveform } from "@/components/ui/Waveform";
+import { haptic } from "@/lib/haptics";
 
 export interface VoiceState {
   recording: boolean;
@@ -11,6 +12,12 @@ export interface VoiceState {
   latencyMs: number;
   /** Short status line shown under the composer (e.g. voice unavailable). */
   notice?: string;
+  /** Live microphone analyser: drives the real FFT bars. */
+  analyser?: AnalyserNode | null;
+  /** Which recogniser produced / will produce the text. */
+  asr?: "whisper" | "system";
+  busy?: boolean;
+  status?: string;
 }
 
 /** 21st.dev / UiHall-style prompt bar: attach · input · mic · send, with in-bar waveform + live transcript. */
@@ -45,10 +52,10 @@ export function PromptBar({
       <AnimatePresence mode="wait" initial={false}>
         {voice.recording ? (
           <motion.div key="rec" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="min-w-0 flex-1">
-            <Waveform active height={30} />
+            <Waveform active height={30} analyser={voice.analyser} onBeat={() => haptic("detentClick")} />
             <div className="mt-0.5 flex items-center gap-2 text-[11px] text-ink-3">
-              <span className="truncate">{voice.transcript || "Listening…"}</span>
-              <span className="mono tnum ml-auto shrink-0 text-ok/80">{voice.latencyMs} ms</span>
+              <span className="truncate">{voice.transcript || (voice.asr === "system" ? "Listening (system recogniser)…" : "Listening · Whisper transcribes when you stop")}</span>
+              <span className="mono ml-auto shrink-0 text-ok/80">REC</span>
             </div>
           </motion.div>
         ) : (

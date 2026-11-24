@@ -3,6 +3,10 @@
 //! `<think>` parser, GBNF grammars for structured output (MCQ), chat templates.
 #![forbid(unsafe_code)]
 
+#[cfg(feature = "candle")]
+pub mod candle_engine;
+#[cfg(feature = "candle")]
+pub mod gguf_tokenizer;
 pub mod grammar;
 #[cfg(feature = "llama")]
 pub mod llama_engine;
@@ -11,6 +15,12 @@ pub mod think;
 
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+
+/// The engine the mobile shell links: pure-Rust candle when available, llama.cpp otherwise.
+#[cfg(feature = "candle")]
+pub type NativeEngine = candle_engine::CandleEngine;
+#[cfg(all(feature = "llama", not(feature = "candle")))]
+pub type NativeEngine = llama_engine::LlamaEngine;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EngineError {

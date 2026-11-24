@@ -5,7 +5,7 @@ import { RippleButton } from "@/components/ui/Glass";
 import { NANO_MODEL } from "@/lib/models";
 import type { Downloads } from "./useDownloads";
 
-/** 1-tap starter: a verified <100 MB GGUF that downloads and loads in seconds. */
+/** 1-tap starter: a verified 145 MB Q8_0 GGUF (real weights, byte-accurate download). */
 export function NanoCard({ downloads, className = "" }: { downloads: Downloads; className?: string }) {
   const s = downloads.get(NANO_MODEL.id);
   const mb = Math.round(NANO_MODEL.sizeGB * 1000);
@@ -18,7 +18,7 @@ export function NanoCard({ downloads, className = "" }: { downloads: Downloads; 
         <div className="min-w-0 flex-1">
           <div className="mono text-[10px] uppercase tracking-[0.16em] text-ok">Instant Nano · {mb} MB</div>
           <div className="truncate text-[15px] font-medium tracking-tight">SmolLM2 135M Instruct</div>
-          <div className="text-[11.5px] leading-snug text-ink-3">Downloads in seconds, runs fully offline. Tiny model: great for speed tests, not a flagship.</div>
+          <div className="text-[11.5px] leading-snug text-ink-3">Real weights, cached on-device, runs fully offline. Tiny model: great for speed tests, not a flagship.</div>
         </div>
         {s.status === "done" ? (
           <span className="flex h-11 items-center gap-1 rounded-full bg-ok/15 px-3 text-[12px] font-semibold text-ok">

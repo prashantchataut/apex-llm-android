@@ -1,6 +1,6 @@
 [package]
 name = "cortex-inference"
-description = "Engine trait over llama.cpp, <think> stream parser, GBNF grammars, chat templates"
+description = "Engine trait over llama.cpp / pure-Rust candle GGUF, <think> stream parser, GBNF grammars, chat templates"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,6 +9,8 @@ license.workspace = true
 default = []
 # Real llama.cpp backend (llama-cpp-2). Cross-compiles for Android arm64 with the NDK (set ANDROID_NDK + ANDROID_API_LEVEL).
 llama = ["dep:llama-cpp-2", "dep:encoding_rs"]
+# Pure-Rust quantized GGUF backend (candle). No C/C++ build step; cross-compiles to aarch64-linux-android cleanly.
+candle = ["dep:candle-core", "dep:candle-transformers", "dep:fancy-regex"]
 # Android: link libc++ statically so the .so has no libc++_shared.so dependency.
 android-static-stdcxx = ["llama", "llama-cpp-2/android-static-stdcxx"]
 
@@ -18,3 +20,6 @@ serde_json.workspace = true
 thiserror.workspace = true
 llama-cpp-2 = { version = "0.1.161", optional = true, default-features = false }
 encoding_rs = { version = "0.8", optional = true }
+candle-core = { version = "0.9", optional = true }
+candle-transformers = { version = "0.9", optional = true }
+fancy-regex = { version = "0.14", optional = true }

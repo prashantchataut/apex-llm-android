@@ -76,6 +76,7 @@ export function AppShell({ firstRun = false }: { firstRun?: boolean }) {
     chat.send(p, { attachments: atts, cartridge: cart.selected, ctx: cart.selected.ctx });
     setTab("chat");
   };
+  const opts = { cartridge: cart.selected, ctx: cart.selected.ctx };
   const go = (t: Tab) => {
     if (t !== tab) haptic("detentClick");
     setTab(t);
@@ -95,7 +96,7 @@ export function AppShell({ firstRun = false }: { firstRun?: boolean }) {
           <AnimatePresence mode="wait" initial={false}>
             <motion.div key={tab} className="absolute inset-0" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ type: "spring", stiffness: 340, damping: 32, mass: 0.8 }}>
               {tab === "home" && <HomeScreen onSend={send} onOpenSettings={() => setSettingsOpen(true)} model={chat.activeModel} cartridges={cart} downloads={downloads} kvUsed={chat.usedTokens} />}
-              {tab === "chat" && <ChatScreen msgs={chat.msgs} busy={chat.busy} onSend={send} model={chat.activeModel} cartridge={cart.selected} kvUsed={chat.usedTokens} />}
+              {tab === "chat" && <ChatScreen msgs={chat.msgs} busy={chat.busy} model={chat.activeModel} cartridge={cart.selected} kvUsed={chat.usedTokens} handlers={{ onSend: send, onEdit: (id, t) => chat.edit(id, t, opts), onRegenerate: (id) => chat.regenerate(id, opts), onStop: chat.stop, branchInfo: chat.branchInfo, onSwitch: chat.switchBranch, onAdopt: (p, r) => chat.adopt(p, r) }} />}
               {tab === "studio" && <StudioScreen dev={dev} downloads={downloads} onBrowse={browse} />}
               {tab === "hub" && <HubScreen activeKeys={keys.filter((k) => !k.revoked).length} dev={dev} setDev={setDev} source={source} downloads={downloads} initialSection={hubSection} kvUsed={chat.usedTokens} kvMax={cart.selected.ctx} />}
               {tab === "server" && <ServerScreen keys={keys} setKeys={setKeys} model={chat.activeModel} />}

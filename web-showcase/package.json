@@ -6,12 +6,18 @@
     "dev": "next dev",
     "build": "next build",
     "build:app": "NEXT_PUBLIC_APEX_TARGET=tauri next build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "predev": "node scripts/vendor-assets.mjs",
+    "prebuild": "node scripts/vendor-assets.mjs",
+    "prebuild:app": "node scripts/vendor-assets.mjs"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.2",
     "@tauri-apps/api": "^2.12.5",
+    "@wllama/wllama": "^4.0.0",
     "framer-motion": "^14.14.0",
     "katex": "^0.19.1",
+    "mermaid": "^11.17.2",
     "next": "16.4.2",
     "qrcode": "^1.5.4",
     "react": "19.2.6",

@@ -6,6 +6,7 @@ import { Icon } from "@/components/ui/Icon";
 import { RippleButton } from "@/components/ui/Glass";
 import { readAttachment, TEXT_ACCEPT, type Attachment } from "@/lib/attachments";
 import { fmtK } from "./GuardPill";
+import { asrProgressLabel, useAsrStatus } from "./useVoice";
 import { PromptBar, type VoiceState } from "./PromptBar";
 
 /** Frosted-glass "Attached Context" chip: file or photo, live token estimate, remove. */
@@ -60,6 +61,8 @@ export function Composer({
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
   const budget = Math.floor(ctx * 0.5);
+  const asr = useAsrStatus();
+  const asrLine = voice.recording || voice.busy ? asrProgressLabel(asr) : null;
 
   const add = async (files: FileList | null, kind: "text" | "image") => {
     if (!files) return;
@@ -115,7 +118,7 @@ export function Composer({
           setAtts([]);
         }}
       />
-      {(voice.notice || footer) && <p className="mono mt-2 text-center text-[10px] text-ink-3">{voice.notice ?? footer}</p>}
+      {(voice.status || asrLine || voice.notice || footer) && <p className="mono mt-2 text-center text-[10px] text-ink-3">{asrLine ?? voice.status ?? voice.notice ?? footer}</p>}
     </div>
   );
 }

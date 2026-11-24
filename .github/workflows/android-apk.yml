@@ -1,4 +1,4 @@
-# Builds the arm64-v8a Apex LLM APK (Tauri v2 Mobile + llama.cpp), signs it and publishes it to a GitHub Release.
+# Builds the arm64-v8a Apex LLM APK (Tauri v2 Mobile + pure-Rust candle GGUF engine), signs it and publishes it to a GitHub Release.
 # Trigger: push a tag `v*` or run manually (workflow_dispatch). The signing key is generated per run (alpha channel):
 # updating an installed alpha build with a newer one requires uninstalling first until a stable release key exists.
 name: Android APK
@@ -8,7 +8,7 @@ on:
     inputs:
       tag:
         description: Release tag to publish to (created if missing)
-        default: v0.2.0-alpha
+        default: v0.3.0-beta
   push:
     tags: ["v*"]
 
@@ -52,8 +52,10 @@ jobs:
       - name: Frontend deps
         working-directory: web-showcase
         run: npm ci
-      - name: Tauri CLI
-        run: npm install -g @tauri-apps/cli@^2
+      # Gradle's rust plugin shells out to `cargo tauri android-studio-script`; the npm CLI does NOT provide the
+      # `cargo tauri` subcommand (Session 4 failed with "no such command: tauri"). Install the real cargo plugin.
+      - name: Tauri CLI (cargo subcommand)
+        run: cargo install tauri-cli --version "^2" --locked
       - name: Signing key (alpha channel)
         run: |
           KS="$RUNNER_TEMP/apex-alpha.jks"
@@ -68,7 +70,7 @@ jobs:
         run: |
           export NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
           export ANDROID_NDK_HOME="$NDK_HOME"
-          tauri android build --apk --target aarch64 --features android
+          cargo tauri android build --apk --target aarch64 --features android
       - name: Verify + name the artifact
         id: pack
         run: |
