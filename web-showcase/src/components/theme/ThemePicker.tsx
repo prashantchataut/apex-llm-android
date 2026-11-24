@@ -6,6 +6,7 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 import { FanStack } from "@/components/ui/FanStack";
 import { MODES, THEMES, type Mode, type ModePref, type ThemeMeta } from "@/lib/themes";
 import { useTheme } from "./ThemeProvider";
+import { HapticsControl } from "./HapticsControl";
 
 const SPRING = { type: "spring", stiffness: 380, damping: 30 } as const;
 const MODE_ICON: Record<ModePref, IconName> = { system: "monitor", light: "sun", dark: "moon" };
@@ -169,6 +170,10 @@ export function ThemeSheet({ open, onClose, inline = false, onReplayOnboarding }
               </FanStack>
               <div className="mt-6">
                 <ThemePicker />
+                <div className="mt-6">
+                  <h4 className="mono mb-2.5 text-[10.5px] uppercase tracking-[0.18em] text-ink-3">Haptics</h4>
+                  <HapticsControl />
+                </div>
               </div>
               {onReplayOnboarding && (
                 <button onClick={onReplayOnboarding} className="bento mt-5 flex min-h-[56px] w-full items-center gap-3 px-4 text-left transition-transform active:scale-[0.97]">

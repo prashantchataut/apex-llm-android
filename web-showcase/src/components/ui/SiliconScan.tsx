@@ -1,5 +1,6 @@
 "use client";
 
+import { haptic, scanSweep } from "@/lib/haptics";
 import { motion, useAnimationControls } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { ApexLogo } from "@/components/brand/ApexLogo";
@@ -56,14 +57,26 @@ export function SiliconScan({
     const timers: number[] = [];
     beam.set({ x: 0, opacity: 1 });
     void beam.start({ x: w - 3, transition: { duration: d, ease: "linear" } }).then(() => beam.start({ opacity: 0, transition: { duration: 0.35 } }));
-    ZONES.forEach((z, i) => timers.push(window.setTimeout(() => setFound(i + 1), d * 1000 * z.at)));
+    // Geiger-like ticks that speed up along the beam, and a detent as each telemetry card lands
+    const stopSweep = scanSweep(Math.max(6, Math.round(d * 5)), 220, 55);
+    ZONES.forEach((z, i) =>
+      timers.push(
+        window.setTimeout(() => {
+          setFound(i + 1);
+          haptic("detentClick");
+        }, d * 1000 * z.at),
+      ),
+    );
     timers.push(
       window.setTimeout(() => {
         setDone(true);
         doneRef.current?.();
       }, d * 1000 + 250),
     );
-    return () => timers.forEach((t) => window.clearTimeout(t));
+    return () => {
+      stopSweep();
+      timers.forEach((t) => window.clearTimeout(t));
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runKey, dev.label, duration]);
 

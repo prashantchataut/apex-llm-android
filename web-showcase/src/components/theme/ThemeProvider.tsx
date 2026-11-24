@@ -1,5 +1,6 @@
 "use client";
 
+import { haptic } from "@/lib/haptics";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   DEFAULT_PREFS,
@@ -149,8 +150,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     void invokeNative("settings_set", { key: "theme", value: JSON.stringify(next) });
   }, []);
 
-  const setTheme = useCallback((theme: ThemeId) => commit({ ...prefs, theme }), [commit, prefs]);
-  const setMode = useCallback((mode: ModePref) => commit({ ...prefs, mode }), [commit, prefs]);
+  const setTheme = useCallback((theme: ThemeId) => {
+    haptic("detentClick");
+    commit({ ...prefs, theme });
+  }, [commit, prefs]);
+  const setMode = useCallback((mode: ModePref) => {
+    haptic("detentClick");
+    commit({ ...prefs, mode });
+  }, [commit, prefs]);
 
   const value = useMemo<ThemeCtx>(() => ({ ...prefs, resolved, setTheme, setMode }), [prefs, resolved, setTheme, setMode]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

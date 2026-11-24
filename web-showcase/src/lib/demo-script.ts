@@ -1,4 +1,4 @@
-/** Scripted "model" for the browser demo — there is no LLM in the web build. The app uses cortex-inference. */
+/** Sample conversations for the browser build, which has no inference engine. The Android app streams from cortex-inference instead. */
 export interface DemoReply {
   steps: string[];
   thinkMs: number;
@@ -12,9 +12,9 @@ const MATH: DemoReply = {
 
 $$\\int_0^1 x^2\\,dx = \\frac{1}{3} \\qquad \\sum_{k=1}^{n} k = \\frac{n(n+1)}{2}$$
 
-Quick check — what is $(x+4)^2$?
+To point this at what you need:
 
-[[mcq]]{"question":"Pick the correct expansion of (x+4)²","options":["$x^2 + 16$","$x^2 + 8x + 16$","$x^2 + 4x + 16$","$x^2 + 8x + 4$"],"answer":1}[[/mcq]]`,
+[[choices]]{"question":"What would help most right now?","options":[{"label":"A worked example","hint":"Expand $(x+4)^2$ step by step"},{"label":"Practice problems","hint":"Three, easy to hard"},{"label":"The geometric picture","hint":"Why the $2ab$ term appears"}]}[[/choices]]`,
 };
 
 const HARDWARE: DemoReply = {
@@ -26,7 +26,7 @@ $$\\text{KV} = 2 \\cdot L \\cdot n_{ctx} \\cdot n_{kv} \\cdot d_h \\cdot b$$
 
 For a 3B model at $n_{ctx}=4096$ that is roughly $0.15$–$0.5\\,\\text{GB}$ on top of the weights. With ~4.6 GB free, **Q4_K_M** is the sweet spot; **Q5_K_M** only pays off on 12 GB flagships.
 
-[[mcq]]{"question":"Which quantization should I download for an 8 GB phone?","options":["Q4_K_M — balanced","Q5_K_M — higher quality, tighter RAM","IQ4_XS — smallest that still behaves"],"answer":0}[[/mcq]]`,
+[[choices]]{"question":"Which phone are we tuning for?","options":[{"label":"8 GB flagship","hint":"Room for Q4_K_M and a 4k context"},{"label":"6 GB mid-range","hint":"IQ4_XS or a smaller model"},{"label":"4 GB budget","hint":"Stick to 1B-class models"}]}[[/choices]]`,
 };
 
 const REPO: DemoReply = {
@@ -36,7 +36,7 @@ const REPO: DemoReply = {
 
 Want me to draft a patch and push it to a branch?
 
-[[mcq]]{"question":"What should I do next?","options":["Push to a new branch","Create a secret Gist","Show the diff only"],"answer":0}[[/mcq]]`,
+[[choices]]{"question":"What should I do with it?","options":[{"label":"Push to a new branch"},{"label":"Create a secret Gist"},{"label":"Show the diff only"}]}[[/choices]]`,
 };
 
 export function pickReply(prompt: string): DemoReply {
@@ -48,7 +48,7 @@ export function pickReply(prompt: string): DemoReply {
 
 export const SUGGESTIONS = [
   { id: "quant", title: "Explain Q4_K_M vs Q5_K_M for my phone", tag: "Hardware", tall: true },
-  { id: "math", title: "Expand (a+b)² and quiz me", tag: "Math · LaTeX" },
+  { id: "math", title: "Expand (a+b)² step by step", tag: "Math · LaTeX" },
   { id: "rust", title: "Debug my Rust lifetimes", tag: "Code" },
   { id: "repo", title: "Summarise my GitHub repo into context", tag: "GitHub", wide: true },
 ] as const;

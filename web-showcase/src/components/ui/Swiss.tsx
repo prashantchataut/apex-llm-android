@@ -1,3 +1,6 @@
+"use client";
+
+import { useChoreo } from "@/components/site/Choreo";
 import type { CSSProperties, ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
 
@@ -10,7 +13,7 @@ export function GridFrame({ children, cols = 4, className = "" }: { children: Re
   return (
     <div className={`relative mx-auto w-full max-w-[1240px] ${className}`}>
       {Array.from({ length: cols + 1 }, (_, i) => (
-        <span key={i} className="grid-v" style={{ left: `${(i / cols) * 100}%` }} aria-hidden="true" />
+        <span key={i} className="grid-v choreo-v" style={{ left: `${(i / cols) * 100}%` }} aria-hidden="true" />
       ))}
       {children}
     </div>
@@ -18,8 +21,9 @@ export function GridFrame({ children, cols = 4, className = "" }: { children: Re
 }
 
 export function GridRow({ children, cols = 4, className = "", id }: { children: ReactNode; cols?: number; className?: string; id?: string }) {
+  const c = useChoreo<HTMLElement>();
   return (
-    <section id={id} className={`relative ${className}`}>
+    <section ref={c.ref} id={id} className={`relative ${c.className} ${className}`}>
       <span className="grid-h" style={{ top: 0 }} aria-hidden="true" />
       {Array.from({ length: cols + 1 }, (_, i) => (
         <Crosshair key={i} left={`${(i / cols) * 100}%`} top="0px" />

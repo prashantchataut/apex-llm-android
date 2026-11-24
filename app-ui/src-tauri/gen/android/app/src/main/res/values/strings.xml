@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">"Apex"</string>
-    <string name="main_activity_title">"Apex"</string>
+    <string name="app_name">Apex LLM</string>
+    <string name="main_activity_title">Apex LLM</string>
 </resources>

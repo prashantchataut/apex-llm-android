@@ -14,8 +14,13 @@ import { HubScreen } from "./HubScreen";
 import { Onboarding } from "./Onboarding";
 import { ServerScreen, type KeyRec } from "./ServerScreen";
 import { StudioScreen } from "./StudioScreen";
-import { useDemoChat } from "./useDemoChat";
+import { useChat } from "./useChat";
 import { useDownloads } from "./useDownloads";
+import type { Attachment } from "@/lib/attachments";
+import { useCartridges } from "@/lib/cartridges";
+import { haptic } from "@/lib/haptics";
+import { invokeNative, isNative } from "@/lib/native";
+import { useKeyboardInset } from "@/lib/useKeyboard";
 
 type Tab = "home" | "chat" | "studio" | "hub" | "server";
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
@@ -31,14 +36,16 @@ const TONE: Record<Tab, "violet" | "cobalt"> = { home: "violet", hub: "violet", 
 /** `firstRun`: show onboarding when it has not been completed (the /app route). The landing-page demo passes false. */
 export function AppShell({ firstRun = false }: { firstRun?: boolean }) {
   const [tab, setTab] = useState<Tab>("home");
-  const [keys, setKeys] = useState<KeyRec[]>([{ id: "demo0001", name: "Cursor · laptop", hint: "Qx7a", requests: 12, tokens: 3480, revoked: false }]);
+  const [keys, setKeys] = useState<KeyRec[]>(() => (isNative() ? [] : [{ id: "sample01", name: "Cursor · laptop", hint: "Qx7a", requests: 12, tokens: 3480, revoked: false }]));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [hubSection, setHubSection] = useState<"text" | "image" | "video" | "voice">("text");
   const [dev, setDev] = useState<DeviceProfile>(DEVICES[1]);
   const [source, setSource] = useState<"native" | "browser" | "preset">("preset");
   const [onboarding, setOnboarding] = useState<OnboardingState | null>(null);
   const [replay, setReplay] = useState(false);
-  const chat = useDemoChat();
+  const chat = useChat();
+  const cart = useCartridges();
+  const kb = useKeyboardInset();
   const downloads = useDownloads();
 
   useEffect(() => {
@@ -64,10 +71,14 @@ export function AppShell({ firstRun = false }: { firstRun?: boolean }) {
     }
   }, []);
 
-  const send = (p: string) => {
+  const send = (p: string, atts?: Attachment[]) => {
     if (!p) return;
-    chat.send(p);
+    chat.send(p, { attachments: atts, cartridge: cart.selected, ctx: cart.selected.ctx });
     setTab("chat");
+  };
+  const go = (t: Tab) => {
+    if (t !== tab) haptic("detentClick");
+    setTab(t);
   };
   const browse = (k: MediaKind) => {
     setHubSection(k);
@@ -79,20 +90,20 @@ export function AppShell({ firstRun = false }: { firstRun?: boolean }) {
     <div className="relative h-full w-full overflow-hidden bg-canvas text-white">
       <div className="aurora" data-tone={TONE[tab]} />
       <div className="grain pointer-events-none absolute inset-0" />
-      <div className="absolute inset-0 flex flex-col">
+      <motion.div className="absolute inset-0 flex flex-col" initial={false} animate={{ paddingBottom: kb }} transition={{ type: "spring", stiffness: 520, damping: 46, mass: 0.6 }}>
         <main className="relative min-h-0 flex-1">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div key={tab} className="absolute inset-0" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ type: "spring", stiffness: 340, damping: 32, mass: 0.8 }}>
-              {tab === "home" && <HomeScreen onSend={send} onOpenSettings={() => setSettingsOpen(true)} />}
-              {tab === "chat" && <ChatScreen msgs={chat.msgs} busy={chat.busy} onSend={send} />}
+              {tab === "home" && <HomeScreen onSend={send} onOpenSettings={() => setSettingsOpen(true)} model={chat.activeModel} cartridges={cart} downloads={downloads} kvUsed={chat.usedTokens} />}
+              {tab === "chat" && <ChatScreen msgs={chat.msgs} busy={chat.busy} onSend={send} model={chat.activeModel} cartridge={cart.selected} kvUsed={chat.usedTokens} />}
               {tab === "studio" && <StudioScreen dev={dev} downloads={downloads} onBrowse={browse} />}
-              {tab === "hub" && <HubScreen activeKeys={keys.filter((k) => !k.revoked).length} dev={dev} setDev={setDev} source={source} downloads={downloads} initialSection={hubSection} />}
-              {tab === "server" && <ServerScreen keys={keys} setKeys={setKeys} />}
+              {tab === "hub" && <HubScreen activeKeys={keys.filter((k) => !k.revoked).length} dev={dev} setDev={setDev} source={source} downloads={downloads} initialSection={hubSection} kvUsed={chat.usedTokens} kvMax={cart.selected.ctx} />}
+              {tab === "server" && <ServerScreen keys={keys} setKeys={setKeys} model={chat.activeModel} />}
             </motion.div>
           </AnimatePresence>
         </main>
 
-        <nav aria-label="Primary" className="px-3 pt-1" style={{ paddingBottom: "max(20px, var(--apex-inset-bottom, 0px))" }}>
+        <motion.nav aria-label="Primary" className="overflow-hidden px-3 pt-1" initial={false} animate={{ height: kb > 0 ? 0 : "auto", opacity: kb > 0 ? 0 : 1 }} transition={{ type: "spring", stiffness: 520, damping: 46 }} style={{ paddingBottom: kb > 0 ? 0 : "max(20px, env(safe-area-inset-bottom), var(--apex-inset-bottom, 0px))" }}>
           <LayoutGroup>
             <div className="glass-dark mx-auto flex max-w-[360px] items-center justify-between rounded-full p-1.5">
               {TABS.map((t) => {
@@ -100,7 +111,7 @@ export function AppShell({ firstRun = false }: { firstRun?: boolean }) {
                 return (
                   <button
                     key={t.id}
-                    onClick={() => setTab(t.id)}
+                    onClick={() => go(t.id)}
                     aria-current={active ? "page" : undefined}
                     aria-label={t.label}
                     className={`relative flex h-12 min-h-11 items-center justify-center rounded-full text-[12px] font-medium transition-[flex-grow,transform] duration-300 active:scale-[0.97] ${active ? "flex-[1.9]" : "flex-1"}`}
@@ -115,8 +126,8 @@ export function AppShell({ firstRun = false }: { firstRun?: boolean }) {
               })}
             </div>
           </LayoutGroup>
-        </nav>
-      </div>
+        </motion.nav>
+      </motion.div>
 
       <ThemeSheet
         open={settingsOpen}

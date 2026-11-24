@@ -4,7 +4,7 @@ import katex from "katex";
 import "katex/dist/katex.min.css";
 import { Fragment, useMemo, type ReactNode } from "react";
 import { parseAssistant, safePrefix, type Seg } from "@/lib/richtext";
-import { OptionCards } from "./OptionCards";
+import { ChoiceCards } from "./ChoiceCards";
 
 function tex(src: string, display: boolean): string {
   return katex.renderToString(src, { displayMode: display, throwOnError: false, output: "html", strict: "ignore" });
@@ -41,7 +41,7 @@ function Inline({ text }: { text: string }) {
   );
 }
 
-/** Text with `$inline$` math — used for MCQ options too. */
+/** Text with `$inline$` math — also used for choice labels and hints. */
 export function RichInline({ text }: { text: string }) {
   const segs = parseAssistant(text);
   return (
@@ -53,7 +53,7 @@ export function RichInline({ text }: { text: string }) {
   );
 }
 
-export function AssistantBody({ text, streaming }: { text: string; streaming: boolean }) {
+export function AssistantBody({ text, streaming, onChoice }: { text: string; streaming: boolean; onChoice?: (answer: string) => void }) {
   const segs: Seg[] = useMemo(() => parseAssistant(streaming ? safePrefix(text) : text), [text, streaming]);
   const out: ReactNode[] = [];
   let group: ReactNode[] = [];
@@ -73,7 +73,7 @@ export function AssistantBody({ text, streaming }: { text: string; streaming: bo
     else {
       flush(`p${i}`);
       if (s.kind === "block") out.push(<Math key={i} src={s.value} display />);
-      else out.push(<OptionCards key={i} question={s.question} options={s.options} answer={s.answer} />);
+      else out.push(<ChoiceCards key={i} question={s.question} options={s.options} multi={s.multi} onAnswer={onChoice} />);
     }
   });
   flush("tail");

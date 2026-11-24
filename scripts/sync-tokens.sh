@@ -3,4 +3,5 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 cp packages/design-system/tokens.css web-showcase/src/app/tokens.css
-echo "tokens synced"
+cp packages/design-system/haptics/haptics.ts web-showcase/src/lib/haptics.ts
+echo "tokens + haptics synced"

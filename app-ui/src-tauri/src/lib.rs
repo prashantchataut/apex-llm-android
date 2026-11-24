@@ -42,6 +42,38 @@ fn settings_get(app: AppHandle, key: String) -> Option<String> {
 }
 
 #[derive(Serialize)]
+struct Telemetry {
+    mem_total_mb: u64,
+    mem_available_mb: u64,
+    battery_pct: Option<u8>,
+    battery_temp_c: Option<f32>,
+    charging: Option<bool>,
+}
+
+fn meminfo_mb(src: &str, key: &str) -> u64 {
+    src.lines()
+        .find_map(|l| l.strip_prefix(key))
+        .and_then(|r| r.trim().trim_end_matches("kB").trim().parse::<u64>().ok())
+        .map(|kb| kb / 1024)
+        .unwrap_or(0)
+}
+
+/// Live RAM + battery readings for the thermal/memory guard pill. Every battery field is `None` when
+/// the OS (SELinux) does not expose it to the app; the UI then shows "—" rather than inventing a value.
+#[tauri::command]
+fn device_telemetry() -> Telemetry {
+    let mi = std::fs::read_to_string("/proc/meminfo").unwrap_or_default();
+    let bat = |f: &str| std::fs::read_to_string(format!("/sys/class/power_supply/battery/{f}")).ok();
+    Telemetry {
+        mem_total_mb: meminfo_mb(&mi, "MemTotal:"),
+        mem_available_mb: meminfo_mb(&mi, "MemAvailable:"),
+        battery_pct: bat("capacity").and_then(|v| v.trim().parse().ok()),
+        battery_temp_c: bat("temp").and_then(|v| v.trim().parse::<f32>().ok()).map(|t| t / 10.0),
+        charging: bat("status").map(|v| matches!(v.trim(), "Charging" | "Full")),
+    }
+}
+
+#[derive(Serialize)]
 struct MediaEntry {
     #[serde(flatten)]
     spec: MediaModelSpec,
@@ -242,6 +274,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             device_profile,
+            device_telemetry,
             settings_get,
             settings_set,
             media_catalog,

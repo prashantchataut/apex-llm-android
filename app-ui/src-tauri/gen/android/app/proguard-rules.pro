@@ -19,3 +19,9 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+# Apex: WebView bridges are called by name from JS — R8 must not strip or rename them.
+-keepclassmembers class app.apexllm.android.MainActivity$* {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-keep class app.apexllm.android.MainActivity { *; }
+-keep class app.apexllm.android.MainActivity$* { *; }

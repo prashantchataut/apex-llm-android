@@ -16,14 +16,26 @@ val tauriProperties = Properties().apply {
 
 android {
     compileSdk = 37
-    namespace = "dev.apex.llm"
+    namespace = "app.apexllm.android"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
-        applicationId = "dev.apex.llm"
+        applicationId = "app.apexllm.android"
         minSdk = 26
         targetSdk = 37
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+    }
+    signingConfigs {
+        // CI generates a keystore and exports these; without them the release APK is left unsigned.
+        create("apex") {
+            val ks = System.getenv("APEX_KEYSTORE")
+            if (ks != null) {
+                storeFile = file(ks)
+                storePassword = System.getenv("APEX_KS_PASS")
+                keyAlias = System.getenv("APEX_KEY_ALIAS")
+                keyPassword = System.getenv("APEX_KS_PASS")
+            }
+        }
     }
     buildTypes {
         getByName("debug") {
@@ -39,6 +51,7 @@ android {
             }
         }
         getByName("release") {
+            if (System.getenv("APEX_KEYSTORE") != null) signingConfig = signingConfigs.getByName("apex")
             optimization {
                enable = true
             }

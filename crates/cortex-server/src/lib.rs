@@ -15,6 +15,7 @@ use axum::{
     extract::{ConnectInfo, Path, Request, State},
     http::{header, StatusCode},
     middleware::{self, Next},
+    response::Html,
     response::{IntoResponse, Response},
     routing::{delete, get, post},
     Extension, Json, Router,
@@ -32,7 +33,7 @@ use std::{
 use vault::KeyVault;
 
 pub const DEFAULT_PORT: u16 = 11434;
-pub const VERSION: &str = "0.1.0-apex";
+pub const VERSION: &str = "0.2.0-apex";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ChatMessage {
@@ -214,7 +215,10 @@ fn tokens(
 async fn auth(State(st): State<AppState>, mut req: Request, next: Next) -> Response {
     let path = req.uri().path().to_string();
     let method = req.method().to_string();
-    if matches!(path.as_str(), "/health" | "/api/health" | "/api/version") {
+    if matches!(
+        path.as_str(),
+        "/" | "/health" | "/api/health" | "/api/version"
+    ) {
         return next.run(req).await;
     }
     let loopback = req
@@ -482,6 +486,11 @@ async fn admin_logs(State(st): State<AppState>) -> Json<Value> {
     Json(json!({ "logs": st.vault.logs() }))
 }
 
+/// PC-browser console: status, copy-able client configs and a streaming playground (single self-contained page).
+async fn dashboard() -> Html<&'static str> {
+    Html(include_str!("dashboard.html"))
+}
+
 async fn health() -> Json<Value> {
     Json(json!({ "status": "ok" }))
 }
@@ -490,6 +499,7 @@ async fn health() -> Json<Value> {
 
 pub fn router(state: AppState) -> Router {
     Router::new()
+        .route("/", get(dashboard))
         .route("/health", get(health))
         .route("/api/health", get(health))
         .route("/api/version", get(api_version))
@@ -561,6 +571,15 @@ mod tests {
     fn iso_is_correct() {
         assert_eq!(iso(0), "1970-01-01T00:00:00Z");
         assert_eq!(iso(1_700_000_000), "2023-11-14T22:13:20Z");
+    }
+
+    #[tokio::test]
+    async fn dashboard_is_public_html() {
+        let (app, _) = app();
+        let r = app.oneshot(req("GET", "/", None, None)).await.unwrap();
+        assert_eq!(r.status(), StatusCode::OK);
+        let b = body(r).await;
+        assert!(b.contains("Apex LLM") && b.contains("Playground"));
     }
 
     #[tokio::test]

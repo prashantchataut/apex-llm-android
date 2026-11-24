@@ -1,30 +1,41 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ApexTile } from "@/components/brand/ApexLogo";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { RippleButton } from "@/components/ui/Glass";
 import { Ph } from "@/components/ui/Swiss";
 import { SUGGESTIONS } from "@/lib/demo-script";
-import { PromptBar } from "./PromptBar";
+import type { Attachment } from "@/lib/attachments";
+import type { Cartridge } from "@/lib/cartridges";
+import { Cartridges } from "./Cartridges";
+import { Composer } from "./Composer";
+import { GuardPill } from "./GuardPill";
+import { NanoCard } from "./NanoCard";
+import { modelLabel } from "./useChat";
+import type { Downloads } from "./useDownloads";
 import { useVoiceDemo } from "./useVoice";
 
 const ICONS: Record<string, IconName> = { quant: "cpu", math: "prism", rust: "code", repo: "github" };
 
 /** Archetype A — themed canvas with top-bleed aurora (rendered by the shell), asymmetric bento cards, docked quick-action pill. */
-export function HomeScreen({ onSend, onOpenSettings }: { onSend: (prompt: string) => void; onOpenSettings: () => void }) {
+export function HomeScreen({
+  onSend,
+  onOpenSettings,
+  model,
+  cartridges,
+  downloads,
+  kvUsed,
+}: {
+  onSend: (prompt: string, atts?: Attachment[]) => void;
+  onOpenSettings: () => void;
+  model: string | null;
+  cartridges: { all: Cartridge[]; selected: Cartridge; select: (id: string) => void; save: (c: Cartridge) => void; remove: (id: string) => void };
+  downloads: Downloads;
+  kvUsed: number;
+}) {
   const [value, setValue] = useState("");
-  const [attachment, setAttachment] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const camRef = useRef<HTMLInputElement>(null);
   const { voice, toggleVoice } = useVoiceDemo(setValue);
-
-  const submit = () => {
-    onSend(value.trim());
-    setValue("");
-    setAttachment(null);
-  };
 
   return (
     <div className="flex h-full flex-col">
@@ -37,7 +48,7 @@ export function HomeScreen({ onSend, onOpenSettings }: { onSend: (prompt: string
           <div className="flex items-center gap-2">
             <span className="glass-dark mono rounded-full px-3 py-1.5 text-[11px] text-ink-2">
               <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-ok align-middle" />
-              Qwen2.5 3B
+              {model ? modelLabel(model).split(" · ")[0] : "Qwen2.5 3B"}
             </span>
             <button onClick={onOpenSettings} aria-label="Appearance and settings" className="glass-dark grid h-11 w-11 place-items-center rounded-full transition-transform active:scale-[0.97]">
               <Icon name="sliders" size={18} />
@@ -45,7 +56,9 @@ export function HomeScreen({ onSend, onOpenSettings }: { onSend: (prompt: string
           </div>
         </div>
 
-        <h1 className="display mt-12 text-[40px]">
+        <GuardPill className="mt-3" kvUsed={kvUsed} kvMax={cartridges.selected.ctx} />
+
+        <h1 className="display mt-10 text-[40px]">
           <Ph text="Ask anything." from={1} to={1} />
           <br />
           <Ph text="It stays on your phone." from={1} to={0.35} />
@@ -76,35 +89,17 @@ export function HomeScreen({ onSend, onOpenSettings }: { onSend: (prompt: string
             );
           })}
         </div>
+
+        <NanoCard downloads={downloads} className="mt-5" />
+
+        <div className="mt-7">
+          <Cartridges all={cartridges.all} selected={cartridges.selected} onSelect={cartridges.select} onSave={cartridges.save} onRemove={cartridges.remove} />
+        </div>
       </div>
 
       {/* docked composer */}
       <div className="px-4 pb-2">
-        <div className="mb-2.5 flex justify-center">
-          <div className="glass flex items-center gap-1 p-1 text-[13px] font-medium">
-            <input ref={fileRef} type="file" className="hidden" onChange={(e) => setAttachment(e.target.files?.[0]?.name ?? null)} />
-            <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setAttachment(e.target.files?.[0]?.name ?? null)} />
-            <RippleButton type="button" onClick={() => fileRef.current?.click()} className="relative z-[1] flex h-11 items-center gap-1.5 rounded-full px-3.5">
-              <Icon name="upload" size={16} /> Upload
-            </RippleButton>
-            <RippleButton type="button" onClick={() => camRef.current?.click()} className="relative z-[1] flex h-11 items-center gap-1.5 rounded-full px-3.5">
-              <Icon name="camera" size={16} /> Camera
-            </RippleButton>
-            <RippleButton type="button" onClick={toggleVoice} className="relative z-[1] flex h-11 items-center gap-1.5 rounded-full px-3.5">
-              <Icon name="mic" size={16} /> Voice
-            </RippleButton>
-          </div>
-        </div>
-        {attachment && (
-          <div className="mb-2 flex items-center gap-2 pl-2 text-[12px] text-ink-3">
-            <Icon name="upload" size={13} /> <span className="truncate">{attachment}</span>
-            <button onClick={() => setAttachment(null)} aria-label="Remove attachment" className="ml-auto">
-              <Icon name="x" size={14} />
-            </button>
-          </div>
-        )}
-        <PromptBar value={value} onChange={setValue} onSubmit={submit} voice={voice} onMic={toggleVoice} />
-        <p className="mono mt-2 text-center text-[10px] text-ink-3">{voice.recording ? "Dictation runs on this device." : "Demo build · replies are scripted"}</p>
+        <Composer value={value} onChange={setValue} onSend={(t, a) => onSend(t, a)} voice={voice} onMic={toggleVoice} ctx={cartridges.selected.ctx} footer="Private by design · everything runs on this device" />
       </div>
     </div>
   );

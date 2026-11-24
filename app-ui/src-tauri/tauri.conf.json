@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Apex",
-  "version": "0.1.0",
-  "identifier": "dev.apex.llm",
+  "productName": "Apex LLM",
+  "version": "0.2.0",
+  "identifier": "app.apexllm.android",
   "build": {
     "beforeDevCommand": "npm --prefix ../web-showcase run dev",
     "beforeBuildCommand": "npm --prefix ../web-showcase run build:app",
@@ -10,7 +10,7 @@
     "frontendDist": "../../web-showcase/out"
   },
   "app": {
-    "windows": [{ "title": "Apex", "width": 420, "height": 880, "resizable": true }],
+    "windows": [{ "title": "Apex LLM", "width": 420, "height": 880, "resizable": true }],
     "security": { "csp": null }
   },
   "bundle": {

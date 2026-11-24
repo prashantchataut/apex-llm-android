@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { ThinkingAccordion } from "@/components/app/ThinkingAccordion";
 import { AssistantBody } from "@/components/app/Rich";
@@ -11,6 +11,8 @@ import { SiliconScan } from "@/components/ui/SiliconScan";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { DEVICES } from "@/lib/compat";
 import { pickReply } from "@/lib/demo-script";
+import { createTokenTicker, haptic, SIGNATURES, type HapticName } from "@/lib/haptics";
+import { HapticPulse } from "@/components/ui/HapticPulse";
 
 const SPRING = { type: "spring", stiffness: 320, damping: 26 } as const;
 
@@ -37,32 +39,51 @@ function ReplayButton({ onClick, label }: { onClick: () => void; label: string }
   );
 }
 
-/** Live reasoning demo: steps appear on a timer, the accordion collapses, then KaTeX + clickable MCQ cards render. */
+/** Live reasoning demo: steps appear, the accordion collapses, then the answer streams with KaTeX and clarifying-choice cards. Fires the real haptic signatures. */
 function ReasoningDemo() {
   const reply = useMemo(() => pickReply("expand a square"), []);
   const [run, setRun] = useState(0);
   const [session, setSession] = useState<{ t0: number } | null>(null);
   const [shown, setShown] = useState(0);
   const [endedAt, setEndedAt] = useState<number | null>(null);
+  const [text, setText] = useState("");
 
   useEffect(() => {
     setSession({ t0: performance.now() });
     setShown(0);
     setEndedAt(null);
+    setText("");
     const timers: number[] = [];
+    const tick = createTokenTicker();
+    haptic("reasoningPulse");
     const gap = reply.thinkMs / (reply.steps.length + 0.5);
     reply.steps.forEach((_, i) => timers.push(window.setTimeout(() => setShown(i + 1), gap * (i + 0.6))));
-    timers.push(window.setTimeout(() => setEndedAt(performance.now()), reply.thinkMs));
-    return () => timers.forEach((t) => window.clearTimeout(t));
+    timers.push(
+      window.setTimeout(() => {
+        setEndedAt(performance.now());
+        haptic("reasoningDone");
+        let pos = 0;
+        const iv = window.setInterval(() => {
+          pos += 5;
+          tick();
+          if (pos >= reply.answer.length) {
+            window.clearInterval(iv);
+            setText(reply.answer);
+          } else setText(reply.answer.slice(0, pos));
+        }, 24);
+        timers.push(iv);
+      }, reply.thinkMs),
+    );
+    return () => timers.forEach((t) => (window.clearTimeout(t), window.clearInterval(t)));
   }, [run, reply]);
 
   return (
     <div className="min-h-[560px] space-y-3">
       <div className="ml-auto w-fit max-w-[85%] rounded-[22px] rounded-br-md border border-white/10 bg-white/[0.09] px-4 py-2.5 text-[14.5px] leading-snug">Expand (a + b)² and check it.</div>
       {session && <ThinkingAccordion key={run} steps={reply.steps} shown={shown} startedAt={session.t0} endedAt={endedAt} />}
-      {endedAt !== null && (
+      {endedAt !== null && text && (
         <motion.div initial={{ opacity: 0, y: 10, filter: "blur(8px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={SPRING} key={`a${run}`}>
-          <AssistantBody text={reply.answer} streaming={false} />
+          <AssistantBody text={text} streaming={text.length < reply.answer.length} />
         </motion.div>
       )}
       <button onClick={() => setRun((r) => r + 1)} className="mono flex h-11 items-center gap-2 text-[11.5px] uppercase tracking-[0.14em] text-ink-3 active:scale-[0.97]" aria-label="Replay reasoning demo">
@@ -124,12 +145,17 @@ export function LiveLab() {
         </Panel>
       </div>
 
-      <AnimatePresence>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mono mt-6 flex items-center gap-3 text-[11px] text-ink-3">
-          <ApexLogo size={18} state="monochrome" />
-          Scripted replies. The web build has no model; the Android build runs llama.cpp.
-        </motion.div>
-      </AnimatePresence>
+      <Panel kicker="Tactile engineering" title="Feel the interface" className="mt-4" action={<HapticPulse />}>
+        <p className="mb-4 max-w-[60ch] text-[14px] leading-relaxed text-ink-2">Every tap, token and thought has its own vibration signature. On an Android phone you feel them; here you can see the waveform each one commands. Press a signature.</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {(Object.keys(SIGNATURES) as HapticName[]).map((n) => (
+            <button key={n} onClick={() => haptic(n)} className="bento flex min-h-[64px] flex-col items-start justify-center gap-0.5 px-4 py-2.5 text-left transition-transform active:scale-[0.97]">
+              <span className="text-[14px] font-medium tracking-tight">{n}</span>
+              <span className="mono text-[10.5px] text-ink-3">[{SIGNATURES[n].join(", ")}] ms</span>
+            </button>
+          ))}
+        </div>
+      </Panel>
     </div>
   );
 }

@@ -157,3 +157,30 @@ button {
     animation: none;
   }
 }
+
+/* Haptic waveform bars (HapticPulse): quick rise + decay so each pulse is visible but never noisy. */
+@keyframes haptic-bar {
+  0% { transform: scaleY(0.1); opacity: 0.2; }
+  25% { transform: scaleY(1); opacity: 1; }
+  100% { transform: scaleY(0.55); opacity: 0.55; }
+}
+.haptic-bar { transform-origin: center; transform-box: fill-box; animation: haptic-bar 380ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) { .haptic-bar { animation: none; } }
+
+/* ── Site choreography: hairlines draw across the viewport, `+` crosshairs spin 90° into place ── */
+.choreo .grid-h { transform: scaleX(0); transform-origin: left center; transition: transform 1.25s cubic-bezier(0.22, 1, 0.36, 1); }
+.choreo.in .grid-h { transform: scaleX(1); }
+.choreo .cross { opacity: 0; transform: translate(-50%, -50%) rotate(-90deg) scale(0.3); transition: transform 0.95s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease; }
+.choreo.in .cross { opacity: 1; transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+.choreo.in .cross:nth-child(2) { transition-delay: 0.08s; }
+.choreo.in .cross:nth-child(3) { transition-delay: 0.16s; }
+.choreo.in .cross:nth-child(4) { transition-delay: 0.24s; }
+.choreo.in .cross:nth-child(5) { transition-delay: 0.32s; }
+.choreo.in .cross:nth-child(6) { transition-delay: 0.4s; }
+@keyframes draw-v { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.choreo-v { transform-origin: top center; animation: draw-v 1.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .choreo .grid-h, .choreo .cross { transition: none; transform: none; opacity: 1; }
+  .choreo .cross { transform: translate(-50%, -50%); }
+  .choreo-v { animation: none; }
+}
