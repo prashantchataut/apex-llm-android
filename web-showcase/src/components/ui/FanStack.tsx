@@ -20,11 +20,11 @@ export function FanStack({ cards, children }: { cards: FanCard[]; children: Reac
     <motion.div className="relative pt-[58px]" initial="rest" animate="rest" whileHover="hover" whileTap="hover">
       {list.map((c, i) => {
         const angle = -12 + (26 * i) / (n - 1);
-        const left = 4 + (i * (100 - 36 - 8)) / (n - 1);
+        const left = 4 + (i * (100 - 34 - 8)) / (n - 1);
         return (
           <motion.div
             key={c.label}
-            className="mini-card absolute top-0 h-28 w-[36%] px-3 py-2.5"
+            className="mini-card absolute top-0 h-28 w-[34%] px-3 py-2.5"
             style={{ left: `${left}%`, transformOrigin: "50% 100%", zIndex: i }}
             variants={{
               rest: { rotate: angle, y: 0 },
@@ -33,7 +33,7 @@ export function FanStack({ cards, children }: { cards: FanCard[]; children: Reac
             transition={{ type: "spring", stiffness: 320, damping: 20, delay: i * 0.015 }}
           >
             <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[rgb(11_11_16/0.6)]">{c.label}</div>
-            <div className="tnum mt-0.5 text-[19px] font-semibold leading-none tracking-tight">
+            <div className="tnum mt-0.5 whitespace-nowrap text-[16px] font-semibold leading-none tracking-tight">
               {c.value}
               {c.unit && <span className="ml-0.5 text-[11px] font-medium text-[rgb(11_11_16/0.6)]">{c.unit}</span>}
             </div>

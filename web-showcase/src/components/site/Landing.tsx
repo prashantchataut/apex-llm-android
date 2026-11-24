@@ -2,14 +2,16 @@ import { AppShell } from "@/components/app/AppShell";
 import { PhoneFrame } from "@/components/app/PhoneFrame";
 import { FanStack } from "@/components/ui/FanStack";
 import { Chip3D } from "@/components/ui/Glass";
+import { ApexLogo, ApexTile } from "@/components/brand/ApexLogo";
 import { Icon } from "@/components/ui/Icon";
+import { LiveLab } from "./LiveLab";
 import { ThemeButton } from "./ThemeButton";
 import { Archetypes } from "./Archetypes";
 import { Cutout, GridFrame, GridRow, Ph, ScriptNote } from "@/components/ui/Swiss";
 import { RELEASES_URL, REPO_URL } from "@/lib/site";
 
 const CURL = `curl http://phone.local:11434/v1/chat/completions \\
-  -H "Authorization: Bearer sk-pocket-…" \\
+  -H "Authorization: Bearer sk-apex-…" \\
   -d '{"model":"qwen2.5-3b","messages":[{"role":"user","content":"hi"}]}'`;
 
 export function Landing() {
@@ -21,14 +23,13 @@ export function Landing() {
       <header className="sticky top-4 z-50 mx-auto mt-4 w-[min(1100px,calc(100%-24px))]">
         <nav className="glass flex items-center justify-between px-3 py-2" aria-label="Site">
           <a href="#top" className="relative z-[1] flex h-11 items-center gap-2 pl-2 text-[15px] font-semibold tracking-tight">
-            <span className="grid h-7 w-7 place-items-center rounded-[9px] bg-white text-black">
-              <Icon name="bolt" size={16} strokeWidth={2.4} />
-            </span>
+            <ApexTile size={32} />
             Apex
           </a>
           <div className="relative z-[1] hidden items-center gap-1 text-[13.5px] font-medium sm:flex">
             {[
               ["Try it", "#demo"],
+              ["Lab", "#lab"],
               ["Looks", "#looks"],
               ["API", "#api"],
             ].map(([l, h]) => (
@@ -50,7 +51,7 @@ export function Landing() {
         <div id="top" className="relative px-5 pb-24 pt-24 sm:px-10 sm:pt-32">
           <div className="mono mb-8 text-[11px] uppercase tracking-[0.2em] text-ink-3">Private · Offline · Open source</div>
           <h1 className="display max-w-[13ch] text-[clamp(44px,8.4vw,118px)]">
-            <Ph text="Real AI," from={1} to={1} /> <Cutout tone="cobalt" icon="bolt" tilt={-6} label="Lightning" /> <Ph text="in your" from={1} to={1} />{" "}
+            <Ph text="Real AI," from={1} to={1} /> <Cutout tone="cobalt" tilt={-6} label="Apex prism"><ApexLogo size={44} state="idle" className="h-[0.6em] w-[0.6em]" /></Cutout> <Ph text="in your" from={1} to={1} />{" "}
             <Cutout tone="violet" icon="cpu" tilt={5} label="Chip" /> <Ph text="pocket." from={1} to={0.35} />
           </h1>
 
@@ -62,7 +63,7 @@ export function Landing() {
               <span className="mono">Q4_K_M</span>
             </Chip3D>
             <Chip3D tilt="rotate(5deg)" delay={0.8} className="ml-10">
-              <Icon name="bolt" size={15} /> on-device
+              <ApexLogo size={16} state="monochrome" /> on-device
             </Chip3D>
             <Chip3D tilt="rotate(-3deg)" delay={1.6}>
               <span className="mono">:11434</span>
@@ -115,8 +116,17 @@ export function Landing() {
           </div>
         </GridRow>
 
+        <GridRow id="lab" className="px-5 py-20 sm:px-10">
+          <div className="mono mb-4 text-[11px] uppercase tracking-[0.2em] text-ink-3">02 — Live lab</div>
+          <h2 className="display mb-4 max-w-[18ch] text-[clamp(34px,5vw,64px)]">
+            <Ph text="Touch the" from={1} to={1} /> <Ph text="real parts." from={1} to={0.35} />
+          </h2>
+          <p className="mb-10 max-w-[44ch] text-[17px] leading-snug text-ink-2">Switch the look and the whole page morphs. Run the hardware scan. Open a thought, read the math, answer the quiz.</p>
+          <LiveLab />
+        </GridRow>
+
         <GridRow id="looks" className="px-5 py-20 sm:px-10">
-          <div className="mono mb-4 text-[11px] uppercase tracking-[0.2em] text-ink-3">02 — Looks</div>
+          <div className="mono mb-4 text-[11px] uppercase tracking-[0.2em] text-ink-3">03 — Looks</div>
           <h2 className="display mb-12 max-w-[16ch] text-[clamp(34px,5vw,64px)]">
             <Ph text="Four looks." from={1} to={1} /> <Ph text="One engine." from={1} to={0.35} />
           </h2>
@@ -126,7 +136,7 @@ export function Landing() {
         <GridRow id="api" className="px-5 py-20 sm:px-10">
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
             <div>
-              <div className="mono mb-4 text-[11px] uppercase tracking-[0.2em] text-ink-3">03 — API</div>
+              <div className="mono mb-4 text-[11px] uppercase tracking-[0.2em] text-ink-3">04 — API</div>
               <h2 className="display text-[clamp(34px,5vw,64px)]">
                 <Ph text="Your phone." from={1} to={1} /> <Ph text="Your API." from={1} to={0.35} />
               </h2>

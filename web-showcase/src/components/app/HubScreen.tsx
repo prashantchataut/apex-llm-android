@@ -86,10 +86,9 @@ export function HubScreen({
 
       <FanStack
         cards={[
-          { label: "Speed est.", value: tps.toFixed(1), unit: "tok/s" },
+          { label: "Speed", value: tps.toFixed(1), unit: "t/s" },
           { label: "RAM free", value: dev.availGB.toFixed(1), unit: "GB" },
           { label: "Quant", value: rec.quant },
-          { label: "API keys", value: String(activeKeys), unit: "active" },
           { label: "Context", value: String(ctx) },
         ]}
       >
@@ -249,7 +248,7 @@ function MediaList({ kind, dev, downloads }: { kind: MediaKind; dev: DeviceProfi
     <>
       <SectionTitle>{kind === "image" ? "Image generation" : "Video generation"}</SectionTitle>
       <div className="bento mb-3 flex gap-3 p-3.5 text-[12.5px] leading-relaxed text-ink-2">
-        <Icon name="sparkle" size={16} className="mt-0.5 shrink-0 text-accent" />
+        <Icon name="prism" size={16} className="mt-0.5 shrink-0 text-accent" />
         <p>
           Runs offline through <span className="mono text-[11.5px]">stable-diffusion.cpp</span>. Models install and score today; the Android generation engine is still being wired in.
         </p>

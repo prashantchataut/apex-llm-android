@@ -62,7 +62,7 @@ const TONES = {
 } as const;
 
 /** Inline rounded-square cutout that sits *between words* in a headline. */
-export function Cutout({ tone = "violet", icon, tilt = -5, label }: { tone?: keyof typeof TONES; icon: IconName; tilt?: number; label: string }) {
+export function Cutout({ tone = "violet", icon, tilt = -5, label, children }: { tone?: keyof typeof TONES; icon?: IconName; tilt?: number; label: string; children?: ReactNode }) {
   const style: CSSProperties = {
     background: `radial-gradient(120% 80% at 20% 0%, rgba(255,255,255,.55), transparent 45%), ${TONES[tone]}`,
     transform: `rotate(${tilt}deg)`,
@@ -75,7 +75,7 @@ export function Cutout({ tone = "violet", icon, tilt = -5, label }: { tone?: key
       className="mx-[0.12em] inline-grid h-[0.82em] w-[1.05em] place-items-center rounded-[0.24em] align-[-0.08em] text-white"
       style={style}
     >
-      <Icon name={icon} size={28} style={{ width: "0.42em", height: "0.42em" }} />
+      {children ?? (icon && <Icon name={icon} size={28} style={{ width: "0.42em", height: "0.42em" }} />)}
     </span>
   );
 }

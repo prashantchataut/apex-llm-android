@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useRef, useState } from "react";
+import { ApexTile } from "@/components/brand/ApexLogo";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { RippleButton } from "@/components/ui/Glass";
 import { Ph } from "@/components/ui/Swiss";
@@ -9,7 +10,7 @@ import { SUGGESTIONS } from "@/lib/demo-script";
 import { PromptBar } from "./PromptBar";
 import { useVoiceDemo } from "./useVoice";
 
-const ICONS: Record<string, IconName> = { quant: "cpu", math: "sparkle", rust: "code", repo: "github" };
+const ICONS: Record<string, IconName> = { quant: "cpu", math: "prism", rust: "code", repo: "github" };
 
 /** Archetype A — themed canvas with top-bleed aurora (rendered by the shell), asymmetric bento cards, docked quick-action pill. */
 export function HomeScreen({ onSend, onOpenSettings }: { onSend: (prompt: string) => void; onOpenSettings: () => void }) {
@@ -30,9 +31,7 @@ export function HomeScreen({ onSend, onOpenSettings }: { onSend: (prompt: string
       <div className="scroll-hide flex-1 overflow-y-auto px-5 pb-3 pt-14">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
-            <span className="grid h-7 w-7 place-items-center rounded-[9px] bg-white text-black">
-              <Icon name="bolt" size={16} strokeWidth={2.4} />
-            </span>
+            <ApexTile size={30} />
             Apex
           </div>
           <div className="flex items-center gap-2">

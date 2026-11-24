@@ -97,7 +97,7 @@ export function ServerScreen({ keys, setKeys }: { keys: KeyRec[]; setKeys: (f: (
     const secret = genSecret();
     const id = secret.slice(0, 8);
     setKeys((ks) => [{ id, name: name.trim() || "My PC", hint: secret.slice(-4), requests: 0, tokens: 0, revoked: false }, ...ks]);
-    setFresh({ id, key: `sk-pocket-${secret}` });
+    setFresh({ id, key: `sk-apex-${secret}` });
     setName("");
   };
   const copy = async (text: string, tag: string) => {
@@ -110,7 +110,7 @@ export function ServerScreen({ keys, setKeys }: { keys: KeyRec[]; setKeys: (f: (
     }
   };
 
-  const shownKey = fresh?.key ?? "sk-pocket-YOUR_KEY";
+  const shownKey = fresh?.key ?? "sk-apex-YOUR_KEY";
   const code = useMemo(() => snippet(tab, shownKey), [tab, shownKey]);
 
   return (
@@ -175,7 +175,7 @@ export function ServerScreen({ keys, setKeys }: { keys: KeyRec[]; setKeys: (f: (
             <div className="min-w-0 flex-1">
               <div className="truncate text-[14px] font-medium">{k.name}</div>
               <div className="mono tnum text-[11px] text-ink-3">
-                sk-pocket-••••{k.hint} · {k.requests} req · {k.tokens.toLocaleString()} tok
+                sk-apex-••••{k.hint} · {k.requests} req · {k.tokens.toLocaleString()} tok
               </div>
             </div>
             {k.revoked ? (

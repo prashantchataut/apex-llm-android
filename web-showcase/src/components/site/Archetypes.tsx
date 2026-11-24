@@ -20,7 +20,7 @@ interface Arch {
 const CARDS: Arch[] = [
   { key: "A", theme: "obsidian", mode: "dark", icon: "cpu", kicker: "On-device", title: "Runs on your phone. Not a server.", body: "Every model is sized to your hardware before you download." },
   { key: "B", theme: "visionos", mode: "dark", icon: "server", kicker: "Local API", title: "Your phone becomes an API.", body: "Point Cursor or Continue at it. Keys never leave the device." },
-  { key: "C", theme: "swiss", mode: "light", icon: "sparkle", kicker: "Reasoning", title: "Thinking you can actually read.", body: "A live timeline for every thought. Math renders cleanly." },
+  { key: "C", theme: "swiss", mode: "light", icon: "prism", kicker: "Reasoning", title: "Thinking you can actually read.", body: "A live timeline for every thought. Math renders cleanly." },
   { key: "D", theme: "reasoning", mode: "dark", icon: "swatch", kicker: "Yours", title: "Make it yours, edge to edge.", body: "Six themes. Light and dark. Down to the status bar." },
 ];
 

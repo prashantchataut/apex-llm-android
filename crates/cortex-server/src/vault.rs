@@ -1,4 +1,4 @@
-//! API key vault. Plaintext keys (`sk-pocket-<43 base62>`) are shown exactly once;
+//! API key vault. Plaintext keys (`sk-apex-<43 base62>`) are shown exactly once;
 //! only SHA-256 hashes are kept. Per-key usage analytics + revocation.
 
 use rand::{distributions::Alphanumeric, Rng};
@@ -10,7 +10,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-pub const KEY_PREFIX: &str = "sk-pocket-";
+pub const KEY_PREFIX: &str = "sk-apex-";
 
 fn now() -> u64 {
     SystemTime::now()
@@ -30,7 +30,7 @@ fn hash(key: &str) -> String {
 pub struct KeyRecord {
     pub id: String,
     pub name: String,
-    /// last 4 chars of the key, for display (`sk-pocket-…aB3x`)
+    /// last 4 chars of the key, for display (`sk-apex-…aB3x`)
     pub hint: String,
     pub created_at: u64,
     pub last_used_at: Option<u64>,
@@ -164,10 +164,10 @@ mod tests {
     fn generate_verify_revoke() {
         let v = KeyVault::new();
         let (key, rec) = v.generate("Cursor");
-        assert!(key.starts_with("sk-pocket-"));
+        assert!(key.starts_with("sk-apex-"));
         assert_eq!(key.len(), KEY_PREFIX.len() + 43);
         assert_eq!(v.verify(&key), Some(rec.id.clone()));
-        assert_eq!(v.verify("sk-pocket-nope"), None);
+        assert_eq!(v.verify("sk-apex-nope"), None);
         assert_eq!(v.verify("garbage"), None);
         v.record_usage(&rec.id, 10, 20);
         let r = &v.list()[0];

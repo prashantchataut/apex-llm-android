@@ -55,12 +55,16 @@ impl Engine for LlamaEngine {
     fn load(&mut self, model: &Path, params: &LoadParams) -> Result<(), EngineError> {
         let b = backend()?;
         if !model.exists() {
-            return Err(EngineError::Load(format!("{} does not exist", model.display())));
+            return Err(EngineError::Load(format!(
+                "{} does not exist",
+                model.display()
+            )));
         }
         let mp = LlamaModelParams::default()
             .with_n_gpu_layers(params.n_gpu_layers)
             .with_use_mmap(params.use_mmap);
-        let m = LlamaModel::load_from_file(b, model, &mp).map_err(|e| EngineError::Load(e.to_string()))?;
+        let m = LlamaModel::load_from_file(b, model, &mp)
+            .map_err(|e| EngineError::Load(e.to_string()))?;
         self.model = Some(m);
         self.params = params.clone();
         Ok(())
@@ -96,14 +100,22 @@ impl Engine for LlamaEngine {
             batch.clear();
             for (j, t) in chunk.iter().enumerate() {
                 let pos = chunk_start + j;
-                batch.add(*t, pos as i32, &[0], pos == last).map_err(gen_err)?;
+                batch
+                    .add(*t, pos as i32, &[0], pos == last)
+                    .map_err(gen_err)?;
             }
             ctx.decode(&mut batch).map_err(gen_err)?;
         }
 
         let mut chain = Vec::new();
         if sp.repeat_penalty > 1.0 {
-            chain.push(LlamaSampler::penalties(model.n_vocab(), 64, sp.repeat_penalty, 0.0, 0.0));
+            chain.push(LlamaSampler::penalties(
+                model.n_vocab(),
+                64,
+                sp.repeat_penalty,
+                0.0,
+                0.0,
+            ));
         }
         if let Some(g) = sp.grammar.as_deref() {
             chain.push(LlamaSampler::grammar(model, g, "root").map_err(gen_err)?);
@@ -138,7 +150,11 @@ impl Engine for LlamaEngine {
                 if !on_token(&piece) {
                     break;
                 }
-                if sp.stop.iter().any(|s| !s.is_empty() && text.ends_with(s.as_str())) {
+                if sp
+                    .stop
+                    .iter()
+                    .any(|s| !s.is_empty() && text.ends_with(s.as_str()))
+                {
                     break;
                 }
             }

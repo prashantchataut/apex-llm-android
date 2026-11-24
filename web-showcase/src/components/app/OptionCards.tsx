@@ -52,7 +52,7 @@ export function OptionCards({ question, options, answer }: { question: string; o
   return (
     <div role="radiogroup" aria-label={question} onKeyDown={onKey} className="glass-dark rounded-[22px] p-3.5">
       <div className="mb-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
-        <Icon name="sparkle" size={14} /> Quick question
+        <Icon name="prism" size={14} /> Quick question
       </div>
       <p className="mb-3 text-[15px] font-medium text-white">
         <RichInline text={question} />

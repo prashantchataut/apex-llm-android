@@ -1,6 +1,10 @@
 # PROGRESS
 
-## Session 2 — themes, onboarding, image/video models, QA, CI
+## Session 3 — brand, onboarding, showcase, visual proof
+**Done (verified):** Apex Tensor Prism logo + launcher assets; 4-scene animated onboarding with replay; Live Lab on the landing page; `sk-apex-` key prefix end-to-end; Rust fmt/clippy/test green; 20 headless screenshots in `docs/qa-session-3/`.
+**Not done:** SQLite persistence, Tauri/Android build, device testing, `icon.icns`. See `.agent/STATE.md`.
+
+ession 2 — themes, onboarding, image/video models, QA, CI
 
 **Done (verified)**
 - 6 themes x light/dark + System mode, persisted; Appearance sheet; no-flash boot.

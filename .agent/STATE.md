@@ -1,4 +1,44 @@
-# STATE — last updated: end of Session 2
+# STATE — last updated: end of Session 3
+
+## [SESSION 3 — WHAT ACTUALLY HAPPENED]
+PR #1 was already merged, so work is on `feat/session-3-polish-and-pr` (new PR).
+
+### VERIFIED (run in this sandbox)
+- `tsc --noEmit` + `next build` (web-showcase) pass; root Vite preview (`dist/index.html`) builds and typechecks.
+- `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`: pass (Linux x86_64). Removed unused `tower-http` dep from cortex-server.
+- Headless Chromium (Playwright) renders at 390x844 and 1440x900 @2x, dark scheme: 20 screenshots in `docs/qa-session-3/`. Defects found by eye and fixed: clipped 4th fan card, wrapped telemetry labels, scrolled title in scan scene, orphaned key character, duplicate-looking tab icons, `sk-pocket` copy, overlapping sticky nav in lab capture, clipped fan values on the Models screen.
+
+### DONE (UI)
+- **Apex Tensor Prism** (`components/brand/ApexLogo.tsx`): isometric split cube, 6 facets. States: `idle` (specular sweep), `scanning`/`thinking` (facets separate along their axis, staggered, `cubic-bezier(0.22,1,0.36,1)`), `monochrome` (currentColor stencil). `ApexTile` for app-icon tiles. `bolt` and `sparkle` glyphs deleted from the icon set (sparkle usages -> `prism` glyph).
+- Launcher assets regenerated from the same facet geometry: all PNGs under `app-ui/src-tauri/icons` and Android `mipmap-*`, adaptive background `#050507`, `icon.ico`, `web-showcase/src/app/icon.svg`, `docs/apex-mark.svg`. **`icon.icns` NOT regenerated (STUB)**; Android icons not verified on a device.
+- **Onboarding rewrite** (4 scenes, spring 320/26): (1) hairline grid draws in via pathLength + `+` crosshairs, prism assembles, 100%->35% type with blur-to-sharp; (2) `SiliconScan`: beam sweeps schematic, 4 telemetry cards fan to -12/-5/+6/+14 deg, 80 ms stagger, quant badge computed by `recommend()`; (3) four looks (Obsidian Aurora, VisionOS Spatial Glass, Swiss Grid, Adaptive Daylight = Paper + System mode) morph the canvas live, four workflow cards with press compression + check badges; (4) tilt-on-pointer flip key card + starter queue. **Replay onboarding** button in the Appearance sheet.
+- Landing: prism branding, new **Live Lab** (`#lab`): page-wide theme switch, silicon scan, scripted reasoning + KaTeX + clickable MCQ.
+- Root Vite preview (`/home/user/sandbox`) is a copy of `web-showcase/src` (`#/app` = full-screen app).
+
+### HONEST CAVEATS
+- "16 MB Parakeet": the verified catalog entry is **Parakeet CTC small, ~25 MB** (`lib/models.ts`). The UI shows the catalog value, not 16 MB. UNVERIFIED which build is 16 MB.
+- Optional cloud-provider key step was removed from onboarding (the 4-scene spec has no slot). `provider_key_set` is still STUB and unused there.
+- Onboarding key: calls Tauri `key_create` (exists, returns `{key, record}`), falls back to WebCrypto in a browser. Rust vault prefix changed `sk-pocket-` -> `sk-apex-` (tests pass).
+- App-wide animation audit was partial: tab switch, sheets and onboarding use springs; Hub/Server/Studio internals were only visually inspected, not refactored.
+- Tauri build, Android build, real device: NOT run. `android-apk.yml` never executed (UNVERIFIED).
+
+### NOT DONE (Phase 4 — STUB / carried to Session 4)
+- **SQLite (`rusqlite` bundled) persistence: not started.** No `rusqlite` in any Cargo.toml.
+- Tauri commands the UI needs that exist: `device_profile, settings_get/set, model_list/load, chat_stream, hf_search, hf_download, hf_pause, server_status/start/stop, key_create/list/revoke, voice_status`. They compile only as far as `cargo check` of crates; `app-ui/src-tauri` itself was not built here. Names differ from the prompt (`hardware_profile_get`, `server_control`, `api_key_*`): not renamed.
+- `/api/pull`, `/v1/chat/completions` end-to-end, `ThinkParser` vs real model output: unit-tested only; not run against a real model here.
+
+## [SESSION 4 ROADMAP]
+1. Build `app-ui/src-tauri` on CI (`cargo check`), run `android-apk.yml`, publish APK.
+2. SQLite (rusqlite bundled): chats, think blocks, theme, onboarding, model registry, key hashes.
+3. Real `hf_download`/`chat_stream` replacing simulated paths; benchmark llama.cpp on arm64.
+4. Regenerate `icon.icns`; device-test adaptive icon and onboarding perf (blur filters on low-end GPUs).
+5. Confirm Parakeet 16 MB artifact URL/size; contrast audit for all palettes; `/api/pull` + mDNS.
+6. Rotate the PAT (see below).
+
+## [SECURITY NOTE]
+The PAT was pasted into chat again (3rd session). **Revoke it** and use a fine-grained token. This session passed it only via `http.extraheader`; it is not in any remote URL or file.
+
+---- Previous state (end of Session 2) ----
 
 ## [COMPLETED IN SESSION 2]
 
