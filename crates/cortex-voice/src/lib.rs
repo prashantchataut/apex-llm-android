@@ -46,9 +46,30 @@ pub struct VoiceModel {
 
 /// Installable ASR models (UNVERIFIED sizes — see ARCHITECTURE.md §Voice).
 pub const CATALOG: &[VoiceModel] = &[
-    VoiceModel { id: "moonshine-tiny-int8", name: "Moonshine Tiny", family: "Moonshine", approx_mb: 27, languages: "en", verified: false },
-    VoiceModel { id: "whisper-tiny-int8", name: "Whisper Tiny", family: "Whisper", approx_mb: 40, languages: "multi", verified: false },
-    VoiceModel { id: "parakeet-ctc-int8", name: "Parakeet CTC (small)", family: "Parakeet", approx_mb: 25, languages: "en", verified: false },
+    VoiceModel {
+        id: "moonshine-tiny-int8",
+        name: "Moonshine Tiny",
+        family: "Moonshine",
+        approx_mb: 27,
+        languages: "en",
+        verified: false,
+    },
+    VoiceModel {
+        id: "whisper-tiny-int8",
+        name: "Whisper Tiny",
+        family: "Whisper",
+        approx_mb: 40,
+        languages: "multi",
+        verified: false,
+    },
+    VoiceModel {
+        id: "parakeet-ctc-int8",
+        name: "Parakeet CTC (small)",
+        family: "Parakeet",
+        approx_mb: 25,
+        languages: "en",
+        verified: false,
+    },
 ];
 
 /// Energy VAD with hangover; operates on 10 ms frames.
@@ -61,7 +82,11 @@ pub struct Vad {
 
 impl Vad {
     pub fn new(threshold: f32, hangover_ms: u32) -> Self {
-        Self { threshold, hangover_frames: hangover_ms / 10, left: 0 }
+        Self {
+            threshold,
+            hangover_frames: hangover_ms / 10,
+            left: 0,
+        }
     }
     pub fn is_speech(&mut self, frame: &[f32]) -> bool {
         let rms = rms(frame);
@@ -122,13 +147,18 @@ mod tests {
     use super::*;
 
     fn sine(freq: f32, n: usize) -> Vec<f32> {
-        (0..n).map(|i| 0.8 * (2.0 * PI * freq * i as f32 / SAMPLE_RATE as f32).sin()).collect()
+        (0..n)
+            .map(|i| 0.8 * (2.0 * PI * freq * i as f32 / SAMPLE_RATE as f32).sin())
+            .collect()
     }
 
     #[test]
     fn catalog_is_in_target_size_class() {
         assert!(CATALOG.iter().all(|m| (16..=60).contains(&m.approx_mb)));
-        assert!(CATALOG.iter().all(|m| !m.verified), "flip verified only after checking upstream");
+        assert!(
+            CATALOG.iter().all(|m| !m.verified),
+            "flip verified only after checking upstream"
+        );
     }
 
     #[test]
@@ -144,7 +174,11 @@ mod tests {
     #[test]
     fn spectrum_peaks_near_tone() {
         let bins = spectrum_bins(&sine(1000.0, 512), 32);
-        let (peak, _) = bins.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).unwrap();
+        let (peak, _) = bins
+            .iter()
+            .enumerate()
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .unwrap();
         // 1 kHz sits at t = ln(1000/80)/ln(7000/80) ≈ 0.565 → bin ≈ 18
         assert!((16..=20).contains(&peak), "peak bin was {peak}");
         assert!(bins.iter().all(|b| (0.0..=1.0).contains(b)));

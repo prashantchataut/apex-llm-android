@@ -60,7 +60,11 @@ pub fn plan_segments(total: u64, n: u32) -> Vec<Segment> {
     let mut start = 0;
     for i in 0..n {
         let len = base + u64::from(i < rem);
-        out.push(Segment { start, end: start + len - 1, done: 0 });
+        out.push(Segment {
+            start,
+            end: start + len - 1,
+            done: 0,
+        });
         start += len;
     }
     out
@@ -73,7 +77,10 @@ pub struct DownloadOptions {
 
 impl Default for DownloadOptions {
     fn default() -> Self {
-        Self { segments: 4, expected_sha256: None }
+        Self {
+            segments: 4,
+            expected_sha256: None,
+        }
     }
 }
 
@@ -90,7 +97,9 @@ fn sidecar_path(dest: &Path) -> PathBuf {
 
 async fn content_length(client: &reqwest::Client, url: &str) -> Result<u64, HubError> {
     let resp = client.head(url).send().await?.error_for_status()?;
-    resp.content_length().filter(|l| *l > 0).ok_or(HubError::NoLength)
+    resp.content_length()
+        .filter(|l| *l > 0)
+        .ok_or(HubError::NoLength)
 }
 
 pub async fn sha256_file(path: &Path) -> Result<String, HubError> {
@@ -119,13 +128,26 @@ pub async fn download(
     let side = sidecar_path(dest);
 
     // Resume or plan.
-    let state: Sidecar = match tokio::fs::read(&side).await.ok().and_then(|b| serde_json::from_slice::<Sidecar>(&b).ok()) {
+    let state: Sidecar = match tokio::fs::read(&side)
+        .await
+        .ok()
+        .and_then(|b| serde_json::from_slice::<Sidecar>(&b).ok())
+    {
         Some(s) if s.url == url && part.exists() => s,
         _ => {
             let total = content_length(client, url).await?;
-            let f = OpenOptions::new().create(true).write(true).truncate(true).open(&part).await?;
+            let f = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&part)
+                .await?;
             f.set_len(total).await?;
-            Sidecar { url: url.to_string(), total, segments: plan_segments(total, opts.segments) }
+            Sidecar {
+                url: url.to_string(),
+                total,
+                segments: plan_segments(total, opts.segments),
+            }
         }
     };
     let total = state.total;
@@ -139,7 +161,8 @@ pub async fn download(
         if seg.remaining() == 0 {
             continue;
         }
-        let (client, url, part, side) = (client.clone(), url.to_string(), part.clone(), side.clone());
+        let (client, url, part, side) =
+            (client.clone(), url.to_string(), part.clone(), side.clone());
         let (counter, progress, shared) = (counter.clone(), progress.clone(), shared.clone());
         tasks.push(tokio::spawn(async move {
             let from = seg.start + seg.done;
@@ -175,7 +198,8 @@ pub async fn download(
     }
     for t in tasks {
         // JoinError → io error; inner HubError propagated.
-        t.await.map_err(|e| HubError::Io(std::io::Error::other(e)))??;
+        t.await
+            .map_err(|e| HubError::Io(std::io::Error::other(e)))??;
     }
 
     if let Some(expected) = opts.expected_sha256 {

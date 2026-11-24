@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "web-showcase/**"
+      - "packages/design-system/**"
       - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
@@ -30,6 +31,9 @@ jobs:
       - uses: actions/configure-pages@v5
       - name: Install
         run: npm ci
+        working-directory: web-showcase
+      - name: Typecheck
+        run: npm run typecheck
         working-directory: web-showcase
       - name: Build static export
         run: npm run build

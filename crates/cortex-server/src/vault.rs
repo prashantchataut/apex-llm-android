@@ -13,11 +13,17 @@ use std::{
 pub const KEY_PREFIX: &str = "sk-pocket-";
 
 fn now() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 fn hash(key: &str) -> String {
-    Sha256::digest(key.as_bytes()).iter().map(|b| format!("{b:02x}")).collect()
+    Sha256::digest(key.as_bytes())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -59,8 +65,16 @@ impl KeyVault {
     /// Returns `(plaintext_key, record)`. The plaintext is never retrievable again.
     pub fn generate(&self, name: &str) -> (String, KeyRecord) {
         let mut rng = rand::thread_rng();
-        let secret: String = (&mut rng).sample_iter(&Alphanumeric).take(43).map(char::from).collect();
-        let id: String = (&mut rng).sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+        let secret: String = (&mut rng)
+            .sample_iter(&Alphanumeric)
+            .take(43)
+            .map(char::from)
+            .collect();
+        let id: String = (&mut rng)
+            .sample_iter(&Alphanumeric)
+            .take(8)
+            .map(char::from)
+            .collect();
         let key = format!("{KEY_PREFIX}{secret}");
         let rec = KeyRecord {
             id: id.clone(),
@@ -85,14 +99,21 @@ impl KeyVault {
         }
         let h = hash(presented);
         let mut keys = self.keys.lock().unwrap();
-        let rec = keys.values_mut().find(|r| !r.revoked && constant_time_eq(r.hash.as_bytes(), h.as_bytes()))?;
+        let rec = keys
+            .values_mut()
+            .find(|r| !r.revoked && constant_time_eq(r.hash.as_bytes(), h.as_bytes()))?;
         rec.last_used_at = Some(now());
         rec.requests += 1;
         Some(rec.id.clone())
     }
 
     pub fn revoke(&self, id: &str) -> bool {
-        self.keys.lock().unwrap().get_mut(id).map(|r| r.revoked = true).is_some()
+        self.keys
+            .lock()
+            .unwrap()
+            .get_mut(id)
+            .map(|r| r.revoked = true)
+            .is_some()
     }
 
     pub fn record_usage(&self, id: &str, prompt: u64, completion: u64) {
@@ -121,7 +142,13 @@ impl KeyVault {
     }
 
     pub fn log_now(&self, key_id: Option<String>, method: &str, path: &str, status: u16) {
-        self.push_log(LogEntry { ts: now(), key_id, method: method.into(), path: path.into(), status });
+        self.push_log(LogEntry {
+            ts: now(),
+            key_id,
+            method: method.into(),
+            path: path.into(),
+            status,
+        });
     }
 }
 
@@ -144,7 +171,10 @@ mod tests {
         assert_eq!(v.verify("garbage"), None);
         v.record_usage(&rec.id, 10, 20);
         let r = &v.list()[0];
-        assert_eq!((r.requests, r.prompt_tokens, r.completion_tokens), (1, 10, 20));
+        assert_eq!(
+            (r.requests, r.prompt_tokens, r.completion_tokens),
+            (1, 10, 20)
+        );
         assert!(v.revoke(&rec.id));
         assert_eq!(v.verify(&key), None);
     }

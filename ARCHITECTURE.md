@@ -99,3 +99,12 @@ OS+WebView reserve 1.2 GB → model budget `min(0.55·4.6, 0.45·8)=2.5 GB` → 
 ## 6. Delivery pipeline
 - `web-showcase` → `next build` (`output: 'export'`, `basePath=/<repo>`) → `deploy-pages.yml`.
 - Android: `cargo tauri android init` → `cargo tauri android build --target aarch64` (NDK r26+, `ANDROID_NDK_HOME`). Session 2.
+
+
+## 7. Session 2 additions
+
+### Theming
+`tokens.css` defines each palette as flat custom properties on `[data-theme][data-mode]`; any element can carry those attributes to preview a palette in place (the Appearance swatches do this). `<html>` gets the resolved mode (System resolves in JS and follows OS changes). Components never hard-code colours: Tailwind `white`/`black` map to theme ink/inverse, `ink-2`/`ink-3` carry body/secondary alpha, `--r-card` varies per theme (Swiss 6 px, Graphite 16 px).
+
+### Image / video generation (planned)
+`cortex-hf-hub::media` holds the catalog and scoring. Planned engines: stable-diffusion.cpp (GGUF; SD-Turbo, SD 1.5, SDXL-Turbo, FLUX, Wan 2.1, LTX-Video; CPU/Vulkan), MNN (SD 1.5 CPU zips) and QNN (Snapdragon NPU zips, `needs_npu`). Diffusion runs with the LLM unloaded, hence the larger RAM share in `media_budget_bytes`. Engine trait and `media_generate` command are not written yet.

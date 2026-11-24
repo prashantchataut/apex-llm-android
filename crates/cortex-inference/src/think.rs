@@ -36,7 +36,11 @@ impl ThinkParser {
         if s.is_empty() {
             return;
         }
-        out.push(if self.inside { ThinkEvent::Thought(s.to_string()) } else { ThinkEvent::Text(s.to_string()) });
+        out.push(if self.inside {
+            ThinkEvent::Thought(s.to_string())
+        } else {
+            ThinkEvent::Text(s.to_string())
+        });
     }
 
     pub fn feed(&mut self, chunk: &str) -> Vec<ThinkEvent> {
@@ -48,12 +52,19 @@ impl ThinkParser {
                 let before: String = self.buf.drain(..i).collect();
                 self.emit(&before, &mut out);
                 self.buf.drain(..tag.len());
-                out.push(if self.inside { ThinkEvent::ThinkEnd } else { ThinkEvent::ThinkStart });
+                out.push(if self.inside {
+                    ThinkEvent::ThinkEnd
+                } else {
+                    ThinkEvent::ThinkStart
+                });
                 self.inside = !self.inside;
                 continue;
             }
             // Hold back the longest suffix that is a proper prefix of `tag`.
-            let hold = (1..tag.len()).rev().find(|&k| k <= self.buf.len() && self.buf.ends_with(&tag[..k])).unwrap_or(0);
+            let hold = (1..tag.len())
+                .rev()
+                .find(|&k| k <= self.buf.len() && self.buf.ends_with(&tag[..k]))
+                .unwrap_or(0);
             let cut = self.buf.len() - hold;
             let ready: String = self.buf.drain(..cut).collect();
             self.emit(&ready, &mut out);
@@ -97,13 +108,29 @@ mod tests {
 
     #[test]
     fn simple() {
-        assert_eq!(run(&["<think>hmm</think>42"]), [ThinkStart, Thought("hmm".into()), ThinkEnd, Text("42".into())]);
+        assert_eq!(
+            run(&["<think>hmm</think>42"]),
+            [
+                ThinkStart,
+                Thought("hmm".into()),
+                ThinkEnd,
+                Text("42".into())
+            ]
+        );
     }
 
     #[test]
     fn tags_split_across_chunks() {
         let ev = run(&["<th", "ink>re", "ason</thi", "nk>ans", "wer"]);
-        assert_eq!(ev, [ThinkStart, Thought("reason".into()), ThinkEnd, Text("answer".into())]);
+        assert_eq!(
+            ev,
+            [
+                ThinkStart,
+                Thought("reason".into()),
+                ThinkEnd,
+                Text("answer".into())
+            ]
+        );
     }
 
     #[test]
@@ -113,11 +140,22 @@ mod tests {
 
     #[test]
     fn unterminated_think_flushes_as_thought() {
-        assert_eq!(run(&["<think>still going"]), [ThinkStart, Thought("still going".into())]);
+        assert_eq!(
+            run(&["<think>still going"]),
+            [ThinkStart, Thought("still going".into())]
+        );
     }
 
     #[test]
     fn multibyte_is_safe() {
-        assert_eq!(run(&["<think>日本", "語</think>✓"]), [ThinkStart, Thought("日本語".into()), ThinkEnd, Text("✓".into())]);
+        assert_eq!(
+            run(&["<think>日本", "語</think>✓"]),
+            [
+                ThinkStart,
+                Thought("日本語".into()),
+                ThinkEnd,
+                Text("✓".into())
+            ]
+        );
     }
 }

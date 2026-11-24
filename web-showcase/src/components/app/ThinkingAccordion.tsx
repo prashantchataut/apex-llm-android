@@ -34,9 +34,9 @@ export function ThinkingAccordion({ steps, shown, startedAt, endedAt }: { steps:
       >
         <span className="orb" data-done={!thinking} />
         <span className="tnum flex-1 text-[13px] font-medium">
-          {thinking ? <span className="shimmer-text">Thinking… {elapsed.toFixed(1)}s</span> : <span className="text-white/80">Thought for {elapsed.toFixed(1)}s</span>}
+          {thinking ? <span className="shimmer-text">Thinking… {elapsed.toFixed(1)}s</span> : <span className="text-ink-2">Thought for {elapsed.toFixed(1)}s</span>}
         </span>
-        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ type: "spring", stiffness: 300, damping: 24 }} className="text-white/50">
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ type: "spring", stiffness: 300, damping: 24 }} className="text-ink-3">
           <Icon name="chevron" size={18} />
         </motion.span>
       </button>
@@ -55,11 +55,11 @@ export function ThinkingAccordion({ steps, shown, startedAt, endedAt }: { steps:
               {steps.slice(0, shown).map((s, i) => {
                 const active = thinking && i === shown - 1;
                 return (
-                  <motion.li key={s} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} className="relative text-[13px] text-white/70">
+                  <motion.li key={s} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} className="relative text-[13px] text-ink-2">
                     <span
-                      className={`absolute -left-6 top-[3px] grid h-[14px] w-[14px] place-items-center rounded-full border ${active ? "border-sky-300/70 bg-sky-400/30 shadow-[0_0_12px_rgba(56,189,248,0.7)]" : "border-emerald-300/50 bg-emerald-400/20"}`}
+                      className={`absolute -left-6 top-[3px] grid h-[14px] w-[14px] place-items-center rounded-full border ${active ? "border-accent-2/70 bg-accent-2/30 shadow-[0_0_12px_rgba(56,189,248,0.7)]" : "border-ok/50 bg-ok/20"}`}
                     >
-                      {!active && <Icon name="check" size={9} strokeWidth={3} className="text-emerald-200" />}
+                      {!active && <Icon name="check" size={9} strokeWidth={3} className="text-ok" />}
                     </span>
                     {s}
                   </motion.li>

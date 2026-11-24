@@ -20,3 +20,24 @@
 
 ### [SKILL: native-rust-systems]
 - Wrote 6 crates with trait seams + unit tests. Not compilable in the sandbox (no cargo); verified afterwards by the Rust CI workflow on GitHub (check + 37 tests green).
+
+## Session 2 (2026-11-24)
+
+> Same honesty note: no skill-loader in this runtime; the protocols were applied manually.
+
+### [SKILL: design-taste-frontend / hallmark-ui / open-design-skill]
+- Theme system: `packages/design-system/tokens.css` now holds 6 themes x light/dark as flat custom properties
+  (`data-theme` + `data-mode`). Tailwind `white`/`black` are re-pointed at theme ink/inverse in `globals.css`,
+  plus `ink-2`/`ink-3` text tokens so body copy stays >= 4.5:1 in every palette (checked by eye in screenshots, not with a contrast tool: UNVERIFIED numerically).
+- Appearance sheet (spring bottom sheet, drag to dismiss, live FanStack preview, swatches rendered with each theme's own tokens).
+- Onboarding: Swiss progress rail with `+` markers (hallmark), 5 steps, FanStack device read-out, skippable at every step.
+- Studio screen: denoising timeline (hallmark). Hub: Text / Image / Video / Voice segments.
+- Browser QA with Playwright: found and fixed clipped fan cards, 40 px touch targets, hero chip overlap, hub header overlap.
+
+### [SKILL: native-rust-systems]
+- `cortex-hf-hub::media` (catalog + `score_media`/`best_media`, 5 tests). `cargo fmt`, `cargo clippy --workspace --all-targets -D warnings`
+  and `cargo test --workspace` were run locally with a fresh rustup toolchain and pass.
+- Tauri commands `settings_get/settings_set/media_catalog` written but the Tauri crate was NOT built (UNVERIFIED).
+
+### [SKILL: rea-reverse-engineering]
+- Not used this session. HF model repos for the media catalog were found via the public HF API; sizes read from the tree endpoint.

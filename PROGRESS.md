@@ -1,16 +1,20 @@
 # PROGRESS
 
-## Session 1 — Foundation setup completed. Next: visual QA, clippy/fmt, Android/Tauri build, llama.cpp backend.
+## Session 2 — themes, onboarding, image/video models, QA, CI
 
-**Done**
-- Monorepo: 6 Rust crates + Tauri v2 shell skeleton + Next.js showcase/app UI + design tokens + docs + CI.
-- UI: Home (A), Chat (D), Model Hub (B), Server & Keys, landing (C) — shared components, spring motion, KaTeX, MCQ cards, thinking timeline.
-- REA of PocketLLM and local-llms-on-android → `ARCHITECTURE.md` §3.
+**Done (verified)**
+- 6 themes x light/dark + System mode, persisted; Appearance sheet; no-flash boot.
+- First-run onboarding (use cases, look, device, model picks, optional key).
+- Image + video model catalog (HF sizes verified), device scoring in TS and Rust, Models segments, Studio tab.
+- Copy rewrite; visual QA in a real browser with fixes; screenshots in `docs/screens/`.
+- Rust: fmt + clippy `-D warnings` + tests green locally; CI updated; web typecheck in CI.
 
-**Caveats (read these)**
-- Rust workspace is green on Linux CI (37 tests) but untested on Android; Tauri shell (`app-ui/src-tauri`) was never built.
-- Web "model", downloads, traffic and dictation are simulated.
-- UiHall / 21st.dev could not be scraped over plain HTTP (client-rendered); primitives were re-derived, not copied.
-- UI is live on GitHub Pages but has not been visually reviewed in a browser by the author.
+**Caveats**
+- No generation engine, no Android build, Tauri crate unbuilt; new Tauri commands UNVERIFIED.
+- Companion sizes, RAM and ETAs for media models are estimates.
+- Image/video output in the web build is placeholder art.
 
-**Next session focus** → `.agent/STATE.md` § NEXT PRIORITIES.
+**Next** -> `.agent/STATE.md` § NEXT PRIORITIES FOR SESSION 3.
+
+## Session 1 — Foundation
+Monorepo: 6 Rust crates, Tauri v2 shell skeleton, Next.js showcase/app UI, design tokens, docs, CI. REA of PocketLLM and local-llms-on-android in `ARCHITECTURE.md` §3.

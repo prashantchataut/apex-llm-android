@@ -11,3 +11,4 @@ app-ui/src-tauri/gen/
 *.part
 *.apexdl
 *.gguf
+web-showcase/next-env.d.ts

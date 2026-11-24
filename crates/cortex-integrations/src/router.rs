@@ -52,7 +52,10 @@ impl Provider {
     }
     pub fn auth_headers(&self, key: &str) -> Vec<(&'static str, String)> {
         match self {
-            Provider::Anthropic => vec![("x-api-key", key.to_string()), ("anthropic-version", "2023-06-01".to_string())],
+            Provider::Anthropic => vec![
+                ("x-api-key", key.to_string()),
+                ("anthropic-version", "2023-06-01".to_string()),
+            ],
             _ => vec![("authorization", format!("Bearer {key}"))],
         }
     }
@@ -83,12 +86,21 @@ impl ProviderRouter {
     }
 
     pub fn resolve(&self, model_id: &str) -> Route {
-        let (provider, model) = match model_id.split_once(':').and_then(|(p, m)| Provider::parse_prefix(p).map(|p| (p, m))) {
+        let (provider, model) = match model_id
+            .split_once(':')
+            .and_then(|(p, m)| Provider::parse_prefix(p).map(|p| (p, m)))
+        {
             Some((p, m)) => (p, m.to_string()),
             None => (Provider::Local, model_id.to_string()),
         };
-        let url = provider.base_url().map(|b| format!("{b}{}", provider.chat_path()));
-        Route { provider, model, url }
+        let url = provider
+            .base_url()
+            .map(|b| format!("{b}{}", provider.chat_path()));
+        Route {
+            provider,
+            model,
+            url,
+        }
     }
 }
 
@@ -100,16 +112,28 @@ mod tests {
     fn routes_by_prefix() {
         let r = ProviderRouter::new();
         let a = r.resolve("groq:llama-3.3-70b-versatile");
-        assert_eq!((a.provider, a.model.as_str()), (Provider::Groq, "llama-3.3-70b-versatile"));
-        assert_eq!(a.url.as_deref(), Some("https://api.groq.com/openai/v1/chat/completions"));
-        assert_eq!(r.resolve("anthropic:claude-x").url.as_deref(), Some("https://api.anthropic.com/v1/messages"));
+        assert_eq!(
+            (a.provider, a.model.as_str()),
+            (Provider::Groq, "llama-3.3-70b-versatile")
+        );
+        assert_eq!(
+            a.url.as_deref(),
+            Some("https://api.groq.com/openai/v1/chat/completions")
+        );
+        assert_eq!(
+            r.resolve("anthropic:claude-x").url.as_deref(),
+            Some("https://api.anthropic.com/v1/messages")
+        );
     }
 
     #[test]
     fn ollama_style_tags_stay_local() {
         let r = ProviderRouter::new();
         let a = r.resolve("qwen2.5:3b");
-        assert_eq!((a.provider, a.model.as_str(), a.url), (Provider::Local, "qwen2.5:3b", None));
+        assert_eq!(
+            (a.provider, a.model.as_str(), a.url),
+            (Provider::Local, "qwen2.5:3b", None)
+        );
         assert_eq!(r.resolve("llama3").provider, Provider::Local);
     }
 

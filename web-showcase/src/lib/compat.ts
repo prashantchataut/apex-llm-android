@@ -17,6 +17,10 @@ export interface DeviceProfile {
   vulkan: boolean;
   dotprod: boolean;
   cores: number;
+  /** Hexagon / QNN-class NPU available to apps. */
+  npu: boolean;
+  /** Relative CPU throughput, 1.0 = mid-range 8 GB phone (used only for ETAs). */
+  speed: number;
 }
 
 export interface Recommendation {
@@ -29,9 +33,9 @@ export interface Recommendation {
 }
 
 export const DEVICES: DeviceProfile[] = [
-  { label: "4 GB budget", totalGB: 4, availGB: 1.9, freeStorageGB: 18, vulkan: false, dotprod: false, cores: 8 },
-  { label: "8 GB mid", totalGB: 7.63, availGB: 4.6, freeStorageGB: 64, vulkan: true, dotprod: true, cores: 8 },
-  { label: "12 GB flagship", totalGB: 11.4, availGB: 7.8, freeStorageGB: 180, vulkan: true, dotprod: true, cores: 8 },
+  { label: "4 GB budget", totalGB: 4, availGB: 1.9, freeStorageGB: 18, vulkan: false, dotprod: false, cores: 8, npu: false, speed: 0.4 },
+  { label: "8 GB mid", totalGB: 7.63, availGB: 4.6, freeStorageGB: 64, vulkan: true, dotprod: true, cores: 8, npu: false, speed: 1 },
+  { label: "12 GB flagship", totalGB: 11.4, availGB: 7.8, freeStorageGB: 180, vulkan: true, dotprod: true, cores: 8, npu: true, speed: 1.9 },
 ];
 
 export function recommend(d: DeviceProfile): Recommendation {
@@ -70,9 +74,9 @@ export function score(d: DeviceProfile, fileBytes: number, kvBytes: number): Com
 }
 
 export const BADGE: Record<Compat, { label: string; tone: string }> = {
-  optimal: { label: "⚡ Optimal for Your Phone", tone: "text-emerald-300 bg-emerald-400/10 border-emerald-300/25" },
-  heavy: { label: "⚠️ Heavy (High RAM)", tone: "text-amber-300 bg-amber-400/10 border-amber-300/25" },
-  incompatible: { label: "❌ Incompatible", tone: "text-rose-300 bg-rose-400/10 border-rose-300/25" },
+  optimal: { label: "Fits well", tone: "text-ok bg-ok/10 border-ok/30" },
+  heavy: { label: "Heavy · high RAM", tone: "text-warn bg-warn/10 border-warn/30" },
+  incompatible: { label: "Won’t fit", tone: "text-bad bg-bad/10 border-bad/30" },
 };
 
 export function fmtBytes(b: number): string {

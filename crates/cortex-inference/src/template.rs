@@ -10,12 +10,13 @@ pub struct Message {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChatTemplate {
-    ChatMl,  // Qwen, SmolLM2, many fine-tunes
-    Llama3,  // Llama 3.x
-    Gemma,   // Gemma 2/3 (no system role: folded into first user turn)
+    ChatMl, // Qwen, SmolLM2, many fine-tunes
+    Llama3, // Llama 3.x
+    Gemma,  // Gemma 2/3 (no system role: folded into first user turn)
 }
 
-pub const APEX_SYSTEM_PROMPT: &str = "You are Apex, a private on-device assistant. Be concise and exact. \
+pub const APEX_SYSTEM_PROMPT: &str =
+    "You are Apex, a private on-device assistant. Be concise and exact. \
 Use $...$ for inline math and $$...$$ for block math. When you need the user to choose, \
 reply with a JSON object {\"question\": string, \"options\": string[]}.";
 
@@ -45,7 +46,10 @@ impl ChatTemplate {
             Self::Llama3 => {
                 s += "<|begin_of_text|>";
                 for m in msgs {
-                    s += &format!("<|start_header_id|>{}<|end_header_id|>\n\n{}<|eot_id|>", m.role, m.content);
+                    s += &format!(
+                        "<|start_header_id|>{}<|end_header_id|>\n\n{}<|eot_id|>",
+                        m.role, m.content
+                    );
                 }
                 s += "<|start_header_id|>assistant<|end_header_id|>\n\n";
             }
@@ -56,7 +60,11 @@ impl ChatTemplate {
                         "system" => pending_system = format!("{}\n\n", m.content),
                         r => {
                             let role = if r == "assistant" { "model" } else { "user" };
-                            let body = if role == "user" { format!("{}{}", std::mem::take(&mut pending_system), m.content) } else { m.content.clone() };
+                            let body = if role == "user" {
+                                format!("{}{}", std::mem::take(&mut pending_system), m.content)
+                            } else {
+                                m.content.clone()
+                            };
                             s += &format!("<start_of_turn>{role}\n{body}<end_of_turn>\n");
                         }
                     }
@@ -81,12 +89,18 @@ mod tests {
     use super::*;
 
     fn m(r: &str, c: &str) -> Message {
-        Message { role: r.into(), content: c.into() }
+        Message {
+            role: r.into(),
+            content: c.into(),
+        }
     }
 
     #[test]
     fn guess_templates() {
-        assert_eq!(ChatTemplate::guess("Llama-3.2-3B-Instruct-Q4_K_M.gguf"), ChatTemplate::Llama3);
+        assert_eq!(
+            ChatTemplate::guess("Llama-3.2-3B-Instruct-Q4_K_M.gguf"),
+            ChatTemplate::Llama3
+        );
         assert_eq!(ChatTemplate::guess("gemma-2-2b-it"), ChatTemplate::Gemma);
         assert_eq!(ChatTemplate::guess("qwen2.5-3b"), ChatTemplate::ChatMl);
     }

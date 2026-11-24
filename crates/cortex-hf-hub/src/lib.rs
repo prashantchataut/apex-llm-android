@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 pub mod download;
+pub mod media;
 pub mod scoring;
 
 use serde::{Deserialize, Serialize};
@@ -51,7 +52,10 @@ impl ModelFile {
         self.filename.contains("-of-0")
     }
     pub fn resolve_url(&self, repo_id: &str) -> String {
-        format!("https://huggingface.co/{repo_id}/resolve/main/{}?download=true", self.filename)
+        format!(
+            "https://huggingface.co/{repo_id}/resolve/main/{}?download=true",
+            self.filename
+        )
     }
 }
 
@@ -96,11 +100,18 @@ pub struct HfClient {
 
 impl HfClient {
     pub fn new(token: Option<String>) -> Self {
-        Self { http: reqwest::Client::new(), base: "https://huggingface.co".into(), token }
+        Self {
+            http: reqwest::Client::new(),
+            base: "https://huggingface.co".into(),
+            token,
+        }
     }
 
     fn get(&self, url: &str) -> reqwest::RequestBuilder {
-        let r = self.http.get(url).header("User-Agent", "apex-llm-android/0.1");
+        let r = self
+            .http
+            .get(url)
+            .header("User-Agent", "apex-llm-android/0.1");
         match &self.token {
             Some(t) => r.bearer_auth(t),
             None => r,
@@ -112,7 +123,12 @@ impl HfClient {
         let url = format!("{}/api/models", self.base);
         let hits: Vec<SearchHit> = self
             .get(&url)
-            .query(&[("search", query), ("filter", "gguf"), ("sort", "downloads"), ("limit", &limit.to_string())])
+            .query(&[
+                ("search", query),
+                ("filter", "gguf"),
+                ("sort", "downloads"),
+                ("limit", &limit.to_string()),
+            ])
             .send()
             .await?
             .error_for_status()?
@@ -120,14 +136,25 @@ impl HfClient {
             .await?;
         Ok(hits
             .into_iter()
-            .map(|h| ModelCard { repo_id: h.id, downloads: h.downloads, likes: h.likes, files: vec![] })
+            .map(|h| ModelCard {
+                repo_id: h.id,
+                downloads: h.downloads,
+                likes: h.likes,
+                files: vec![],
+            })
             .collect())
     }
 
     /// List `.gguf` files (single-file only) of a repo with sizes + sha256.
     pub async fn files(&self, repo_id: &str) -> Result<Vec<ModelFile>, HubError> {
         let url = format!("{}/api/models/{repo_id}/tree/main", self.base);
-        let entries: Vec<TreeEntry> = self.get(&url).send().await?.error_for_status()?.json().await?;
+        let entries: Vec<TreeEntry> = self
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
         Ok(entries
             .into_iter()
             .filter(|e| e.kind == "file")
@@ -147,10 +174,20 @@ mod tests {
 
     #[test]
     fn gguf_filters() {
-        let f = ModelFile { filename: "m-Q4_K_M.gguf".into(), size_bytes: 1, sha256: None };
+        let f = ModelFile {
+            filename: "m-Q4_K_M.gguf".into(),
+            size_bytes: 1,
+            sha256: None,
+        };
         assert!(f.is_gguf() && !f.is_split());
-        let s = ModelFile { filename: "m-00001-of-00003.gguf".into(), size_bytes: 1, sha256: None };
+        let s = ModelFile {
+            filename: "m-00001-of-00003.gguf".into(),
+            size_bytes: 1,
+            sha256: None,
+        };
         assert!(s.is_split());
-        assert!(f.resolve_url("a/b").starts_with("https://huggingface.co/a/b/resolve/main/"));
+        assert!(f
+            .resolve_url("a/b")
+            .starts_with("https://huggingface.co/a/b/resolve/main/"));
     }
 }

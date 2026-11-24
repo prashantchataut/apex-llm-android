@@ -27,6 +27,15 @@ const PATHS = {
   shield: "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z",
   code: "M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16",
   book: "M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19V5",
+  sun: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4",
+  moon: "M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z",
+  monitor: "M3 5h18v11H3zM8 20h8M12 16v4",
+  image: "M4 5h16v14H4zM4 16l5-5 4 4 3-3 4 4M9 9h.01",
+  film: "M4 4h16v16H4zM8 4v16M16 4v16M4 9h4M4 15h4M16 9h4M16 15h4",
+  sliders: "M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6",
+  swatch: "M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2 0-1.3-1-1.5-1-2.7 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3zM7.5 11h.01M10 7.5h.01M14.5 7.5h.01",
+  plus: "M12 5v14M5 12h14",
+  back: "M15 6l-6 6 6 6",
 } as const;
 
 export type IconName = keyof typeof PATHS;

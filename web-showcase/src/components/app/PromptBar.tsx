@@ -41,9 +41,9 @@ export function PromptBar({
         {voice.recording ? (
           <motion.div key="rec" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="min-w-0 flex-1">
             <Waveform active height={30} />
-            <div className="mt-0.5 flex items-center gap-2 text-[11px] text-white/55">
+            <div className="mt-0.5 flex items-center gap-2 text-[11px] text-ink-3">
               <span className="truncate">{voice.transcript || "Listening…"}</span>
-              <span className="mono tnum ml-auto shrink-0 text-emerald-300/80">{voice.latencyMs} ms</span>
+              <span className="mono tnum ml-auto shrink-0 text-ok/80">{voice.latencyMs} ms</span>
             </div>
           </motion.div>
         ) : (
@@ -56,7 +56,7 @@ export function PromptBar({
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             aria-label="Prompt"
-            className="min-w-0 flex-1 bg-transparent px-1 text-[15px] text-white outline-none placeholder:text-white/35"
+            className="min-w-0 flex-1 bg-transparent px-1 text-[15px] text-white outline-none placeholder:text-ink-3"
           />
         )}
       </AnimatePresence>
@@ -65,7 +65,7 @@ export function PromptBar({
         onClick={onMic}
         aria-label={voice.recording ? "Stop dictation" : "Start voice input"}
         aria-pressed={voice.recording}
-        className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${voice.recording ? "bg-rose-500/90 text-white shadow-[0_0_24px_rgba(244,63,94,0.6)]" : "bg-white/[0.07] text-white/80"}`}
+        className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${voice.recording ? "bg-bad/90 text-white shadow-[0_0_24px_rgba(244,63,94,0.6)]" : "bg-white/[0.07] text-ink-2"}`}
       >
         <Icon name="mic" size={20} />
       </RippleButton>
@@ -73,7 +73,7 @@ export function PromptBar({
         type="submit"
         aria-label="Send"
         disabled={!value.trim() || disabled}
-        className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-black disabled:bg-white/20 disabled:text-white/40"
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-black disabled:bg-white/20 disabled:text-ink-3"
       >
         <Icon name="send" size={20} strokeWidth={2.4} />
       </RippleButton>

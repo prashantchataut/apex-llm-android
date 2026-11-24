@@ -77,5 +77,5 @@ export function AssistantBody({ text, streaming }: { text: string; streaming: bo
     }
   });
   flush("tail");
-  return <div className="space-y-3 text-[15px] leading-[1.6] text-white/80">{out}</div>;
+  return <div className="space-y-3 text-[15px] leading-[1.6] text-ink-2">{out}</div>;
 }

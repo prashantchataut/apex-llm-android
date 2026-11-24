@@ -74,8 +74,23 @@ impl Backend for EchoBackend {
         vec!["echo:latest".into()]
     }
     fn chat_stream(&self, _model: &str, messages: Vec<ChatMessage>) -> BoxStream<'static, String> {
-        let last = messages.iter().rev().find(|m| m.role == "user").map(|m| m.content.clone()).unwrap_or_default();
-        let words: Vec<String> = last.split_whitespace().enumerate().map(|(i, w)| if i == 0 { w.to_string() } else { format!(" {w}") }).collect();
+        let last = messages
+            .iter()
+            .rev()
+            .find(|m| m.role == "user")
+            .map(|m| m.content.clone())
+            .unwrap_or_default();
+        let words: Vec<String> = last
+            .split_whitespace()
+            .enumerate()
+            .map(|(i, w)| {
+                if i == 0 {
+                    w.to_string()
+                } else {
+                    format!(" {w}")
+                }
+            })
+            .collect();
         stream::iter(words).boxed()
     }
 }
@@ -88,7 +103,10 @@ pub struct ServerConfig {
 
 impl Default for ServerConfig {
     fn default() -> Self {
-        Self { require_key: true, allow_loopback_keyless: false }
+        Self {
+            require_key: true,
+            allow_loopback_keyless: false,
+        }
     }
 }
 
@@ -101,7 +119,11 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(backend: Arc<dyn Backend>, config: ServerConfig) -> Self {
-        Self { backend, vault: Arc::new(KeyVault::new()), config: Arc::new(config) }
+        Self {
+            backend,
+            vault: Arc::new(KeyVault::new()),
+            config: Arc::new(config),
+        }
     }
 }
 
@@ -111,7 +133,10 @@ pub struct KeyId(pub Option<String>);
 // ───────────────────────── helpers ─────────────────────────
 
 fn unix() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 /// RFC 3339 UTC from unix seconds (no chrono dependency).
@@ -128,14 +153,22 @@ pub fn iso(ts: u64) -> String {
     let d = doy - (153 * mp + 2) / 5 + 1;
     let m = if mp < 10 { mp + 3 } else { mp - 9 };
     let y = if m <= 2 { y + 1 } else { y };
-    format!("{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z", secs / 3600, secs % 3600 / 60, secs % 60)
+    format!(
+        "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z",
+        secs / 3600,
+        secs % 3600 / 60,
+        secs % 60
+    )
 }
 
 fn ndjson(v: Value) -> String {
     format!("{v}\n")
 }
 
-fn stream_response(content_type: &'static str, s: impl Stream<Item = String> + Send + 'static) -> Response {
+fn stream_response(
+    content_type: &'static str,
+    s: impl Stream<Item = String> + Send + 'static,
+) -> Response {
     let body = Body::from_stream(s.map(|l| Ok::<_, Infallible>(Bytes::from(l))));
     Response::builder()
         .header(header::CONTENT_TYPE, content_type)
@@ -145,11 +178,23 @@ fn stream_response(content_type: &'static str, s: impl Stream<Item = String> + S
 }
 
 fn error(status: StatusCode, msg: &str) -> Response {
-    (status, Json(json!({ "error": { "message": msg, "type": "apex_error" } }))).into_response()
+    (
+        status,
+        Json(json!({ "error": { "message": msg, "type": "apex_error" } })),
+    )
+        .into_response()
 }
 
-fn tokens(st: &AppState, kid: &KeyId, model: &str, msgs: Vec<ChatMessage>) -> BoxStream<'static, String> {
-    let prompt_tokens: u64 = msgs.iter().map(|m| m.content.split_whitespace().count() as u64).sum();
+fn tokens(
+    st: &AppState,
+    kid: &KeyId,
+    model: &str,
+    msgs: Vec<ChatMessage>,
+) -> BoxStream<'static, String> {
+    let prompt_tokens: u64 = msgs
+        .iter()
+        .map(|m| m.content.split_whitespace().count() as u64)
+        .sum();
     if let Some(id) = &kid.0 {
         st.vault.record_usage(id, prompt_tokens, 0);
     }
@@ -172,7 +217,11 @@ async fn auth(State(st): State<AppState>, mut req: Request, next: Next) -> Respo
     if matches!(path.as_str(), "/health" | "/api/health" | "/api/version") {
         return next.run(req).await;
     }
-    let loopback = req.extensions().get::<ConnectInfo<SocketAddr>>().map(|c| c.0.ip().is_loopback()).unwrap_or(false);
+    let loopback = req
+        .extensions()
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|c| c.0.ip().is_loopback())
+        .unwrap_or(false);
 
     if path.starts_with("/apex/") {
         if !loopback || !req.headers().contains_key("x-apex-admin") {
@@ -191,11 +240,15 @@ async fn auth(State(st): State<AppState>, mut req: Request, next: Next) -> Respo
     let exempt = !st.config.require_key || (loopback && st.config.allow_loopback_keyless);
     if key_id.is_none() && !exempt {
         st.vault.log_now(None, &method, &path, 401);
-        return error(StatusCode::UNAUTHORIZED, "missing or invalid API key (expected `Authorization: Bearer sk-pocket-…`)");
+        return error(
+            StatusCode::UNAUTHORIZED,
+            "missing or invalid API key (expected `Authorization: Bearer sk-pocket-…`)",
+        );
     }
     req.extensions_mut().insert(KeyId(key_id.clone()));
     let resp = next.run(req).await;
-    st.vault.log_now(key_id, &method, &path, resp.status().as_u16());
+    st.vault
+        .log_now(key_id, &method, &path, resp.status().as_u16());
     resp
 }
 
@@ -252,7 +305,11 @@ struct OGenReq {
     stream: bool,
 }
 
-async fn api_chat(State(st): State<AppState>, Extension(kid): Extension<KeyId>, Json(req): Json<OChatReq>) -> Response {
+async fn api_chat(
+    State(st): State<AppState>,
+    Extension(kid): Extension<KeyId>,
+    Json(req): Json<OChatReq>,
+) -> Response {
     let toks = tokens(&st, &kid, &req.model, req.messages);
     let model = req.model;
     if req.stream {
@@ -269,12 +326,22 @@ async fn api_chat(State(st): State<AppState>, Extension(kid): Extension<KeyId>, 
     }
 }
 
-async fn api_generate(State(st): State<AppState>, Extension(kid): Extension<KeyId>, Json(req): Json<OGenReq>) -> Response {
+async fn api_generate(
+    State(st): State<AppState>,
+    Extension(kid): Extension<KeyId>,
+    Json(req): Json<OGenReq>,
+) -> Response {
     let mut msgs = vec![];
     if let Some(s) = req.system {
-        msgs.push(ChatMessage { role: "system".into(), content: s });
+        msgs.push(ChatMessage {
+            role: "system".into(),
+            content: s,
+        });
     }
-    msgs.push(ChatMessage { role: "user".into(), content: req.prompt });
+    msgs.push(ChatMessage {
+        role: "user".into(),
+        content: req.prompt,
+    });
     let toks = tokens(&st, &kid, &req.model, msgs);
     let model = req.model;
     if req.stream {
@@ -291,7 +358,12 @@ async fn api_generate(State(st): State<AppState>, Extension(kid): Extension<KeyI
 
 /// STUB: real wiring to `cortex-hf-hub::download` lands in Session 2.
 async fn api_pull(Json(v): Json<Value>) -> Response {
-    let name = v.get("model").or_else(|| v.get("name")).and_then(Value::as_str).unwrap_or("unknown").to_string();
+    let name = v
+        .get("model")
+        .or_else(|| v.get("name"))
+        .and_then(Value::as_str)
+        .unwrap_or("unknown")
+        .to_string();
     let lines = vec![
         ndjson(json!({ "status": "pulling manifest" })),
         ndjson(json!({ "status": format!("pull of {name} is not wired to cortex-hf-hub yet") })),
@@ -303,7 +375,12 @@ async fn api_pull(Json(v): Json<Value>) -> Response {
 // ───────────────────────── OpenAI ─────────────────────────
 
 async fn v1_models(State(st): State<AppState>) -> Json<Value> {
-    let data: Vec<Value> = st.backend.models().iter().map(|m| json!({ "id": m.name, "object": "model", "created": unix(), "owned_by": "apex" })).collect();
+    let data: Vec<Value> = st
+        .backend
+        .models()
+        .iter()
+        .map(|m| json!({ "id": m.name, "object": "model", "created": unix(), "owned_by": "apex" }))
+        .collect();
     Json(json!({ "object": "list", "data": data }))
 }
 
@@ -319,28 +396,47 @@ fn sse(v: Value) -> String {
     format!("data: {v}\n\n")
 }
 
-async fn v1_chat(State(st): State<AppState>, Extension(kid): Extension<KeyId>, Json(req): Json<OaiChatReq>) -> Response {
+async fn v1_chat(
+    State(st): State<AppState>,
+    Extension(kid): Extension<KeyId>,
+    Json(req): Json<OaiChatReq>,
+) -> Response {
     let id = format!("chatcmpl-apex-{}", unix());
     let created = unix();
-    let prompt_tokens: u64 = req.messages.iter().map(|m| m.content.split_whitespace().count() as u64).sum();
+    let prompt_tokens: u64 = req
+        .messages
+        .iter()
+        .map(|m| m.content.split_whitespace().count() as u64)
+        .sum();
     let toks = tokens(&st, &kid, &req.model, req.messages);
     let model = req.model;
     if req.stream {
         let chunk = move |model: String, id: String, delta: Value, finish: Value| {
-            sse(json!({ "id": id, "object": "chat.completion.chunk", "created": created, "model": model,
-                        "choices": [{ "index": 0, "delta": delta, "finish_reason": finish }] }))
+            sse(
+                json!({ "id": id, "object": "chat.completion.chunk", "created": created, "model": model,
+                        "choices": [{ "index": 0, "delta": delta, "finish_reason": finish }] }),
+            )
         };
         let (m0, i0) = (model.clone(), id.clone());
         let (m1, i1) = (model.clone(), id.clone());
         let (m2, i2) = (model, id);
-        let first = stream::once(async move { chunk(m0, i0, json!({ "role": "assistant", "content": "" }), Value::Null) });
+        let first = stream::once(async move {
+            chunk(
+                m0,
+                i0,
+                json!({ "role": "assistant", "content": "" }),
+                Value::Null,
+            )
+        });
         let mid = toks.map(move |t| {
             sse(json!({ "id": i1, "object": "chat.completion.chunk", "created": created, "model": m1,
                         "choices": [{ "index": 0, "delta": { "content": t }, "finish_reason": null }] }))
         });
         let last = stream::iter(vec![
-            sse(json!({ "id": i2, "object": "chat.completion.chunk", "created": created, "model": m2,
-                        "choices": [{ "index": 0, "delta": {}, "finish_reason": "stop" }] })),
+            sse(
+                json!({ "id": i2, "object": "chat.completion.chunk", "created": created, "model": m2,
+                        "choices": [{ "index": 0, "delta": {}, "finish_reason": "stop" }] }),
+            ),
             "data: [DONE]\n\n".to_string(),
         ]);
         stream_response("text/event-stream", first.chain(mid).chain(last))
@@ -369,7 +465,9 @@ async fn admin_keys(State(st): State<AppState>) -> Json<Value> {
 
 async fn admin_new_key(State(st): State<AppState>, Json(b): Json<NewKey>) -> Json<Value> {
     let (key, rec) = st.vault.generate(&b.name);
-    Json(json!({ "key": key, "record": rec, "note": "store this key now — it cannot be shown again" }))
+    Json(
+        json!({ "key": key, "record": rec, "note": "store this key now — it cannot be shown again" }),
+    )
 }
 
 async fn admin_revoke(State(st): State<AppState>, Path(id): Path<String>) -> Response {
@@ -412,7 +510,11 @@ pub fn router(state: AppState) -> Router {
 /// Bind and serve (default `0.0.0.0:11434`). mDNS announce (`_ollama._tcp`) is a Session 2 task.
 pub async fn serve(state: AppState, addr: SocketAddr) -> std::io::Result<()> {
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, router(state).into_make_service_with_connect_info::<SocketAddr>()).await
+    axum::serve(
+        listener,
+        router(state).into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
 }
 
 #[cfg(test)]
@@ -429,15 +531,30 @@ mod tests {
     }
 
     async fn body(resp: Response) -> String {
-        String::from_utf8(resp.into_body().collect().await.unwrap().to_bytes().to_vec()).unwrap()
+        String::from_utf8(
+            resp.into_body()
+                .collect()
+                .await
+                .unwrap()
+                .to_bytes()
+                .to_vec(),
+        )
+        .unwrap()
     }
 
     fn req(method: &str, uri: &str, key: Option<&str>, json: Option<Value>) -> HttpRequest<Body> {
-        let mut b = HttpRequest::builder().method(method).uri(uri).header("content-type", "application/json");
+        let mut b = HttpRequest::builder()
+            .method(method)
+            .uri(uri)
+            .header("content-type", "application/json");
         if let Some(k) = key {
             b = b.header("authorization", format!("Bearer {k}"));
         }
-        b.body(json.map(|j| Body::from(j.to_string())).unwrap_or_else(Body::empty)).unwrap()
+        b.body(
+            json.map(|j| Body::from(j.to_string()))
+                .unwrap_or_else(Body::empty),
+        )
+        .unwrap()
     }
 
     #[test]
@@ -449,16 +566,26 @@ mod tests {
     #[tokio::test]
     async fn health_is_open() {
         let (app, _) = app();
-        let r = app.oneshot(req("GET", "/health", None, None)).await.unwrap();
+        let r = app
+            .oneshot(req("GET", "/health", None, None))
+            .await
+            .unwrap();
         assert_eq!(r.status(), StatusCode::OK);
     }
 
     #[tokio::test]
     async fn keys_are_enforced() {
         let (app, key) = app();
-        let r = app.clone().oneshot(req("GET", "/v1/models", None, None)).await.unwrap();
+        let r = app
+            .clone()
+            .oneshot(req("GET", "/v1/models", None, None))
+            .await
+            .unwrap();
         assert_eq!(r.status(), StatusCode::UNAUTHORIZED);
-        let r = app.oneshot(req("GET", "/v1/models", Some(&key), None)).await.unwrap();
+        let r = app
+            .oneshot(req("GET", "/v1/models", Some(&key), None))
+            .await
+            .unwrap();
         assert_eq!(r.status(), StatusCode::OK);
         let v: Value = serde_json::from_str(&body(r).await).unwrap();
         assert_eq!(v["object"], "list");
@@ -468,7 +595,10 @@ mod tests {
     #[tokio::test]
     async fn admin_is_not_reachable_without_loopback_connect_info() {
         let (app, key) = app();
-        let r = app.oneshot(req("GET", "/apex/keys", Some(&key), None)).await.unwrap();
+        let r = app
+            .oneshot(req("GET", "/apex/keys", Some(&key), None))
+            .await
+            .unwrap();
         assert_eq!(r.status(), StatusCode::FORBIDDEN);
     }
 
@@ -476,11 +606,20 @@ mod tests {
     async fn ollama_chat_streams_ndjson_and_ends_with_done() {
         let (app, key) = app();
         let payload = json!({ "model": "echo:latest", "messages": [{ "role": "user", "content": "hello brave world" }] });
-        let r = app.oneshot(req("POST", "/api/chat", Some(&key), Some(payload))).await.unwrap();
+        let r = app
+            .oneshot(req("POST", "/api/chat", Some(&key), Some(payload)))
+            .await
+            .unwrap();
         let text = body(r).await;
-        let lines: Vec<Value> = text.lines().map(|l| serde_json::from_str(l).unwrap()).collect();
+        let lines: Vec<Value> = text
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect();
         assert_eq!(lines.len(), 4);
-        let joined: String = lines.iter().map(|l| l["message"]["content"].as_str().unwrap()).collect();
+        let joined: String = lines
+            .iter()
+            .map(|l| l["message"]["content"].as_str().unwrap())
+            .collect();
         assert_eq!(joined, "hello brave world");
         assert_eq!(lines.last().unwrap()["done"], true);
     }
@@ -489,7 +628,15 @@ mod tests {
     async fn openai_stream_is_sse_with_done_sentinel() {
         let (app, key) = app();
         let payload = json!({ "model": "echo:latest", "stream": true, "messages": [{ "role": "user", "content": "hi" }] });
-        let r = app.oneshot(req("POST", "/v1/chat/completions", Some(&key), Some(payload))).await.unwrap();
+        let r = app
+            .oneshot(req(
+                "POST",
+                "/v1/chat/completions",
+                Some(&key),
+                Some(payload),
+            ))
+            .await
+            .unwrap();
         let text = body(r).await;
         assert!(text.contains("\"delta\":{\"content\":\"hi\"}"));
         assert!(text.trim_end().ends_with("data: [DONE]"));
@@ -498,8 +645,17 @@ mod tests {
     #[tokio::test]
     async fn openai_non_stream_reports_usage() {
         let (app, key) = app();
-        let payload = json!({ "model": "echo:latest", "messages": [{ "role": "user", "content": "a b c" }] });
-        let r = app.oneshot(req("POST", "/v1/chat/completions", Some(&key), Some(payload))).await.unwrap();
+        let payload =
+            json!({ "model": "echo:latest", "messages": [{ "role": "user", "content": "a b c" }] });
+        let r = app
+            .oneshot(req(
+                "POST",
+                "/v1/chat/completions",
+                Some(&key),
+                Some(payload),
+            ))
+            .await
+            .unwrap();
         let v: Value = serde_json::from_str(&body(r).await).unwrap();
         assert_eq!(v["choices"][0]["message"]["content"], "a b c");
         assert_eq!(v["usage"]["total_tokens"], 6);

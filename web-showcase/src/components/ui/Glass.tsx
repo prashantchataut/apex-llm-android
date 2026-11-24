@@ -73,13 +73,13 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boo
       aria-checked={on}
       aria-label={label}
       onClick={() => onChange(!on)}
-      className={`relative h-9 w-16 shrink-0 rounded-full border transition-colors duration-300 ${on ? "border-emerald-300/40 bg-emerald-400/30" : "border-white/10 bg-white/10"}`}
+      className={`relative h-11 w-16 shrink-0 rounded-full border transition-colors duration-300 ${on ? "border-ok/40 bg-ok/30" : "border-white/10 bg-white/10"}`}
     >
       <motion.span
         layout
         transition={SPRING}
-        className="absolute top-1 h-7 w-7 rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.4)]"
-        style={{ left: on ? 32 : 4 }}
+        className="absolute top-[5px] h-8 w-8 rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.4)]"
+        style={{ left: on ? 27 : 3 }}
       />
     </button>
   );

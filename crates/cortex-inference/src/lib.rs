@@ -31,7 +31,12 @@ pub struct LoadParams {
 
 impl Default for LoadParams {
     fn default() -> Self {
-        Self { n_ctx: 4096, n_threads: 4, n_gpu_layers: 0, use_mmap: true }
+        Self {
+            n_ctx: 4096,
+            n_threads: 4,
+            n_gpu_layers: 0,
+            use_mmap: true,
+        }
     }
 }
 
@@ -49,7 +54,15 @@ pub struct SamplingParams {
 
 impl Default for SamplingParams {
     fn default() -> Self {
-        Self { temperature: 0.7, top_p: 0.9, top_k: 40, repeat_penalty: 1.1, max_tokens: 1024, grammar: None, stop: vec![] }
+        Self {
+            temperature: 0.7,
+            top_p: 0.9,
+            top_k: 40,
+            repeat_penalty: 1.1,
+            max_tokens: 1024,
+            grammar: None,
+            stop: vec![],
+        }
     }
 }
 
@@ -82,7 +95,10 @@ pub struct ScriptedEngine {
 
 impl ScriptedEngine {
     pub fn new(script: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        Self { script: script.into_iter().map(Into::into).collect(), loaded: false }
+        Self {
+            script: script.into_iter().map(Into::into).collect(),
+            loaded: false,
+        }
     }
 }
 
@@ -91,7 +107,12 @@ impl Engine for ScriptedEngine {
         self.loaded = true;
         Ok(())
     }
-    fn generate(&mut self, prompt: &str, p: &SamplingParams, on_token: &mut dyn FnMut(&str) -> bool) -> Result<GenerationStats, EngineError> {
+    fn generate(
+        &mut self,
+        prompt: &str,
+        p: &SamplingParams,
+        on_token: &mut dyn FnMut(&str) -> bool,
+    ) -> Result<GenerationStats, EngineError> {
         if !self.loaded {
             return Err(EngineError::NotLoaded);
         }
@@ -102,7 +123,11 @@ impl Engine for ScriptedEngine {
                 break;
             }
         }
-        Ok(GenerationStats { prompt_tokens: prompt.split_whitespace().count() as u32, completion_tokens: n, tokens_per_second: 0.0 })
+        Ok(GenerationStats {
+            prompt_tokens: prompt.split_whitespace().count() as u32,
+            completion_tokens: n,
+            tokens_per_second: 0.0,
+        })
     }
     fn unload(&mut self) {
         self.loaded = false;
@@ -119,14 +144,18 @@ mod tests {
     #[test]
     fn scripted_engine_streams_and_cancels() {
         let mut e = ScriptedEngine::new(["a", "b", "c"]);
-        assert!(matches!(e.generate("x", &SamplingParams::default(), &mut |_| true), Err(EngineError::NotLoaded)));
+        assert!(matches!(
+            e.generate("x", &SamplingParams::default(), &mut |_| true),
+            Err(EngineError::NotLoaded)
+        ));
         e.load(Path::new("m.gguf"), &LoadParams::default()).unwrap();
         let mut got = vec![];
-        let s = e.generate("hi there", &SamplingParams::default(), &mut |t| {
-            got.push(t.to_string());
-            got.len() < 2
-        })
-        .unwrap();
+        let s = e
+            .generate("hi there", &SamplingParams::default(), &mut |t| {
+                got.push(t.to_string());
+                got.len() < 2
+            })
+            .unwrap();
         assert_eq!(got, ["a", "b"]);
         assert_eq!(s.completion_tokens, 2);
     }

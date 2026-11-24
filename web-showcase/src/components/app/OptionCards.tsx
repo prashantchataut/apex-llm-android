@@ -43,15 +43,15 @@ export function OptionCards({ question, options, answer }: { question: string; o
   };
   const ring: Record<string, string> = {
     idle: "border-white/10 bg-white/[0.05] hover:bg-white/[0.09]",
-    picked: "border-violet-300/60 bg-violet-400/15",
-    right: "border-emerald-300/70 bg-emerald-400/15",
-    wrong: "border-rose-300/70 bg-rose-400/15",
-    reveal: "border-emerald-300/40 bg-transparent",
+    picked: "border-accent/60 bg-accent/15",
+    right: "border-ok/70 bg-ok/15",
+    wrong: "border-bad/70 bg-bad/15",
+    reveal: "border-ok/40 bg-transparent",
   };
 
   return (
     <div role="radiogroup" aria-label={question} onKeyDown={onKey} className="glass-dark rounded-[22px] p-3.5">
-      <div className="mb-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
+      <div className="mb-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
         <Icon name="sparkle" size={14} /> Quick question
       </div>
       <p className="mb-3 text-[15px] font-medium text-white">
@@ -72,19 +72,19 @@ export function OptionCards({ question, options, answer }: { question: string; o
                 onClick={() => choose(i)}
                 className={`flex min-h-[48px] w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left text-[14px] text-white transition-colors ${ring[s]} ${locked && s === "idle" ? "opacity-45" : ""}`}
               >
-                <span className="mono grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-white/10 text-[11px] text-white/70">{i + 1}</span>
+                <span className="mono grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-white/10 text-[11px] text-ink-2">{i + 1}</span>
                 <span className="flex-1">
                   <RichInline text={o} />
                 </span>
-                {(s === "right" || s === "reveal") && <Icon name="check" size={18} className="text-emerald-300" />}
-                {s === "wrong" && <Icon name="x" size={18} className="text-rose-300" />}
+                {(s === "right" || s === "reveal") && <Icon name="check" size={18} className="text-ok" />}
+                {s === "wrong" && <Icon name="x" size={18} className="text-bad" />}
               </RippleButton>
             </motion.div>
           );
         })}
       </div>
       {locked && answer !== undefined && (
-        <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className={`mt-3 text-[13px] ${picked === answer ? "text-emerald-300" : "text-rose-300"}`}>
+        <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className={`mt-3 text-[13px] ${picked === answer ? "text-ok" : "text-bad"}`}>
           {picked === answer ? "Correct — nicely done." : "Not quite — the highlighted option is the right one."}
         </motion.p>
       )}

@@ -25,7 +25,9 @@ pub fn parse_meminfo(s: &str) -> MemInfo {
     let mut have_avail = false;
     for line in s.lines() {
         let mut it = line.split_whitespace();
-        let (Some(key), Some(val)) = (it.next(), it.next()) else { continue };
+        let (Some(key), Some(val)) = (it.next(), it.next()) else {
+            continue;
+        };
         let Ok(kb) = val.parse::<u64>() else { continue };
         match key {
             "MemTotal:" => m.total_bytes = kb * 1024,
@@ -71,8 +73,13 @@ pub fn parse_cpuinfo(s: &str) -> CpuFeatures {
         if line.starts_with("processor") {
             f.logical_cores += 1;
         } else if line.starts_with("Features") {
-            let feats: Vec<&str> = line.split(':').nth(1).unwrap_or("").split_whitespace().collect();
-            let has = |n: &str| feats.iter().any(|x| *x == n);
+            let feats: Vec<&str> = line
+                .split(':')
+                .nth(1)
+                .unwrap_or("")
+                .split_whitespace()
+                .collect();
+            let has = |n: &str| feats.contains(&n);
             f.dotprod |= has("asimddp");
             f.fp16 |= has("fphp") || has("asimdhp");
             f.i8mm |= has("i8mm");
@@ -166,18 +173,33 @@ impl SystemSource for LinuxSource {
         std::fs::read_to_string(path).ok()
     }
     fn prop(&self, key: &str) -> Option<String> {
-        let out = std::process::Command::new("getprop").arg(key).output().ok()?;
+        let out = std::process::Command::new("getprop")
+            .arg(key)
+            .output()
+            .ok()?;
         let s = String::from_utf8(out.stdout).ok()?.trim().to_string();
         (!s.is_empty()).then_some(s)
     }
     fn vulkan(&self) -> VulkanInfo {
-        let libs = ["/system/lib64/libvulkan.so", "/vendor/lib64/libvulkan.so", "/usr/lib/libvulkan.so.1"];
+        let libs = [
+            "/system/lib64/libvulkan.so",
+            "/vendor/lib64/libvulkan.so",
+            "/usr/lib/libvulkan.so.1",
+        ];
         let supported = libs.iter().any(|p| std::path::Path::new(p).exists());
-        VulkanInfo { supported, api_version: self.prop("ro.hwui.use_vulkan").filter(|_| supported) }
+        VulkanInfo {
+            supported,
+            api_version: self.prop("ro.hwui.use_vulkan").filter(|_| supported),
+        }
     }
     fn free_storage_bytes(&self) -> u64 {
         // `df -k <dir>` — avoids libc/unsafe. Column 4 = available (kB).
-        let Ok(out) = std::process::Command::new("df").args(["-k", &self.data_dir]).output() else { return 0 };
+        let Ok(out) = std::process::Command::new("df")
+            .args(["-k", &self.data_dir])
+            .output()
+        else {
+            return 0;
+        };
         let text = String::from_utf8_lossy(&out.stdout);
         text.lines()
             .nth(1)
@@ -254,7 +276,7 @@ pub fn recommend(mem: &MemInfo, cpu: &CpuFeatures, vk: &VulkanInfo) -> Recommend
         b if b >= 3 * GIB / 2 => 2048,
         _ => 1024,
     };
-    let threads = (((cpu.logical_cores.max(2) + 1) / 2) as u32).clamp(2, 6);
+    let threads = (cpu.logical_cores.max(2).div_ceil(2) as u32).clamp(2, 6);
     Recommendation {
         model_budget_bytes: budget,
         // leave 12% for KV cache + activations
@@ -271,7 +293,9 @@ pub fn profile(src: &dyn SystemSource) -> DeviceCapabilityProfile {
     let mem = parse_meminfo(&src.read("/proc/meminfo").unwrap_or_default());
     let cpu = parse_cpuinfo(&src.read("/proc/cpuinfo").unwrap_or_default());
     let vulkan = src.vulkan();
-    let soc_model = src.prop("ro.soc.model").or_else(|| src.prop("ro.board.platform"));
+    let soc_model = src
+        .prop("ro.soc.model")
+        .or_else(|| src.prop("ro.board.platform"));
     DeviceCapabilityProfile {
         total_ram_bytes: mem.total_bytes,
         available_ram_bytes: mem.available_bytes,
@@ -305,7 +329,10 @@ mod tests {
             (k == "ro.soc.model").then(|| "SM8550".into())
         }
         fn vulkan(&self) -> VulkanInfo {
-            VulkanInfo { supported: true, api_version: Some("1.3".into()) }
+            VulkanInfo {
+                supported: true,
+                api_version: Some("1.3".into()),
+            }
         }
         fn free_storage_bytes(&self) -> u64 {
             50 * GIB
@@ -340,7 +367,10 @@ mod tests {
 
     #[test]
     fn low_ram_gets_small_quant() {
-        let mem = MemInfo { total_bytes: 3 * GIB, available_bytes: GIB };
+        let mem = MemInfo {
+            total_bytes: 3 * GIB,
+            available_bytes: GIB,
+        };
         let r = recommend(&mem, &CpuFeatures::default(), &VulkanInfo::default());
         assert_eq!(r.quant, Quant::Q3KM);
         assert_eq!(r.model_budget_bytes, 0);
@@ -348,7 +378,10 @@ mod tests {
 
     #[test]
     fn quant_parse_from_filenames() {
-        assert_eq!(Quant::parse("qwen2.5-3b-instruct-q4_k_m.gguf"), Some(Quant::Q4KM));
+        assert_eq!(
+            Quant::parse("qwen2.5-3b-instruct-q4_k_m.gguf"),
+            Some(Quant::Q4KM)
+        );
         assert_eq!(Quant::parse("Model-IQ4_XS.gguf"), Some(Quant::IQ4XS));
         assert_eq!(Quant::parse("model.safetensors"), None);
     }
