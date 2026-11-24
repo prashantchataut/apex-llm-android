@@ -1,47 +1,95 @@
-# EXPERIMENTAL / UNVERIFIED — written in Session 2 without an Android toolchain available.
-# Manual trigger only so it can never turn the main branch red. Expect to iterate on the first runs.
-name: Android APK (experimental)
+# Builds the arm64-v8a Apex LLM APK (Tauri v2 Mobile + llama.cpp), signs it and publishes it to a GitHub Release.
+# Trigger: push a tag `v*` or run manually (workflow_dispatch). The signing key is generated per run (alpha channel):
+# updating an installed alpha build with a newer one requires uninstalling first until a stable release key exists.
+name: Android APK
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish to (created if missing)
+        default: v0.2.0-alpha
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
 
 jobs:
   apk:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     env:
       NDK_VERSION: 26.3.11579264
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: web-showcase/package-lock.json
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
       - uses: android-actions/setup-android@v3
-      - name: Install NDK r26
-        run: sdkmanager "ndk;${NDK_VERSION}" "platforms;android-34" "build-tools;34.0.0"
+      - name: SDK / NDK
+        run: |
+          set -x
+          SDK=$(grep -oP 'compileSdk = \K[0-9]+' app-ui/src-tauri/gen/android/app/build.gradle.kts)
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "ndk;${NDK_VERSION}" "platforms;android-${SDK}" "build-tools;35.0.0" || sdkmanager "ndk;${NDK_VERSION}" "platforms;android-${SDK}.0" "build-tools;35.0.0" || sdkmanager "ndk;${NDK_VERSION}" "build-tools;35.0.0"
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: app-ui/src-tauri
-      - name: Frontend
+      - name: Frontend deps
         working-directory: web-showcase
-        run: npm ci && npm run build:app
-      - name: Tauri Android project
+        run: npm ci
+      - name: Tauri CLI
+        run: npm install -g @tauri-apps/cli@^2
+      - name: Signing key (alpha channel)
+        run: |
+          KS="$RUNNER_TEMP/apex-alpha.jks"
+          PASS=$(openssl rand -hex 16)
+          keytool -genkeypair -v -keystore "$KS" -storetype PKCS12 -alias apex -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$PASS" -keypass "$PASS" -dname "CN=Apex LLM alpha, O=Apex, C=US"
+          echo "APEX_KEYSTORE=$KS" >> "$GITHUB_ENV"
+          echo "APEX_KS_PASS=$PASS" >> "$GITHUB_ENV"
+          echo "APEX_KEY_ALIAS=apex" >> "$GITHUB_ENV"
+      - name: Build APK (arm64-v8a, release)
         working-directory: app-ui
         env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
+        run: tauri android build --apk --target aarch64 --features android
+      - name: Verify + name the artifact
+        id: pack
         run: |
-          cargo install tauri-cli --version "^2" --locked
-          cargo tauri android init
-          cargo tauri android build --apk --target aarch64
+          APK=$(find app-ui/src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -1)
+          echo "built: $APK"
+          OUT="apex-llm-${TAG}-arm64-v8a.apk"
+          cp "$APK" "$OUT"
+          APKSIGNER=$(ls $ANDROID_HOME/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --verbose --print-certs "$OUT" | head -12
+          unzip -l "$OUT" | grep -E "lib/arm64-v8a/.*\.so" || { echo "no arm64 native lib in APK"; exit 1; }
+          sha256sum "$OUT" | tee "$OUT.sha256"
+          echo "file=$OUT" >> "$GITHUB_OUTPUT"
+          ls -l "$OUT"
       - uses: actions/upload-artifact@v4
         with:
-          name: apex-arm64-apk
-          path: app-ui/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
-          if-no-files-found: warn
+          name: apex-llm-arm64-apk
+          path: |
+            apex-llm-*.apk
+            apex-llm-*.sha256
+      - name: Publish GitHub Release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --prerelease --target "${GITHUB_SHA}" --title "Apex LLM ${TAG}" --notes "Android arm64-v8a build. See the PR for details."
+          fi
+          gh release upload "$TAG" apex-llm-*.apk apex-llm-*.sha256 --clobber
