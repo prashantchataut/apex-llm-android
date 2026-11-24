@@ -51,7 +51,7 @@ jobs:
           workspaces: app-ui/src-tauri
       - name: Frontend deps
         working-directory: web-showcase
-        run: npm ci
+        run: ONNXRUNTIME_NODE_INSTALL=skip npm ci
       # Gradle's rust plugin shells out to `cargo tauri android-studio-script`; the npm CLI does NOT provide the
       # `cargo tauri` subcommand (Session 4 failed with "no such command: tauri"). Install the real cargo plugin.
       - name: Tauri CLI (cargo subcommand)

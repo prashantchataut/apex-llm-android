@@ -36,7 +36,7 @@ const BASE_CSS = "html,body{margin:0;min-height:100%;background:#0b0b10;color:#f
 
 /** Complete HTML document for the sandboxed iframe (`sandbox="allow-scripts"`, opaque origin: no cookies, no storage, no parent access). */
 export function buildSrcDoc(kind: ArtifactKind, code: string): string {
-  if (kind === "svg") return `<!doctype html><meta charset="utf-8"><style>${BASE_CSS}body{display:grid;place-items:center;padding:16px;box-sizing:border-box}svg{max-width:100%;max-height:92vh;height:auto}</style>${code}`;
+  if (kind === "svg") return `<!doctype html><meta charset="utf-8"><style>${BASE_CSS}body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;box-sizing:border-box;overflow:hidden}svg{width:min(100%,78vmin);height:auto;max-height:86vh;overflow:visible}</style>${code}`;
   if (kind === "js") return `<!doctype html><meta charset="utf-8"><style>${BASE_CSS}body{padding:12px;box-sizing:border-box}</style><div id="app"></div><script>try{${code.replace(/<\/script/gi, "<\\/script")}}catch(e){document.body.insertAdjacentHTML("beforeend","<pre style='color:#ff8a8a'>"+e+"</pre>")}</script>`;
   if (/<html[\s>]/i.test(code)) return code;
   return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${BASE_CSS}</style>${code}`;

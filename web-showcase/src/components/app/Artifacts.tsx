@@ -136,7 +136,7 @@ export function ArtifactDrawer({ artifact, onClose }: { artifact: Artifact | nul
               </button>
             </header>
 
-            <div className="flex items-center gap-1.5 px-4 pb-3">
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 px-4 pb-3">
               <div className="flex rounded-full border border-white/10 bg-white/[0.06] p-1" role="tablist">
                 {(["preview", "code"] as const).map((t) => (
                   <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => { haptic("detentClick"); setTab(t); }} className={`relative h-9 rounded-full px-4 text-[12.5px] font-semibold capitalize ${tab === t ? "text-black" : "text-ink-2"}`}>
@@ -145,14 +145,14 @@ export function ArtifactDrawer({ artifact, onClose }: { artifact: Artifact | nul
                   </button>
                 ))}
               </div>
-              <div className="ml-auto flex items-center gap-1.5">
-                <button type="button" onClick={() => { void navigator.clipboard?.writeText(code); haptic("detentClick"); say("Copied"); }} className="mono flex h-10 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 text-[11px] active:scale-95">
+              <div className="flex items-center gap-1.5 sm:ml-auto">
+                <button type="button" onClick={() => { void navigator.clipboard?.writeText(code); haptic("detentClick"); say("Copied"); }} className="mono flex h-10 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-2.5 text-[11px] active:scale-95">
                   <Icon name="copy" size={13} /> Copy
                 </button>
-                <button type="button" onClick={exportHtml} className="mono flex h-10 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 text-[11px] active:scale-95">
+                <button type="button" onClick={exportHtml} className="mono flex h-10 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-2.5 text-[11px] active:scale-95">
                   <Icon name="download" size={13} /> {kind === "svg" || kind === "mermaid" ? "SVG" : "HTML"}
                 </button>
-                <button type="button" onClick={() => void exportPng()} className="mono flex h-10 items-center gap-1.5 rounded-full bg-white px-3 text-[11px] font-semibold text-black active:scale-95">
+                <button type="button" onClick={() => void exportPng()} className="mono flex h-10 items-center gap-1.5 rounded-full bg-white px-2.5 text-[11px] font-semibold text-black active:scale-95">
                   <Icon name="image" size={13} /> PNG
                 </button>
               </div>

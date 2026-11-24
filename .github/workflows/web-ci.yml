@@ -22,7 +22,7 @@ jobs:
         run: |
           cmp packages/design-system/tokens.css web-showcase/src/app/tokens.css
           cmp packages/design-system/haptics/haptics.ts web-showcase/src/lib/haptics.ts
-      - run: npm ci
+      - run: ONNXRUNTIME_NODE_INSTALL=skip npm ci
         working-directory: web-showcase
       - run: npm run typecheck
         working-directory: web-showcase
