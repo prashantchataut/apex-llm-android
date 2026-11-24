@@ -17,7 +17,7 @@
 │  │ cortex-integrations ─► GitHub client + Provider router           │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
 └───────────────▲──────────────────────────────────────────────────────┘
-                │ LAN (mDNS `_ollama._tcp`), Bearer sk-pocket-…
+                │ LAN (mDNS `_ollama._tcp`), Bearer sk-apex-…
         PC: Cursor / Continue / curl / any OpenAI SDK
 ```
 
@@ -55,7 +55,7 @@
 Ollama: `GET /api/tags`, `GET /api/ps`, `POST /api/generate`, `POST /api/chat` (NDJSON stream), `POST /api/pull`, `GET /api/version`.
 OpenAI: `GET /v1/models`, `POST /v1/chat/completions` (JSON + SSE `data: …\n\n` + `[DONE]`).
 Ops: `GET /health`, `GET /api/health`.
-Auth: `Authorization: Bearer sk-pocket-<43 base62>`; keys stored as **SHA-256 hashes** (plaintext shown once). Loopback requests may be allowed keyless via a setting (default: keys required for non-loopback). Per-key usage (prompt/completion tokens, last used) in `KeyVault`.
+Auth: `Authorization: Bearer sk-apex-<43 base62>`; keys stored as **SHA-256 hashes** (plaintext shown once). Loopback requests may be allowed keyless via a setting (default: keys required for non-loopback). Per-key usage (prompt/completion tokens, last used) in `KeyVault`.
 
 ## 3. REA findings
 
@@ -94,7 +94,7 @@ OS+WebView reserve 1.2 GB → model budget `min(0.55·4.6, 0.45·8)=2.5 GB` → 
 1. **Aurora Home** — Archetype A. Violet top-bleed aurora (`#6D28D9`), greeting in progressive-opacity type, 4 asymmetric bento suggestion cards, quick-action pill [Upload][Camera][Mic], PromptBar. Mic toggles a 60 fps waveform + live partial transcript demo.
 2. **Reasoning Chat** — Archetype D, cobalt aurora (`#1D4ED8`). ThinkingAccordion with live ms timer + vertical timeline; KaTeX inline/block; MCQ OptionCards parsed from a `[[mcq]]` block; ShimmerBadge "Proxima" while streaming.
 3. **Model Hub** — Archetype B. Hero frosted telemetry card with fanned mini cards (TPS, RAM, Q4_K_M, API keys, ctx). Model list scored by the *same algorithm as Rust* (`lib/compat.ts` mirrors `cortex-hf-hub::score`). 1-tap download simulation w/ progress. Voice model installer (16–25 MB class).
-4. **Server & Keys** — Toggle server (`:11434`), `sk-pocket-…` generator (WebCrypto), revoke, live request-log timeline, one-tap config snippets (Cursor, Continue, curl), GitHub connection card.
+4. **Server & Keys** — Toggle server (`:11434`), `sk-apex-…` generator (WebCrypto), revoke, live request-log timeline, one-tap config snippets (Cursor, Continue, curl), GitHub connection card.
 
 ## 6. Delivery pipeline
 - `web-showcase` → `next build` (`output: 'export'`, `basePath=/<repo>`) → `deploy-pages.yml`.

@@ -12,10 +12,23 @@ fn real_model_generates_tokens() {
         return;
     };
     let mut e = LlamaEngine::new();
-    e.load(&PathBuf::from(p), &LoadParams { n_ctx: 512, n_threads: 4, n_gpu_layers: 0, use_mmap: true }).unwrap();
+    e.load(
+        &PathBuf::from(p),
+        &LoadParams {
+            n_ctx: 512,
+            n_threads: 4,
+            n_gpu_layers: 0,
+            use_mmap: true,
+        },
+    )
+    .unwrap();
     assert!(e.is_loaded());
     let mut out = String::new();
-    let sp = SamplingParams { temperature: 0.0, max_tokens: 24, ..Default::default() };
+    let sp = SamplingParams {
+        temperature: 0.0,
+        max_tokens: 24,
+        ..Default::default()
+    };
     let stats = e
         .generate("The capital of France is", &sp, &mut |t| {
             out.push_str(t);

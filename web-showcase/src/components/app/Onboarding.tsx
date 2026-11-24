@@ -117,7 +117,7 @@ function OnboardGrid({ dim }: { dim: boolean }) {
 
 /** Generates a `sk-apex-…` LAN key. Uses the Rust vault when running in Tauri, otherwise WebCrypto (browser preview). */
 async function issueKey(): Promise<string> {
-  const native = await invokeNative<{ key?: string } | string>("api_key_create", { name: "Onboarding · LAN" });
+  const native = await invokeNative<{ key?: string } | string>("key_create", { name: "Onboarding · LAN" });
   const k = typeof native === "string" ? native : native?.key;
   if (k && k.startsWith("sk-apex-")) return k;
   const bytes = new Uint8Array(16);

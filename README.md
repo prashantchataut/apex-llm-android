@@ -13,7 +13,7 @@ Run GGUF LLMs on your phone. Serve **Ollama- and OpenAI-compatible APIs** to you
 | `crates/cortex-hf-hub` | Hugging Face GGUF search, ⚡/⚠️/❌ scoring, resumable segmented downloads + SHA-256 |
 | `crates/cortex-inference` | `Engine` trait, streaming `<think>` parser, GBNF (MCQ/JSON), chat templates |
 | `crates/cortex-voice` | `Transcriber` trait, INT8 model catalog, VAD, 60 fps spectrum bins |
-| `crates/cortex-server` | axum: Ollama + OpenAI endpoints, `sk-pocket-…` key vault (hashed), request log |
+| `crates/cortex-server` | axum: Ollama + OpenAI endpoints, `sk-apex-…` key vault (hashed), request log |
 | `crates/cortex-integrations` | GitHub REST client + provider router (Local / OpenRouter / Anthropic / OpenAI / Groq) |
 | `app-ui/src-tauri` | Tauri v2 Mobile shell (thin command layer) |
 | `web-showcase` | Next.js static export: landing page **and** the 4 app screens (`/app`) |

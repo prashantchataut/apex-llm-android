@@ -2,7 +2,7 @@
 //! OpenAI wire format (`/v1/*`, SSE) over one [`Backend`].
 //!
 //! Security model
-//! * `/api/*` + `/v1/*`: `Authorization: Bearer sk-pocket-…` required unless
+//! * `/api/*` + `/v1/*`: `Authorization: Bearer sk-apex-…` required unless
 //!   `require_key=false` or (loopback && `allow_loopback_keyless`).
 //! * `/apex/*` (key management, logs): loopback only **and** must carry the
 //!   `x-apex-admin` header (forces a CORS preflight, so web pages can't drive it).
@@ -242,7 +242,7 @@ async fn auth(State(st): State<AppState>, mut req: Request, next: Next) -> Respo
         st.vault.log_now(None, &method, &path, 401);
         return error(
             StatusCode::UNAUTHORIZED,
-            "missing or invalid API key (expected `Authorization: Bearer sk-pocket-…`)",
+            "missing or invalid API key (expected `Authorization: Bearer sk-apex-…`)",
         );
     }
     req.extensions_mut().insert(KeyId(key_id.clone()));

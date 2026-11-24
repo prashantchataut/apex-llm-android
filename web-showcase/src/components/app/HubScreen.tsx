@@ -86,10 +86,9 @@ export function HubScreen({
 
       <FanStack
         cards={[
-          { label: "Speed est.", value: tps.toFixed(1), unit: "tok/s" },
+          { label: "Speed", value: tps.toFixed(1), unit: "t/s" },
           { label: "RAM free", value: dev.availGB.toFixed(1), unit: "GB" },
           { label: "Quant", value: rec.quant },
-          { label: "API keys", value: String(activeKeys), unit: "active" },
           { label: "Context", value: String(ctx) },
         ]}
       >

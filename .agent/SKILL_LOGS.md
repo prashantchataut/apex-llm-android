@@ -47,4 +47,7 @@
 - `design-taste-frontend`, `hallmark-ui`, `open-design-skill`: new `ApexLogo` (Tensor Prism, 3 states), 4-scene onboarding (spring 320/26, blur-to-sharp reveals, SVG hairline draw-in, silicon scan + fan cards, live theme morph, flip key card), Replay onboarding in the Appearance sheet, bolt/sparkle glyphs removed from the icon set, launcher/favicon assets regenerated from the same facet geometry.
 
 ## Session 3 — Phase 2 (showcase)
-- `design-taste-frontend`, `hallmark-ui` (applied manually): new nav tile + hero cutout using the prism, `#lab` Live Lab section (live 4-theme switch that morphs the whole page, SiliconScan + fan cards, reasoning timeline + KaTeX + clickable MCQ), `sk-pocket` → `sk-apex` copy fix.
+- `design-taste-frontend`, `hallmark-ui` (applied manually): new nav tile + hero cutout using the prism, `#lab` Live Lab section (live 4-theme switch that morphs the whole page, SiliconScan + fan cards, reasoning timeline + KaTeX + clickable MCQ), `sk-apex` → `sk-apex` copy fix.
+
+## Session 3 — Phase 3/4
+- Phase 3: Playwright/Chromium QA loop (see STATE.md for defects fixed). Phase 4 `native-rust-systems` (manual): fmt/clippy/test verified, vault prefix renamed, unused dep removed; SQLite NOT done.
