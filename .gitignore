@@ -7,7 +7,11 @@ out/
 .env.*
 !.env.example
 .DS_Store
-app-ui/src-tauri/gen/
+app-ui/src-tauri/gen/android/build/
+app-ui/src-tauri/gen/android/.gradle/
+app-ui/src-tauri/gen/android/app/build/
+app-ui/src-tauri/gen/android/local.properties
+app-ui/src-tauri/gen/schemas/
 *.part
 *.apexdl
 *.gguf

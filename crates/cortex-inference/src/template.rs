@@ -33,6 +33,14 @@ impl ChatTemplate {
         }
     }
 
+    pub fn family(&self) -> &'static str {
+        match self {
+            Self::ChatMl => "chatml",
+            Self::Llama3 => "llama",
+            Self::Gemma => "gemma",
+        }
+    }
+
     /// Render messages and open the assistant turn.
     pub fn render(&self, msgs: &[Message]) -> String {
         let mut s = String::new();

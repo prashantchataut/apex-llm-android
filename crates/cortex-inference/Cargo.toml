@@ -7,10 +7,14 @@ license.workspace = true
 
 [features]
 default = []
-# Real backend. Pin the binding after on-device benchmark (llama-cpp-2 vs llama-crab) — see ARCHITECTURE.md.
-llama = []
+# Real llama.cpp backend (llama-cpp-2). Cross-compiles for Android arm64 with the NDK (set ANDROID_NDK + ANDROID_API_LEVEL).
+llama = ["dep:llama-cpp-2", "dep:encoding_rs"]
+# Android: link libc++ statically so the .so has no libc++_shared.so dependency.
+android-static-stdcxx = ["llama", "llama-cpp-2/android-static-stdcxx"]
 
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+llama-cpp-2 = { version = "0.1.161", optional = true, default-features = false }
+encoding_rs = { version = "0.8", optional = true }

@@ -90,7 +90,7 @@ export function AppShell({ firstRun = false }: { firstRun?: boolean }) {
           </AnimatePresence>
         </main>
 
-        <nav aria-label="Primary" className="px-3 pb-5 pt-1">
+        <nav aria-label="Primary" className="px-3 pt-1" style={{ paddingBottom: "max(20px, var(--apex-inset-bottom, 0px))" }}>
           <LayoutGroup>
             <div className="glass-dark mx-auto flex max-w-[360px] items-center justify-between rounded-full p-1.5">
               {TABS.map((t) => {
