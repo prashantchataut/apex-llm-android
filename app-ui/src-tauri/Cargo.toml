@@ -1,0 +1,27 @@
+[package]
+name = "apex-app"
+version = "0.1.0"
+edition = "2021"
+description = "Apex — Tauri v2 Mobile shell around the cortex-* crates"
+
+# Standalone workspace: keeps desktop CI free of webkit / Android SDK requirements.
+[workspace]
+
+[lib]
+name = "apex_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+cortex-hardware = { path = "../../crates/cortex-hardware" }
+cortex-hf-hub = { path = "../../crates/cortex-hf-hub" }
+cortex-inference = { path = "../../crates/cortex-inference" }
+cortex-voice = { path = "../../crates/cortex-voice" }
+cortex-server = { path = "../../crates/cortex-server" }
+cortex-integrations = { path = "../../crates/cortex-integrations" }

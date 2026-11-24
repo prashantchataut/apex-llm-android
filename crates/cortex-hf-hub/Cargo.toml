@@ -1,0 +1,16 @@
+[package]
+name = "cortex-hf-hub"
+description = "Hardware-aware Hugging Face GGUF discovery + resumable segmented downloads"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+cortex-hardware = { path = "../cortex-hardware" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+futures.workspace = true
+reqwest.workspace = true
+sha2.workspace = true

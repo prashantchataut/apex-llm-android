@@ -1,0 +1,39 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/cortex-hardware",
+  "crates/cortex-hf-hub",
+  "crates/cortex-inference",
+  "crates/cortex-voice",
+  "crates/cortex-server",
+  "crates/cortex-integrations",
+]
+# Tauri shell has its own workspace (needs webkit/Android SDK; keep desktop CI light)
+exclude = ["app-ui/src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/prashantchataut/apex-llm-android"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util", "sync", "time", "net"] }
+futures = "0.3"
+bytes = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+sha2 = "0.10"
+rand = "0.8"
+base64 = "0.22"
+axum = "0.7"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+opt-level = 3
+strip = true
+panic = "abort"

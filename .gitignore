@@ -1,0 +1,13 @@
+target/
+node_modules/
+.next/
+out/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+app-ui/src-tauri/gen/
+*.part
+*.apexdl
+*.gguf

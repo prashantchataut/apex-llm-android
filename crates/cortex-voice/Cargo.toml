@@ -1,0 +1,15 @@
+[package]
+name = "cortex-voice"
+description = "On-device ASR seam: Transcriber trait, INT8 model catalog, VAD, 60fps spectrum bins"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+# Real recognizer backends (Session 2): sherpa-onnx or ort.
+sherpa = []
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
