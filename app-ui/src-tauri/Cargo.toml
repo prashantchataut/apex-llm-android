@@ -21,7 +21,27 @@ serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 cortex-hardware = { path = "../../crates/cortex-hardware" }
 cortex-hf-hub = { path = "../../crates/cortex-hf-hub" }
-cortex-inference = { path = "../../crates/cortex-inference" }
+cortex-inference = { path = "../../crates/cortex-inference", features = ["llama"] }
 cortex-voice = { path = "../../crates/cortex-voice" }
 cortex-server = { path = "../../crates/cortex-server" }
 cortex-integrations = { path = "../../crates/cortex-integrations" }
+futures = "0.3"
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+
+[features]
+# Statically link libc++ into the Android .so (no libc++_shared.so to package).
+android = ["cortex-inference/android-static-stdcxx"]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+opt-level = 3
+strip = true
+panic = "abort"
+
+# llama.cpp must be built optimised even in `cargo tauri android build --debug`, otherwise the cmake crate
+# selects CMAKE_BUILD_TYPE=Debug and inference is ~20x slower.
+[profile.dev.package.llama-cpp-sys-2]
+opt-level = 3
+[profile.dev.package.llama-cpp-2]
+opt-level = 2

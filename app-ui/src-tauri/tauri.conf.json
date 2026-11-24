@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "identifier": "dev.apex.llm",
   "build": {
-    "beforeDevCommand": "npm --prefix ../../web-showcase run dev",
-    "beforeBuildCommand": "npm --prefix ../../web-showcase run build:app",
+    "beforeDevCommand": "npm --prefix ../web-showcase run dev",
+    "beforeBuildCommand": "npm --prefix ../web-showcase run build:app",
     "devUrl": "http://localhost:3000/app",
     "frontendDist": "../../web-showcase/out"
   },
@@ -16,6 +16,6 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "android": { "minSdkVersion": 28 }
+    "android": { "minSdkVersion": 26 }
   }
 }

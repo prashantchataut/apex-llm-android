@@ -54,6 +54,29 @@ function apply(theme: ThemeId, resolved: Mode, animate: boolean) {
     document.head.appendChild(meta);
   }
   if (canvas) meta.content = canvas;
+  pushSystemBars(canvas || "#000000", resolved === "dark");
+}
+
+/** CSS colour (hex / rgb / oklch...) -> #rrggbb via a 1px canvas, so the Android side can parse it. */
+function toHex(css: string): string {
+  try {
+    const c = document.createElement("canvas");
+    c.width = c.height = 1;
+    const ctx = c.getContext("2d");
+    if (!ctx) return "#000000";
+    ctx.fillStyle = css;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+  } catch {
+    return "#000000";
+  }
+}
+
+/** Android shell: window.ApexBars is injected by MainActivity.kt (edge-to-edge status + nav bar icons / backdrop). */
+function pushSystemBars(canvas: string, dark: boolean) {
+  const bars = (window as unknown as { ApexBars?: { set: (color: string, lightIcons: boolean) => void } }).ApexBars;
+  if (bars) bars.set(toHex(canvas), dark);
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -67,6 +90,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const r = stored.mode === "system" ? systemMode() : stored.mode;
     setResolved(r);
     apply(stored.theme, r, false);
+    // Native restore: if the WebView storage was cleared, the Rust-side copy wins.
+    if (!localStorage.getItem(THEME_STORAGE_KEY)) {
+      void invokeNative<string>("settings_get", { key: "theme" }).then((raw) => {
+        if (!raw) return;
+        try {
+          const p = JSON.parse(raw) as Partial<ThemePrefs>;
+          const next: ThemePrefs = { theme: isThemeId(p.theme) ? p.theme : DEFAULT_PREFS.theme, mode: isModePref(p.mode) ? p.mode : DEFAULT_PREFS.mode };
+          const rr = next.mode === "system" ? systemMode() : next.mode;
+          setPrefs(next);
+          setResolved(rr);
+          apply(next.theme, rr, true);
+        } catch {
+          /* ignore corrupt native copy */
+        }
+      });
+    }
   }, []);
 
   // Follow OS changes while in "system".

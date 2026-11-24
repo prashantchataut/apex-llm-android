@@ -4,6 +4,8 @@
 #![forbid(unsafe_code)]
 
 pub mod grammar;
+#[cfg(feature = "llama")]
+pub mod llama_engine;
 pub mod template;
 pub mod think;
 
