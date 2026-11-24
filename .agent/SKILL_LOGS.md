@@ -51,3 +51,9 @@
 
 ## Session 3 — Phase 3/4
 - Phase 3: Playwright/Chromium QA loop (see STATE.md for defects fixed). Phase 4 `native-rust-systems` (manual): fmt/clippy/test verified, vault prefix renamed, unused dep removed; SQLite NOT done.
+
+## Session 5
+- No skill-loader in this runtime; protocols applied manually.
+- native-rust-systems: candle engine + tokenizer + tests, clippy clean, real-weights test passed.
+- design-taste-frontend / hallmark-ui / open-design-skill: engine pill, artifacts drawer, frosted telemetry popover, bento share card, Arena dual lanes (Crown + haptics). Visual QA partial (see STATE).
+- rea-reverse-engineering: wllama 4.0 and transformers.js 4.3 APIs read from their shipped type definitions.

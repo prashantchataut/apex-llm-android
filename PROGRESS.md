@@ -22,3 +22,6 @@ ession 2 — themes, onboarding, image/video models, QA, CI
 
 ## Session 1 — Foundation
 Monorepo: 6 Rust crates, Tauri v2 shell skeleton, Next.js showcase/app UI, design tokens, docs, CI. REA of PocketLLM and local-llms-on-android in `ARCHITECTURE.md` §3.
+
+## Session 5 — real GGUF, voice, artifacts, arena
+**Done (verified):** candle GGUF engine with real weights, wllama WASM engine with real download/inference, honest engine pill, CI fixes. **Built, not fully QA'd:** Whisper voice, artifacts, branching, bento, Arena. **Unverified:** APK release. See `.agent/STATE.md`.

@@ -184,3 +184,7 @@ button {
   .choreo .cross { transform: translate(-50%, -50%); }
   .choreo-v { animation: none; }
 }
+
+/* composer: no native focus rectangle inside the glass bar; the bar itself lights up */
+form input:focus-visible{outline:none}
+.glass-dark:focus-within{border-color:rgba(255,255,255,.3)}

@@ -8,7 +8,7 @@ const log = (...a) => console.log(`[${which}]`, ...a);
 
 async function newCtx(browser) {
   const ctx = await browser.newContext({ viewport: VPS[which], deviceScaleFactor: 2, colorScheme: "dark", permissions: ["microphone"] });
-  await ctx.addInitScript(() => localStorage.setItem("apex.onboarding.v1", JSON.stringify({ done: true, uses: [], picks: [] })));
+  await ctx.addInitScript(() => { if (self === top) localStorage.setItem("apex.onboarding.v1", JSON.stringify({ done: true, uses: [], picks: [] })); });
   return ctx;
 }
 async function open(ctx) {
@@ -55,7 +55,9 @@ async function step(name, fn) {
 
   if (process.env.ONLY === "artifacts") { await browser.close(); return; }
   // ── 01 / 03 / 05 / 04 real engine session ──
-  const ctx = await newCtx(browser);
+  // persistent profile on disk: an ephemeral headless profile has a tiny OPFS quota ("No space available")
+  const ctx = await chromium.launchPersistentContext(`/tmp/pwprofile-${which}-${Date.now()}`, { viewport: VPS[which], deviceScaleFactor: 2, colorScheme: "dark", permissions: ["microphone"], args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] });
+  await ctx.addInitScript(() => { if (self === top) localStorage.setItem("apex.onboarding.v1", JSON.stringify({ done: true, uses: [], picks: [] })); });
   const page = await open(ctx);
   await shot(page, "00-sandbox-before-model");
   let loaded = false;

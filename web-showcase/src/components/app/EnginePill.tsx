@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { RippleButton } from "@/components/ui/Glass";
 import { activeBackend, loadWllamaModel, MB, saveRouter, shortModelName, unloadWllama, useEngine, type Backend } from "@/lib/engine";
@@ -29,6 +29,12 @@ export function EnginePill({ nativeModel }: { nativeModel: string | null }) {
   const p = eng.progress;
   const nano = LOADABLE[0];
   const tone = TONE[backend];
+  useEffect(() => {
+    if (!open) return;
+    const f = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", f);
+    return () => window.removeEventListener("keydown", f);
+  }, [open]);
 
   let label: string;
   if (p && p.phase !== "error") {
