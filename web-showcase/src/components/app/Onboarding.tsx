@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useMotionValue, useSpring, type Variants } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type PointerEvent, type ReactNode } from "react";
 import { ApexLogo } from "@/components/brand/ApexLogo";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { RippleButton } from "@/components/ui/Glass";
@@ -120,7 +120,7 @@ async function issueKey(): Promise<string> {
   const native = await invokeNative<{ key?: string } | string>("api_key_create", { name: "Onboarding · LAN" });
   const k = typeof native === "string" ? native : native?.key;
   if (k && k.startsWith("sk-apex-")) return k;
-  const bytes = new Uint8Array(20);
+  const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
   const alphabet = "abcdefghijklmnopqrstuvwxyz234567";
   let bits = 0;
@@ -186,7 +186,7 @@ function KeyCard({ flipped, keyText, onToggle }: { flipped: boolean; keyText: st
                 <Icon name={copied ? "check" : "copy"} size={16} />
               </button>
             </div>
-            <div className="mono break-all text-[13.5px] leading-snug tracking-tight" aria-live="polite">
+            <div className="mono break-all text-[12.5px] leading-snug tracking-tight" aria-live="polite">
               {keyText || "sk-apex-…"}
             </div>
             <div className="mono flex items-center justify-between text-[10.5px] text-white/75">

@@ -102,7 +102,7 @@ export function LiveLab() {
         })}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr] lg:items-start">
         <Panel
           kicker="Onboarding · scene 02"
           title="Silicon scan"

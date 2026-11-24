@@ -17,7 +17,7 @@ const PATHS = {
   download: "M12 4v12M7 11l5 5 5-5M4 20h16",
   pause: "M8 5v14M16 5v14",
   cpu: "M7 7h10v10H7zM9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4",
-  prism: "M12 3l9 5v8l-9 5-9-5V8l9-5zM3 8l9 5 9-5M12 13v8",
+  prism: "M12 4L3 19h18L12 4zM12 4v15M7.6 12.2L12 15l4.4-2.8",
   chevron: "M6 9l6 6 6-6",
   x: "M6 6l12 12M18 6L6 18",
   arrow: "M7 17L17 7M8 7h9v9",

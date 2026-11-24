@@ -69,9 +69,9 @@ export function SiliconScan({
 
   const cards = [
     { label: "Memory", value: dev.totalGB.toFixed(1), unit: "GB", sub: `${dev.availGB.toFixed(1)} GB free` },
-    { label: "ARMv8 NEON", value: String(dev.cores), unit: "cores", sub: dev.dotprod ? "DotProd · FP16" : "NEON only" },
-    { label: "GPU compute", value: dev.vulkan ? "Vulkan" : "CPU", sub: dev.vulkan ? "Compute shaders" : "No Vulkan 1.1" },
-    { label: "Free storage", value: dev.freeStorageGB.toFixed(0), unit: "GB", sub: "for models" },
+    { label: "NEON", value: String(dev.cores), unit: "cores", sub: dev.dotprod ? "DotProd" : "NEON only" },
+    { label: "GPU", value: dev.vulkan ? "Vulkan" : "CPU", sub: dev.vulkan ? "Compute" : "CPU fallback" },
+    { label: "Storage", value: dev.freeStorageGB.toFixed(0), unit: "GB", sub: "for models" },
   ];
   const lit = (i: number) => found > i;
   const sourceLabel = source === "native" ? "Measured on this device" : source === "browser" ? "Estimated from browser" : "Typical phone";
@@ -79,7 +79,7 @@ export function SiliconScan({
   return (
     <div>
       {/* ── frosted hardware schematic + scan beam ── */}
-      <div ref={panel} className="glass-dark relative h-[150px] overflow-hidden rounded-[26px]" aria-hidden="true">
+      <div ref={panel} className="glass-dark relative h-[132px] overflow-hidden rounded-[26px]" aria-hidden="true">
         <svg viewBox="0 0 320 150" className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
           {/* pins */}
           {Array.from({ length: 14 }, (_, i) => (
@@ -143,7 +143,7 @@ export function SiliconScan({
                 initial={false}
                 animate={done ? { opacity: 1, y: 0, filter: "blur(0px)" } : { opacity: 0, y: 6, filter: "blur(6px)" }}
                 transition={SPRING}
-                className="rounded-full border border-accent/60 bg-accent/10 px-2.5 py-1.5 font-medium tracking-[0.04em] text-white"
+                className="rounded-full border border-accent/60 bg-accent/10 px-2.5 py-1.5 text-[9.5px] font-medium tracking-[0.02em] text-white sm:text-[10.5px] sm:tracking-[0.04em]"
               >
                 {quantBadge(dev)}
               </motion.span>
