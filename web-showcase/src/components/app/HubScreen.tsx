@@ -8,6 +8,8 @@ import { FanStack } from "@/components/ui/FanStack";
 import { BADGE, DEVICES, fmtBytes, GIB, recommend, score, type DeviceProfile } from "@/lib/compat";
 import { etaSeconds, fmtEta, MEDIA_CATALOG, mediaTotalGB, scoreMedia, type MediaKind, type MediaModel } from "@/lib/media";
 import { CATALOG, kvFor, VOICE_MODELS } from "@/lib/models";
+import { GuardPill } from "./GuardPill";
+import { NanoCard } from "./NanoCard";
 import type { Downloads, DlState } from "./useDownloads";
 
 type Section = "text" | "image" | "video" | "voice";
@@ -61,6 +63,8 @@ export function HubScreen({
   source,
   downloads,
   initialSection = "text",
+  kvUsed = 0,
+  kvMax = 4096,
 }: {
   activeKeys: number;
   dev: DeviceProfile;
@@ -68,6 +72,8 @@ export function HubScreen({
   source: "native" | "browser" | "preset";
   downloads: Downloads;
   initialSection?: Section;
+  kvUsed?: number;
+  kvMax?: number;
 }) {
   const [section, setSection] = useState<Section>(initialSection);
   const rec = recommend(dev);
@@ -164,6 +170,8 @@ export function HubScreen({
 
       {section === "text" && (
         <>
+          <GuardPill className="mt-5" kvUsed={kvUsed} kvMax={kvMax} />
+          <NanoCard downloads={downloads} className="mt-4" />
           <SectionTitle>Language models · GGUF</SectionTitle>
           <div className="space-y-2.5">
             {CATALOG.map((m) => {
@@ -183,6 +191,7 @@ export function HubScreen({
                     </div>
                     {c !== "incompatible" && <DlButton state={s} onClick={() => downloads.toggle(m.id)} label="Get" />}
                   </div>
+                  {s.error && <p className="mt-2 text-[11.5px] text-bad">{s.error}</p>}
                   {s.status !== "idle" && s.status !== "done" && (
                     <div className="mt-3">
                       <ProgressBar pct={s.pct} />
@@ -198,7 +207,7 @@ export function HubScreen({
               );
             })}
           </div>
-          <p className="mt-4 text-[11px] leading-relaxed text-ink-3">Sizes and layer counts are rounded demo values. The app reads exact sizes and SHA-256 from Hugging Face.</p>
+          <p className="mt-4 text-[11px] leading-relaxed text-ink-3">File sizes are verified against Hugging Face; layer and head counts are rounded from model cards. The app checks the exact size while downloading.</p>
         </>
       )}
 

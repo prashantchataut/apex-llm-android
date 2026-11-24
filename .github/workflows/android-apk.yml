@@ -33,10 +33,13 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: android-actions/setup-android@v3
-      - name: SDK / NDK
+      - name: SDK / NDK (runner image ships the Android SDK)
         run: |
           set -x
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | sort -V | tail -1)
+          echo "$SM" >> "$GITHUB_PATH"
+          export PATH="$SM:$PATH"
           SDK=$(grep -oP 'compileSdk = \K[0-9]+' app-ui/src-tauri/gen/android/app/build.gradle.kts)
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "ndk;${NDK_VERSION}" "platforms;android-${SDK}" "build-tools;35.0.0" || sdkmanager "ndk;${NDK_VERSION}" "platforms;android-${SDK}.0" "build-tools;35.0.0" || sdkmanager "ndk;${NDK_VERSION}" "build-tools;35.0.0"
@@ -62,10 +65,10 @@ jobs:
           echo "APEX_KEY_ALIAS=apex" >> "$GITHUB_ENV"
       - name: Build APK (arm64-v8a, release)
         working-directory: app-ui
-        env:
-          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
-          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
-        run: tauri android build --apk --target aarch64 --features android
+        run: |
+          export NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
+          export ANDROID_NDK_HOME="$NDK_HOME"
+          tauri android build --apk --target aarch64 --features android
       - name: Verify + name the artifact
         id: pack
         run: |

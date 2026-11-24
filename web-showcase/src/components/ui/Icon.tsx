@@ -35,6 +35,10 @@ const PATHS = {
   swatch: "M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2 0-1.3-1-1.5-1-2.7 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3zM7.5 11h.01M10 7.5h.01M14.5 7.5h.01",
   plus: "M12 5v14M5 12h14",
   back: "M15 6l-6 6 6 6",
+  pencil: "M4 20l1-4L16 5l3 3L8 19zM14 7l3 3",
+  thermo: "M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0zM12 9v7",
+  qr: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v2M14 18h2v2M18 18h2v2",
+  vibrate: "M9 4h6v16H9zM5 8v8M2 10v4M19 8v8M22 10v4",
 } as const;
 
 export type IconName = keyof typeof PATHS;

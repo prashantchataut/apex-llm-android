@@ -9,6 +9,8 @@ export interface VoiceState {
   recording: boolean;
   transcript: string;
   latencyMs: number;
+  /** Short status line shown under the composer (e.g. voice unavailable). */
+  notice?: string;
 }
 
 /** 21st.dev / UiHall-style prompt bar: attach · input · mic · send, with in-bar waveform + live transcript. */
@@ -20,6 +22,7 @@ export function PromptBar({
   onMic,
   placeholder = "Ask anything, offline…",
   disabled,
+  canSendEmpty,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -28,12 +31,14 @@ export function PromptBar({
   onMic: () => void;
   placeholder?: string;
   disabled?: boolean;
+  /** Allow sending with an empty prompt (attachments present). */
+  canSendEmpty?: boolean;
 }) {
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (value.trim() && !disabled) onSubmit();
+        if ((value.trim() || canSendEmpty) && !disabled) onSubmit();
       }}
       className="glass-dark relative flex min-h-[60px] items-center gap-2 rounded-[30px] p-2 pl-3"
     >
@@ -72,7 +77,7 @@ export function PromptBar({
       <RippleButton
         type="submit"
         aria-label="Send"
-        disabled={!value.trim() || disabled}
+        disabled={(!value.trim() && !canSendEmpty) || disabled}
         className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-black disabled:bg-white/20 disabled:text-ink-3"
       >
         <Icon name="send" size={20} strokeWidth={2.4} />

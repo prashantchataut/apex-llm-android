@@ -81,6 +81,7 @@ pre{margin:8px 0 0;background:rgba(0,0,0,.45);border:1px solid var(--line);borde
 const $=id=>document.getElementById(id);
 const base=location.origin;
 $('base').textContent=base;
+(function(){const m=location.hash.match(/key=(sk-apex-[A-Za-z0-9]+)/);if(m){localStorage.setItem('apex.key',m[1]);history.replaceState(null,'',location.pathname)}})();
 $('key').value=localStorage.getItem('apex.key')||'';
 const hdr=()=>({'content-type':'application/json',...( $('key').value?{authorization:'Bearer '+$('key').value.trim()}:{})});
 const snippets={

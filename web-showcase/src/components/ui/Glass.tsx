@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { haptic, type HapticName } from "@/lib/haptics";
 import { useCallback, useState, type ComponentProps, type CSSProperties, type ReactNode, type PointerEvent } from "react";
 
 export const SPRING = { type: "spring", stiffness: 380, damping: 26 } as const;
@@ -10,8 +11,10 @@ export function RippleButton({
   children,
   className = "",
   onPointerDown,
+  onClick,
+  haptic: signature = "detentClick",
   ...rest
-}: ComponentProps<"button"> & { children: ReactNode }) {
+}: ComponentProps<"button"> & { children: ReactNode; haptic?: HapticName | false }) {
   const [ripples, setRipples] = useState<{ id: number; x: number; y: number; s: number }[]>([]);
   const down = useCallback(
     (e: PointerEvent<HTMLButtonElement>) => {
@@ -25,7 +28,13 @@ export function RippleButton({
     [onPointerDown],
   );
   return (
-    <button {...rest} onPointerDown={down} className={`ripple-host transition-transform duration-150 active:scale-[0.97] ${className}`}>
+    <button
+      {...rest}
+      onClick={(e) => {
+        if (signature) haptic(signature);
+        onClick?.(e);
+      }}
+      onPointerDown={down} className={`ripple-host transition-transform duration-150 active:scale-[0.97] ${className}`}>
       {children}
       {ripples.map((r) => (
         <span key={r.id} className="ripple" style={{ left: r.x, top: r.y, width: r.s, height: r.s }} />
@@ -72,7 +81,10 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boo
       role="switch"
       aria-checked={on}
       aria-label={label}
-      onClick={() => onChange(!on)}
+      onClick={() => {
+        haptic("detentClick");
+        onChange(!on);
+      }}
       className={`relative h-11 w-16 shrink-0 rounded-full border transition-colors duration-300 ${on ? "border-ok/40 bg-ok/30" : "border-white/10 bg-white/10"}`}
     >
       <motion.span

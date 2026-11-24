@@ -10,7 +10,7 @@ import { Crosshair } from "@/components/ui/Swiss";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { BADGE, DEVICES, GIB, recommend, score, type Compat, type DeviceProfile } from "@/lib/compat";
 import { bestMedia, mediaTotalGB, scoreMedia } from "@/lib/media";
-import { CATALOG, kvFor, VOICE_MODELS } from "@/lib/models";
+import { CATALOG, kvFor, NANO_MODEL, VOICE_MODELS } from "@/lib/models";
 import { invokeNative } from "@/lib/native";
 import type { OnboardingState, UseCase } from "@/lib/prefs";
 import type { ModePref, ThemeId } from "@/lib/themes";
@@ -27,7 +27,7 @@ type Scene = (typeof SCENES)[number];
 /* ───────────────────────── model recommendations (unchanged logic) ───────────────────────── */
 interface Rec {
   id: string;
-  kind: "Language" | "Image" | "Video" | "Voice";
+  kind: "Language" | "Instant start" | "Image" | "Video" | "Voice";
   title: string;
   sub: string;
   gb: number;
@@ -41,7 +41,8 @@ export function buildRecs(uses: UseCase[], dev: DeviceProfile): Rec[] {
   const scored = CATALOG.map((m) => ({ m, c: score(dev, m.sizeGB * GIB, kvFor(m, ctx)) }));
   const fit = scored.filter((x) => x.c === "optimal").sort((a, b) => b.m.sizeGB - a.m.sizeGB)[0] ?? scored.filter((x) => x.c === "heavy").sort((a, b) => a.m.sizeGB - b.m.sizeGB)[0];
   const wantsText = uses.some((u) => u === "chat" || u === "code" || u === "server") || uses.length === 0;
-  if (wantsText && fit) out.push({ id: fit.m.id, kind: "Language", title: fit.m.name, sub: `${fit.m.quant} · ${fit.m.sizeGB.toFixed(2)} GB`, gb: fit.m.sizeGB, compat: fit.c });
+  if (wantsText) out.push({ id: NANO_MODEL.id, kind: "Instant start", title: "SmolLM2 135M Nano", sub: `${NANO_MODEL.quant} · runs in seconds`, gb: NANO_MODEL.sizeGB, compat: "optimal" });
+  if (wantsText && fit && fit.m.id !== NANO_MODEL.id) out.push({ id: fit.m.id, kind: "Language", title: fit.m.name, sub: `${fit.m.quant} · ${fit.m.sizeGB.toFixed(2)} GB`, gb: fit.m.sizeGB, compat: fit.c });
   for (const k of ["image", "video"] as const) {
     if (!uses.includes(k)) continue;
     const m = bestMedia(dev, k);
