@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CATALOG } from "@/lib/models";
 import { shortModelName } from "@/lib/engine";
 import { KEYLESS_MODELS, isServed, useKeylessLive } from "@/lib/keyless";
+import { modelUnlocked, type Access } from "@/lib/access";
 import { downloadImage } from "@/lib/images";
 import { ago, type UpdateState } from "@/lib/updater";
 import { APP_VERSION } from "@/lib/version";
@@ -16,7 +17,7 @@ export type View = "chat" | "hub" | "studio" | "memory" | "mcp" | "lan" | "setti
 
 export function Header({ persistent, onMenu, label, onPill, onNew }: { persistent: boolean; onMenu: () => void; label: string; onPill: () => void; onNew: () => void }) {
   return (
-    <header className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 pb-2 pt-[max(12px,env(safe-area-inset-top))]">
+    <header className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 pb-2 pt-safe">
       <div className="flex">
         <button type="button" onClick={onMenu} aria-label="Open sidebar" className={`ibtn !h-11 !w-11 ${persistent ? "lg:hidden" : ""}`}>
           <CIcon name="sidebar" size={21} />
@@ -44,7 +45,7 @@ export function Header({ persistent, onMenu, label, onPill, onNew }: { persisten
   );
 }
 
-function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
   useEffect(() => {
     if (!open) return;
     const f = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -71,42 +72,71 @@ function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () 
   );
 }
 
-export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading }: { open: boolean; onClose: () => void; choice: Choice; onPick: (c: Choice) => void; dl: Record<string, DlItem>; onHub: () => void; loading: string | null }) {
+export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, access, onKey }: { open: boolean; onClose: () => void; choice: Choice; onPick: (c: Choice) => void; dl: Record<string, DlItem>; onHub: (tab: "trending" | "uncensored" | "search") => void; loading: string | null; access: Access; onKey: () => void }) {
   const live = useKeylessLive();
   const installed = CATALOG.filter((m) => dl[m.id]?.status === "done");
+  const sub = "block truncate text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]";
+  const head = "px-3 pb-1 pt-4 text-[13px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]";
   const Row = ({ active, children, onClick, disabled }: { active: boolean; children: ReactNode; onClick: () => void; disabled?: boolean }) => (
     <button type="button" onClick={onClick} disabled={disabled} aria-pressed={active} className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl px-3 text-left transition-colors hover:bg-[var(--surface-2)] disabled:opacity-50" style={active ? { background: "var(--halo-a)" } : undefined}>
       {children}
       {active && <CIcon name="check" size={17} className="ml-auto shrink-0 text-[var(--halo-ink)]" />}
     </button>
   );
+  const go = (tab: "trending" | "uncensored" | "search") => {
+    onClose();
+    onHub(tab);
+  };
+  const nTrend = CATALOG.filter((m) => !m.uncensored && m.group !== "custom").length;
+  const nUnc = CATALOG.filter((m) => m.uncensored).length;
   return (
-    <Sheet open={open} onClose={onClose} title="Switch engine">
-      <p className="px-3 pb-1 pt-3 text-[13px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Keyless · works instantly</p>
-      {KEYLESS_MODELS.map((m) => {
-        const served = isServed(m, live);
-        return (
-          <Row key={m.id} active={choice.kind === "keyless" && choice.id === m.id} onClick={() => { onPick({ kind: "keyless", id: m.id }); onClose(); }}>
-            <span className="min-w-0">
-              <span className="block truncate text-[14px]">{m.label}</span>
-              <span className="block truncate text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{served ? "Runs in the cloud, no key" : "Busy on the free tier, uses GPT-OSS 20B"}</span>
-            </span>
-          </Row>
-        );
-      })}
-      <p className="px-3 pb-1 pt-4 text-[13px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">On this device</p>
-      {installed.length === 0 && <p className="px-3 pb-2 text-[13px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">No local models yet. They run offline and stay private.</p>}
+    <Sheet open={open} onClose={onClose} title="Choose a model">
+      <p className="px-3 pb-1 pt-2 text-[13px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">On this device · free, private, offline</p>
+      {installed.length === 0 && <p className="px-3 pb-2 text-[13px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">No local models mounted yet. Download one below, it takes about a minute.</p>}
       {installed.map((m) => (
         <Row key={m.id} disabled={loading === m.id} active={choice.kind === "local" && choice.id === m.id} onClick={() => { onPick({ kind: "local", id: m.id }); onClose(); }}>
           <span className="min-w-0">
-            <span className="block truncate text-[14px]">{shortModelName(m)}</span>
-            <span className="block truncate text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{loading === m.id ? "Loading into memory…" : `${(m.sizeGB * 1000).toFixed(0)} MB · Runs offline`}</span>
+            <span className="block truncate text-[14px]">{shortModelName(m)}{m.uncensored ? " · Uncensored" : ""}</span>
+            <span className={sub}>{loading === m.id ? "Loading into memory…" : `${(m.sizeGB * 1000).toFixed(0)} MB · Runs offline`}</span>
           </span>
         </Row>
       ))}
-      <button type="button" onClick={() => { onClose(); onHub(); }} className="calm-btn mt-3 w-full" data-tone="sage">
-        <CIcon name="cube" size={16} /> Browse Model Hub
-      </button>
+
+      <p className={head}>Download local models</p>
+      {([
+        ["trending", "cube", "Trending phone models", `${nTrend} models · from 145 MB`],
+        ["uncensored", "unlock", "Uncensored & abliterated", `${nUnc} models · no refusals`],
+        ["search", "search", "Search Hugging Face", "Any public GGUF"],
+      ] as const).map(([tab, icon, t, d]) => (
+        <Row key={tab} active={false} onClick={() => go(tab)}>
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--surface-2)]"><CIcon name={icon} size={16} /></span>
+          <span className="min-w-0">
+            <span className="block truncate text-[14px]">{t}</span>
+            <span className={sub}>{d}</span>
+          </span>
+          <CIcon name="chevron" size={14} className="ml-auto -rotate-90 opacity-40" />
+        </Row>
+      ))}
+
+      <div className="flex items-center justify-between px-3 pb-1 pt-4">
+        <p className="text-[13px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Keyless Cloud</p>
+        <button type="button" onClick={() => { onClose(); onKey(); }} className="calm-chip" style={access.state === "active" ? { background: "var(--halo-a)", color: "var(--halo-ink)" } : undefined}>
+          <CIcon name={access.state === "active" ? "key" : "lock"} size={12} /> {access.state === "active" ? "Key active" : "Enter key"}
+        </button>
+      </div>
+      {KEYLESS_MODELS.map((m) => {
+        const unlocked = modelUnlocked(m.id, access);
+        const served = isServed(m, live);
+        return (
+          <Row key={m.id} active={unlocked && choice.kind === "keyless" && choice.id === m.id} onClick={() => { if (unlocked) { onPick({ kind: "keyless", id: m.id }); onClose(); } else { onClose(); onKey(); } }}>
+            <span className="min-w-0">
+              <span className="block truncate text-[14px]">{m.label}</span>
+              <span className={sub}>{unlocked ? (served ? "Cloud · unlocked with your key" : "Busy on the free tier, uses GPT-OSS 20B") : "Locked · Requires Access Key"}</span>
+            </span>
+            {!unlocked && <CIcon name="lock" size={15} className="ml-auto shrink-0 opacity-45" />}
+          </Row>
+        );
+      })}
     </Sheet>
   );
 }
@@ -186,7 +216,7 @@ export function Drawer({ open, persistent, onClose, convos, activeId, onOpenConv
         aria-label="Navigation"
         aria-hidden={!open && !persistent ? true : undefined}
         {...(!open ? { inert: persistent ? undefined : true } : {})}
-        className={`absolute inset-y-0 left-0 z-40 flex w-[86%] max-w-[340px] flex-col bg-[var(--canvas)] pt-[max(14px,env(safe-area-inset-top))] ${open ? "shadow-[0_0_70px_-24px_rgb(0_0_0/0.3)]" : ""} transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${open ? "translate-x-0" : "-translate-x-full"} ${persistent ? "lg:static lg:z-10 lg:w-[300px] lg:translate-x-0 lg:shadow-none" : ""}`}
+        className={`absolute inset-y-0 left-0 z-40 flex w-[86%] max-w-[340px] flex-col bg-[var(--canvas)] pt-safe-lg ${open ? "shadow-[0_0_70px_-24px_rgb(0_0_0/0.3)]" : ""} transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${open ? "translate-x-0" : "-translate-x-full"} ${persistent ? "lg:static lg:z-10 lg:w-[300px] lg:translate-x-0 lg:shadow-none" : ""}`}
       >
         <div className="px-3">
           <div className="mb-3 flex items-center justify-between px-1">
@@ -243,7 +273,7 @@ export function Drawer({ open, persistent, onClose, convos, activeId, onOpenConv
           ))}
         </div>
 
-        <div className="px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-2">
+        <div className="px-3 pb-safe-lg pt-2">
           <nav aria-label="Workspace">
             {NAV.map((n) => (
               <button key={n.id} type="button" className="nav-row" data-active={view === n.id} aria-current={view === n.id ? "page" : undefined} onClick={() => onNav(n.id)}>
@@ -273,7 +303,7 @@ export function Lightbox({ img, onClose }: { img: { url: string; prompt: string 
         <motion.div role="dialog" aria-modal="true" aria-label="Image preview" className="absolute inset-0 z-50 grid place-items-center bg-black/80 p-4 backdrop-blur-md" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={img.url} alt={img.prompt} className="max-h-[82%] max-w-full rounded-2xl object-contain shadow-2xl" onClick={(e) => e.stopPropagation()} />
-          <div className="absolute right-3 top-[max(12px,env(safe-area-inset-top))] flex gap-2">
+          <div className="absolute right-3 top-safe flex gap-2">
             <button type="button" aria-label="Download" className="grid h-11 w-11 place-items-center rounded-full bg-[rgb(255_255_255/0.15)] text-[#fff]" onClick={(e) => { e.stopPropagation(); void downloadImage(img.url); }}>
               <CIcon name="download" size={19} />
             </button>

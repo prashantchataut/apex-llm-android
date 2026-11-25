@@ -16,33 +16,79 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
 /**
- * Edge-to-edge shell. The WebView draws behind both system bars; the web layer tells us the active theme's
- * canvas colour + whether its icons should be light or dark through `window.ApexBars.set(...)`, and receives
- * the real system-bar insets as CSS variables (--apex-inset-top / --apex-inset-bottom).
+ * Edge-to-edge shell (targetSdk 37 enforces edge-to-edge, so `setDecorFitsSystemWindows(true)` is ignored and the
+ * WebView always draws behind the status bar). Android WebViews usually report `env(safe-area-inset-top) = 0`, which
+ * made the app header collide with the clock / battery. Fix, in three redundant layers:
+ *  1. The real system-bar insets are captured in [Insets] and pushed to the page as `--safe-top` / `--safe-bottom`
+ *     (CSS px) on every inset change, on resume, and repeatedly during the first two seconds (the old one-shot script
+ *     ran before the document existed and was lost).
+ *  2. `window.ApexBars.insets()` returns the same numbers synchronously, so the web layer can pull them at any time.
+ *  3. The CSS keeps a 38px / 14px Android fallback when neither value is available.
+ * The web layer also tells us the active theme's canvas colour via `window.ApexBars.set(...)`.
  */
 class MainActivity : TauriActivity() {
+  private var webView: WebView? = null
+
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    // Dark backdrop until the web layer reports its theme, so the bars never flash white.
+    window.decorView.setBackgroundColor(Color.parseColor("#0D0D0F"))
   }
 
   override fun onWebViewCreate(webView: WebView) {
+    this.webView = webView
     webView.addJavascriptInterface(Bars(this), "ApexBars")
     webView.addJavascriptInterface(Haptics(this), "ApexHaptics")
-    ViewCompat.setOnApplyWindowInsetsListener(webView) { v, insets ->
-      val b = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
-      val d = v.resources.displayMetrics.density
-      val kb = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-      val js = "(function(){var s=document.documentElement.style;" +
-        "s.setProperty('--apex-inset-top','${b.top / d}px');" +
-        "s.setProperty('--apex-inset-bottom','${b.bottom / d}px');" +
-        "s.setProperty('--apex-kb','${kb / d}px');})()"
-      v.post { (v as WebView).evaluateJavascript(js, null) }
+    val listener = androidx.core.view.OnApplyWindowInsetsListener { v, insets ->
+      Insets.capture(insets, v.resources.displayMetrics.density)
+      pushInsets()
       insets
+    }
+    ViewCompat.setOnApplyWindowInsetsListener(webView, listener)
+    // Late page loads / reloads: keep pushing for the first seconds so the value lands after the document exists.
+    repeat(8) { i -> webView.postDelayed({ refreshFromRoot(webView); pushInsets() }, 250L * (i + 1)) }
+  }
+
+  override fun onResume() {
+    super.onResume()
+    webView?.let { w -> refreshFromRoot(w); w.postDelayed({ pushInsets() }, 120) }
+  }
+
+  private fun refreshFromRoot(w: WebView) {
+    ViewCompat.getRootWindowInsets(w)?.let { Insets.capture(it, w.resources.displayMetrics.density) }
+  }
+
+  private fun pushInsets() {
+    val w = webView ?: return
+    val js = "(function(){var s=document.documentElement.style;" +
+      "s.setProperty('--safe-top','${Insets.top}px');s.setProperty('--safe-bottom','${Insets.bottom}px');" +
+      "s.setProperty('--apex-inset-top','${Insets.top}px');s.setProperty('--apex-inset-bottom','${Insets.bottom}px');" +
+      "s.setProperty('--apex-kb','${Insets.kb}px');document.documentElement.dataset.nativeInsets='1';})()"
+    w.post { w.evaluateJavascript(js, null) }
+  }
+
+  /** Last known system-bar insets in CSS px. */
+  object Insets {
+    @Volatile var top = 0f
+    @Volatile var bottom = 0f
+    @Volatile var kb = 0f
+    fun capture(insets: WindowInsetsCompat, density: Float) {
+      val b = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+      top = b.top / density
+      bottom = b.bottom / density
+      kb = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom / density
     }
   }
 
   class Bars(private val activity: Activity) {
+    /** "top,bottom,keyboard" in CSS px; read synchronously by the web layer (`src/lib/insets.ts`). */
+    @JavascriptInterface
+    fun insets(): String {
+      ViewCompat.getRootWindowInsets(activity.window.decorView)?.let { Insets.capture(it, activity.resources.displayMetrics.density) }
+      return "${Insets.top},${Insets.bottom},${Insets.kb}"
+    }
+
     @JavascriptInterface
     fun set(color: String, lightIcons: Boolean) {
       val c = try { Color.parseColor(color) } catch (e: IllegalArgumentException) { return }

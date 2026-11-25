@@ -591,3 +591,20 @@ button.calm-chip:active {
 ::view-transition-new(root) {
   z-index: 2;
 }
+
+
+/* ───────── Android-safe system-bar clearance ─────────
+   env(safe-area-inset-*) is 0 inside most Android WebViews, so the native shell injects --safe-top / --safe-bottom
+   (see MainActivity.kt + lib/insets.ts). html.is-android guarantees a 38px / 14px floor even if the bridge is late. */
+html.is-android { --safe-top-default: 38px; --safe-bottom-default: 14px; }
+.pt-safe { padding-top: calc(max(env(safe-area-inset-top, 0px), var(--safe-top, var(--safe-top-default, 0px))) + 10px); }
+.pt-safe-lg { padding-top: calc(max(env(safe-area-inset-top, 0px), var(--safe-top, var(--safe-top-default, 0px))) + 16px); }
+.pb-safe { padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), var(--safe-bottom, var(--safe-bottom-default, 0px))) + 8px); }
+.pb-safe-lg { padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), var(--safe-bottom, var(--safe-bottom-default, 0px))) + 16px); }
+.top-safe { top: calc(max(env(safe-area-inset-top, 0px), var(--safe-top, var(--safe-top-default, 0px))) + 10px); }
+/* the embedded landing demo is a framed device, not the real screen: no system bars to clear */
+.calm[data-embedded="true"] .pt-safe, .calm[data-embedded="true"] .pt-safe-lg { padding-top: 12px; }
+.calm[data-embedded="true"] .pb-safe, .calm[data-embedded="true"] .pb-safe-lg { padding-bottom: 12px; }
+
+/* user message: edit affordance sits in a tidy row under the bubble instead of floating beside it */
+.msg-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 4px; padding-right: 6px; min-height: 36px; }
