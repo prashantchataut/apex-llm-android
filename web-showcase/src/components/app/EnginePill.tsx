@@ -14,6 +14,7 @@ const TONE: Record<Backend, { dot: string; text: string; ring: string }> = {
   native: { dot: "bg-ok", text: "text-ok", ring: "border-ok/30" },
   wllama: { dot: "bg-ok", text: "text-ok", ring: "border-ok/30" },
   external: { dot: "bg-[#60a5fa]", text: "text-[#93c5fd]", ring: "border-[#60a5fa]/30" },
+  keyless: { dot: "bg-ok", text: "text-ok", ring: "border-ok/30" },
   sandbox: { dot: "bg-warn", text: "text-warn", ring: "border-warn/30" },
 };
 
