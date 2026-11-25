@@ -82,7 +82,7 @@ export interface KeylessStats extends GenStats {
 }
 
 interface Delta {
-  choices?: { delta?: { content?: string; reasoning?: string; reasoning_content?: string } }[];
+  choices?: { delta?: { content?: string; reasoning?: string; reasoning_content?: string; tool_calls?: { index?: number; function?: { name?: string; arguments?: string } }[] } }[];
 }
 
 async function attempt(api: string, messages: ChatTurn[], opts: GenOpts, onText: (raw: string) => void, started: { v: boolean }): Promise<GenStats> {
@@ -106,6 +106,9 @@ async function attempt(api: string, messages: ChatTurn[], opts: GenOpts, onText:
   let text = "";
   let tokens = 0;
   let first = 0;
+  const calls = new Map<number, { name: string; args: string }>();
+  /** Native function-calling deltas are re-encoded in the app's <tool_call> format so one loop handles every model. */
+  const callMarkup = () => [...calls.values()].filter((c) => c.name).map((c) => `<tool_call>${JSON.stringify({ name: c.name, arguments: (() => { try { return JSON.parse(c.args || "{}"); } catch { return {}; } })() })}</tool_call>`).join("");
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -122,11 +125,17 @@ async function attempt(api: string, messages: ChatTurn[], opts: GenOpts, onText:
         const th = d?.reasoning ?? d?.reasoning_content;
         if (th) thought += th;
         if (d?.content) text += d.content;
-        if (th || d?.content) {
+        for (const tc of d?.tool_calls ?? []) {
+          const k = tc.index ?? 0;
+          const cur = calls.get(k) ?? { name: "", args: "" };
+          calls.set(k, { name: cur.name + (tc.function?.name ?? ""), args: cur.args + (tc.function?.arguments ?? "") });
+        }
+        if (th || d?.content || d?.tool_calls) {
           if (!first) first = performance.now();
           started.v = true;
           tokens += 1;
-          onText(thought ? `<think>${thought}${text ? "</think>" : ""}${text}` : text);
+          const tail = callMarkup();
+          onText((thought ? `<think>${thought}${text || tail ? "</think>" : ""}${text}` : text) + tail);
         }
       } catch {
         /* keep-alive or partial JSON */
