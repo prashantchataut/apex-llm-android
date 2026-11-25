@@ -6,7 +6,7 @@ import { CIcon } from "./icons";
 import { ViewTitle } from "./Chrome";
 
 const Seg = ({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) => (
-  <button type="button" aria-pressed={on} onClick={onClick} className="min-h-10 rounded-full border px-3.5 text-[12.5px] transition-colors" style={on ? { background: "var(--ink-solid)", color: "var(--canvas)", borderColor: "transparent" } : { background: "var(--surface)", borderColor: "var(--hairline-strong)" }}>
+  <button type="button" aria-pressed={on} onClick={onClick} className="min-h-10 rounded-full px-4 text-[13px] transition-colors" style={on ? { background: "var(--ink-solid)", color: "var(--canvas)", borderColor: "transparent" } : { background: "var(--surface-2)" }}>
     {label}
   </button>
 );
@@ -44,9 +44,9 @@ export function ImageStudio({ onUseInChat, onZoom }: { onUseInChat: (url: string
   const size = ASPECTS.find((a) => a.id === aspect) ?? ASPECTS[0];
 
   return (
-    <div className="mx-auto w-full max-w-[980px] px-5 pb-10 pt-3">
+    <div className="mx-auto w-full max-w-[640px] px-5 pb-12 pt-3">
       <ViewTitle title="Image Studio" sub="Keyless text-to-image. Pick an engine, describe it, and download or drop it straight into a chat." />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
+      <div className="flex flex-col gap-7">
         <section aria-label="Controls" className="space-y-4">
           <label className="block">
             <span className="mb-1.5 block text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Prompt</span>
@@ -56,7 +56,7 @@ export function ImageStudio({ onUseInChat, onZoom }: { onUseInChat: (url: string
             <legend className="mb-1.5 text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Engine</legend>
             <div className="space-y-1.5">
               {IMAGE_ENGINES.map((e) => (
-                <button key={e.id} type="button" disabled={e.local} aria-pressed={engine === e.id} onClick={() => setEngine(e.id)} className="flex min-h-[50px] w-full items-center gap-3 rounded-2xl border px-3.5 text-left disabled:opacity-50" style={engine === e.id ? { background: "var(--halo-a)", borderColor: "transparent" } : { background: "var(--surface)", borderColor: "var(--hairline)" }}>
+                <button key={e.id} type="button" disabled={e.local} aria-pressed={engine === e.id} onClick={() => setEngine(e.id)} className="flex min-h-[50px] w-full items-center gap-3 rounded-[18px] px-4 text-left transition-colors disabled:opacity-50" style={engine === e.id ? { background: "var(--halo-a)" } : { background: "var(--surface-2)" }}>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13.5px]">{e.label}</span>
                     <span className="block truncate text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{e.sub}</span>
@@ -137,10 +137,10 @@ export function ImageStudio({ onUseInChat, onZoom }: { onUseInChat: (url: string
 
       {gallery.length > 0 && (
         <section aria-label="Gallery" className="mt-9">
-          <h2 className="mb-3 text-[15px] font-medium">Gallery</h2>
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <h2 className="mb-3 text-[16px] font-medium tracking-[-0.02em]">Recent</h2>
+          <ul className="scroll-quiet -mx-5 flex gap-3 overflow-x-auto px-5 pb-2">
             {gallery.slice(0, 12).map((g) => (
-              <li key={g.id} className="group relative overflow-hidden rounded-2xl border border-[var(--hairline)] shimmer" style={{ aspectRatio: "1 / 1" }}>
+              <li key={g.id} className="group relative h-[132px] w-[132px] shrink-0 overflow-hidden rounded-[22px] shadow-[var(--shadow-card)] shimmer">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={g.thumb ?? g.url} alt={g.prompt} loading="lazy" onClick={() => onZoom(g.thumb ?? g.url, g.prompt)} className="relative z-[1] h-full w-full cursor-zoom-in object-cover" />
                 <button type="button" aria-label="Remove from gallery" onClick={() => removeFromGallery(g.id)} className="absolute right-1.5 top-1.5 z-[2] grid h-8 w-8 place-items-center rounded-full bg-[var(--surface)]/90 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100">

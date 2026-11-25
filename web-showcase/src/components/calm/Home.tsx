@@ -1,43 +1,49 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CIcon, type CIconName } from "./icons";
 
-export type TileId = "files" | "images" | "voice" | "code";
-const TILES: { id: TileId; icon: CIconName; title: string; sub: string }[] = [
-  { id: "files", icon: "file", title: "Chat with Files", sub: "Drop PDF, code, markdown, docs" },
-  { id: "images", icon: "palette", title: "Generate Images", sub: "Artwork, UI mocks, photos" },
-  { id: "voice", icon: "mic", title: "Voice Conversation", sub: "Speech in, spoken notes out" },
-  { id: "code", icon: "branch", title: "Code & GitHub", sub: "Inspect repos, debug, run skills" },
+export type Suggestion = "summarize" | "illustrate" | "brainstorm";
+const PILLS: { id: Suggestion; text: string; rot: number; dy: number; align: string }[] = [
+  { id: "summarize", text: "Summarize a document or codebase", rot: -1.5, dy: 0, align: "self-start" },
+  { id: "illustrate", text: "Generate an illustration", rot: 1, dy: 3, align: "self-end" },
+  { id: "brainstorm", text: "Brainstorm without restrictions", rot: -0.8, dy: -2, align: "self-start" },
 ];
 
-/** Empty-chat state: greeting + four capability tiles with vector icon wells. */
-export function Home({ onTile }: { onTile: (t: TileId) => void }) {
+/**
+ * Empty-chat canvas. No cards, no grid: a calm greeting in the upper third and three floating
+ * speech-bubble pills resting just above the composer. Roughly two thirds of the screen stays open.
+ */
+export function Home({ onPick }: { onPick: (s: Suggestion) => void }) {
   return (
-    <div className="scroll-quiet mx-auto flex h-full w-full max-w-[640px] flex-col justify-center overflow-y-auto px-5 pb-4">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 200, damping: 26 }}>
-        <p className="text-[15px] text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">Hi there</p>
-        <h1 className="mt-1 text-[clamp(28px,7vw,40px)] font-normal leading-[1.12] tracking-[-0.025em]">What do you want to do today?</h1>
+    <div className="mx-auto flex h-full w-full max-w-[640px] flex-col px-6 pb-3">
+      <motion.div
+        className="mt-[7vh] sm:mt-[9vh]"
+        initial={{ opacity: 0, y: 10, filter: "blur(8px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <p className="text-[14px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Hi there</p>
+        <h1 className="mt-2 max-w-[16ch] text-[30px] font-normal leading-[1.14] tracking-[-0.03em]">What do you want to do today?</h1>
       </motion.div>
-      <div className="mt-7 grid grid-cols-2 gap-3">
-        {TILES.map((t, i) => (
-          <motion.button
-            key={t.id}
-            type="button"
-            onClick={() => onTile(t.id)}
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 220, damping: 26, delay: 0.06 + i * 0.05 }}
-            className="calm-tile flex min-h-[124px] flex-col items-start justify-between p-4 text-left"
-          >
-            <span className="well" aria-hidden="true">
-              <CIcon name={t.icon} size={19} />
-            </span>
-            <span>
-              <span className="block text-[14.5px] font-medium leading-tight">{t.title}</span>
-              <span className="mt-1 block text-[12px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{t.sub}</span>
-            </span>
-          </motion.button>
+
+      <div className="flex-1" />
+
+      <div className="flex flex-col gap-2.5 pb-1" role="group" aria-label="Suggestions">
+        {PILLS.map((p, i) => (
+          <motion.div key={p.id} className={p.align} initial={{ opacity: 0, y: 16, filter: "blur(6px)" }} animate={{ opacity: 1, y: p.dy, filter: "blur(0px)" }} transition={{ type: "spring", stiffness: 160, damping: 22, delay: 0.35 + i * 0.09 }}>
+            <motion.button
+              type="button"
+              onClick={() => onPick(p.id)}
+              className="sug"
+              style={{ rotate: p.rot }}
+              animate={{ y: [0, -3, 0] }}
+              transition={{ y: { duration: 5 + i, repeat: Infinity, ease: "easeInOut", delay: i * 0.6 } }}
+              whileHover={{ scale: 1.02, rotate: 0 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              {p.text}
+            </motion.button>
+          </motion.div>
         ))}
       </div>
     </div>

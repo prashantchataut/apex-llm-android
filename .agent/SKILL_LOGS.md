@@ -71,3 +71,10 @@
 | hallmark-ui | NO — not installed | Manual: choreographed 2-step onboarding with live theme preview as the signature component. |
 | open-design-skill | NO — not installed | Manual: components re-implemented from patterns observed on beautifului.dev (ui.tsx). 21st.dev AI chat was not scraped this session. |
 | rea | NO — not installed | Manual: Playwright scrape of beautifului.dev (CSS vars, keyframes, screenshots) and a UX audit via headless captures. |
+## Session 7 — anti-slop overhaul (PR branch feat/anti-slop-ui-overhaul)
+No skill loader in this runtime; protocols applied manually.
+- [SKILL: rea-reverse-engineering] Fetched the 4 reference sites. 21st.dev and beautifului.dev returned server-rendered component catalogues (names + descriptions, no CSS); cuedesign.space and UiHall returned only a shell/title (JS-rendered). Findings and limits recorded in `.agent/COMPONENT_EXTRACTION.md`.
+- [SKILL: open-design-skill] Rebuilt Composer send/stop morph, shimmer thinking text + vertical trace, soft follow-up pills, sliding segmented pills, spring switches, circular progress Get -> Use.
+- [SKILL: design-taste-frontend] Borderless tint-shift depth (#fff over #F8F7F4 / #161618 over #0D0D0F), 400-500 weights with -0.03em tracking, blur-to-sharp entrances, spring press states.
+- [SKILL: hallmark-ui] Signature moments: halo composer with floating speech-bubble pills; onboarding breathing orb + circular theme reveal + button-to-prompt-box morph.
+- [SKILL: native-rust-systems] Rust untouched (cargo not available in this sandbox); CI runs fmt/clippy/test.

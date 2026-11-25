@@ -211,7 +211,7 @@ export function ServerScreen({ keys, setKeys, model }: { keys: KeyRec[]; setKeys
       </div>
 
       {/* API keys */}
-      <h3 className="mt-7 mb-3 text-[13px] font-semibold uppercase tracking-[0.14em] text-ink-3">API keys</h3>
+      <h3 className="mt-8 mb-3 text-[14px] font-medium text-ink-3">API keys</h3>
       <div className="flex gap-2">
         <input
           value={name}
@@ -221,7 +221,7 @@ export function ServerScreen({ keys, setKeys, model }: { keys: KeyRec[]; setKeys
           aria-label="Key name"
           className="glass-dark min-w-0 flex-1 rounded-2xl px-4 text-[14px] outline-none placeholder:text-ink-3"
         />
-        <RippleButton onClick={() => void create()} className="flex h-12 items-center gap-1.5 rounded-2xl bg-white px-4 text-[13px] font-semibold text-black">
+        <RippleButton onClick={() => void create()} className="flex h-12 items-center gap-1.5 rounded-2xl bg-white px-4 text-[13px] font-medium text-black">
           <Icon name="key" size={16} /> Generate
         </RippleButton>
       </div>
@@ -230,10 +230,10 @@ export function ServerScreen({ keys, setKeys, model }: { keys: KeyRec[]; setKeys
         {fresh && (
           <motion.div initial={{ opacity: 0, y: -8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }} className="glass mt-3 !rounded-[22px] p-3.5">
             <div className="relative z-[1]">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-2">Copy now — shown once</div>
+              <div className="text-[11px] font-medium text-ink-2">Copy now — shown once</div>
               <div className="mono mt-2 break-all text-[12px] leading-relaxed">{fresh.key}</div>
               <div className="mt-3 flex gap-2">
-                <RippleButton onClick={() => copy(fresh.key, "fresh")} className="flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-[12px] font-semibold text-black">
+                <RippleButton onClick={() => copy(fresh.key, "fresh")} className="flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-[12px] font-medium text-black">
                   <Icon name={copied === "fresh" ? "check" : "copy"} size={14} /> {copied === "fresh" ? "Copied" : "Copy"}
                 </RippleButton>
                 <button onClick={() => setFresh(null)} className="h-11 rounded-full px-3 text-[12px] text-ink-2">
@@ -270,7 +270,7 @@ export function ServerScreen({ keys, setKeys, model }: { keys: KeyRec[]; setKeys
       </div>
 
       {/* QR pairing */}
-      <h3 className="mt-7 mb-3 text-[13px] font-semibold uppercase tracking-[0.14em] text-ink-3">Pair your PC</h3>
+      <h3 className="mt-8 mb-3 text-[14px] font-medium text-ink-3">Pair your PC</h3>
       <div className="bento flex items-center gap-4 p-4">
         <PairingQR url={pairUrl} />
         <div className="min-w-0 flex-1">
@@ -287,7 +287,7 @@ export function ServerScreen({ keys, setKeys, model }: { keys: KeyRec[]; setKeys
       {!on && <p className="mt-2 text-[11.5px] text-ink-3">Start the server above — the console only answers while it is on and your PC is on the same Wi-Fi.</p>}
 
       {/* config generator */}
-      <h3 className="mt-7 mb-3 text-[13px] font-semibold uppercase tracking-[0.14em] text-ink-3">Connect your PC</h3>
+      <h3 className="mt-8 mb-3 text-[14px] font-medium text-ink-3">Connect your PC</h3>
       <div className="bento overflow-hidden">
         <div className="flex border-b border-white/[0.07]" role="tablist">
           {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
@@ -305,7 +305,7 @@ export function ServerScreen({ keys, setKeys, model }: { keys: KeyRec[]; setKeys
       </div>
 
       {/* live request timeline */}
-      <h3 className="mt-7 mb-3 text-[13px] font-semibold uppercase tracking-[0.14em] text-ink-3">Live requests</h3>
+      <h3 className="mt-8 mb-3 text-[14px] font-medium text-ink-3">Live requests</h3>
       <div className="bento p-4">
         {logs.length === 0 ? (
           <p className="text-[13px] text-ink-3">{on ? "Waiting for requests…" : "Start the server to see requests."}</p>
@@ -330,7 +330,7 @@ export function ServerScreen({ keys, setKeys, model }: { keys: KeyRec[]; setKeys
       </div>
 
       {/* GitHub */}
-      <h3 className="mt-7 mb-3 text-[13px] font-semibold uppercase tracking-[0.14em] text-ink-3">GitHub</h3>
+      <h3 className="mt-8 mb-3 text-[14px] font-medium text-ink-3">GitHub</h3>
       <div className="bento p-4">
         {!gh.login ? (
           <>
@@ -361,7 +361,7 @@ export function ServerScreen({ keys, setKeys, model }: { keys: KeyRec[]; setKeys
                     setGh((g) => ({ ...g, busy: false, error: e instanceof Error && e.message.startsWith("GitHub") ? e.message : "Could not reach GitHub." }));
                   }
                 }}
-                className="flex items-center gap-1.5 rounded-2xl bg-white px-4 text-[13px] font-semibold text-black disabled:opacity-40"
+                className="flex items-center gap-1.5 rounded-2xl bg-white px-4 text-[13px] font-medium text-black disabled:opacity-40"
               >
                 <Icon name="github" size={16} /> {gh.busy ? "Checking…" : "Connect"}
               </RippleButton>
@@ -374,7 +374,7 @@ export function ServerScreen({ keys, setKeys, model }: { keys: KeyRec[]; setKeys
             <div className="mb-3 flex items-center gap-2 text-[13px] text-ok">
               <Icon name="check" size={15} /> Connected as @{gh.login}
             </div>
-            <div className="mono mb-1 text-[10.5px] uppercase tracking-[0.14em] text-ink-3">Recently pushed</div>
+            <div className="mono mb-1 text-[10.5px] text-ink-3">Recently pushed</div>
             {gh.repos.map((f) => (
               <div key={f} className="mono truncate py-1.5 text-[11.5px] text-ink-2">
                 {f}

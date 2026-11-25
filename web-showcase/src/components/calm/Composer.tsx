@@ -5,7 +5,7 @@ import { useCallback, useImperativeHandle, useRef, useState, type Ref } from "re
 import { readAttachment, TEXT_ACCEPT, type Attachment } from "@/lib/attachments";
 import { SKILLS, toggleSkill, useSkills } from "@/lib/skills";
 import { useVoice } from "@/components/app/useVoice";
-import { CIcon, Glyph } from "./icons";
+import { CIcon, KeyIcon } from "./icons";
 
 export interface ComposerHandle {
   attach: () => void;
@@ -24,7 +24,6 @@ interface Props {
   imageMode: boolean;
   setImageMode: (v: boolean) => void;
   statusLeft: string;
-  statusIcon?: "bolt" | "lock";
   statusRight: { label: string; onClick: () => void };
   onOpenMcp: () => void;
 }
@@ -33,7 +32,7 @@ interface Props {
  * Unified Halo Composer. Home state: a two-line card with every action tucked inside its bottom-left and a status strip on top.
  * After the first message it compacts into a single input pill (+ / mic / send) so the conversation gets the height.
  */
-export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, imageMode, setImageMode, statusLeft, statusIcon = "bolt", statusRight, onOpenMcp }: Props) {
+export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, imageMode, setImageMode, statusLeft, statusRight, onOpenMcp }: Props) {
   const [atts, setAtts] = useState<Attachment[]>([]);
   const [menu, setMenu] = useState<null | "skills" | "plus">(null);
   const skills = useSkills();
@@ -81,7 +80,7 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   };
 
-  const placeholder = imageMode ? "Describe the image you want…" : compact ? "Message Apex…" : "Describe your task or ask anything...";
+  const placeholder = imageMode ? "Describe the image you want…" : compact ? "Message Apex…" : "Ask anything...";
   const field = (rows: number) => (
     <textarea
       ref={textRef}
@@ -103,21 +102,30 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
     />
   );
 
-  const sendBtn = busy ? (
-    <button type="button" onClick={onStop} aria-label="Stop generating" className="send">
-      <CIcon name="stop" size={15} />
-    </button>
-  ) : (
-    <button type="button" onClick={submit} disabled={!canSend} aria-label="Send" className="send">
-      <CIcon name="up" size={18} />
-    </button>
+  const sendBtn = (
+    <motion.button
+      type="button"
+      onClick={busy ? onStop : submit}
+      disabled={!busy && !canSend}
+      aria-label={busy ? "Stop generating" : "Send"}
+      className="send"
+      data-stop={busy}
+      whileTap={{ scale: 0.88 }}
+      transition={{ type: "spring", stiffness: 500, damping: 26 }}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span key={busy ? "stop" : "up"} className="grid place-items-center" initial={{ opacity: 0, scale: 0.5, rotate: busy ? -45 : 45 }} animate={{ opacity: 1, scale: 1, rotate: 0 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.16 }}>
+          {busy ? <span className="block h-[13px] w-[13px] rounded-[4px] bg-current" /> : <CIcon name="up" size={18} />}
+        </motion.span>
+      </AnimatePresence>
+    </motion.button>
   );
 
   const chips = (atts.length > 0 || imageMode || voice.recording || voice.busy || voice.notice) && (
     <div className="mb-2 flex flex-wrap items-center gap-1.5">
       {imageMode && (
-        <span className="calm-chip" style={{ background: "var(--halo-a)", color: "var(--halo-ink)", borderColor: "transparent" }}>
-          <CIcon name="palette" size={13} /> Image mode
+        <span className="calm-chip" style={{ background: "var(--halo-a)", color: "var(--halo-ink)" }}>
+          <CIcon name="image" size={13} /> Image mode
           <button type="button" aria-label="Turn off image mode" onClick={() => setImageMode(false)} className="-mr-1 grid h-5 w-5 place-items-center rounded-full">
             <CIcon name="x" size={12} />
           </button>
@@ -143,34 +151,33 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
   );
 
   const skillsMenu = (
-    <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6 }} transition={{ type: "spring", stiffness: 420, damping: 32 }} className="pop absolute bottom-full left-0 right-0 z-20 mb-2 max-h-[52dvh] overflow-y-auto" role="menu" aria-label="Skills">
+    <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6 }} transition={{ type: "spring", stiffness: 420, damping: 32 }} className="calm-card absolute bottom-full left-0 right-0 z-20 mb-2 p-2" role="menu" aria-label="Skills">
       {SKILLS.map((s) => {
         const on = skills.includes(s.id);
         return (
-          <button key={s.id} type="button" role="menuitemcheckbox" aria-checked={on} onClick={() => toggleSkill(s.id)} className="pop-row">
-            <span className="pop-ico"><Glyph e={s.emoji} size={16} /></span>
-            <span className="min-w-0 flex-1"><span className="t block truncate">{s.name}</span><span className="d truncate">{s.desc.split(". ")[0]}</span></span>
+          <button key={s.id} type="button" role="menuitemcheckbox" aria-checked={on} onClick={() => toggleSkill(s.id)} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2.5 text-left hover:bg-[var(--surface-2)]">
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--surface-2)]"><KeyIcon k={s.emoji} size={16} /></span>
+            <span className="min-w-0 flex-1 truncate text-[13.5px]">{s.name}</span>
             <span className="switch" role="presentation" aria-checked={on} />
           </button>
         );
       })}
-      <button type="button" onClick={onOpenMcp} className="pop-row text-[13px] text-[var(--accent)]">
-        <CIcon name="plug" size={16} /> MCP servers &amp; skills…
+      <button type="button" onClick={onOpenMcp} className="mt-1 flex min-h-11 w-full items-center gap-2 rounded-xl px-2.5 text-[13px] text-[var(--accent)]">
+        <CIcon name="plug" size={16} /> Skills &amp; MCP servers
       </button>
     </motion.div>
   );
 
   const plusMenu = (
-    <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6 }} transition={{ type: "spring", stiffness: 420, damping: 32 }} className="pop absolute bottom-full left-0 z-20 mb-2 w-[min(292px,100%)]" role="menu" aria-label="Add">
+    <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6 }} transition={{ type: "spring", stiffness: 420, damping: 32 }} className="calm-card absolute bottom-full left-0 z-20 mb-2 w-[220px] p-1.5" role="menu" aria-label="Add">
       {[
-        { l: "Attach file", d: "PDF, code, markdown, text", i: "clip" as const, f: () => fileRef.current?.click() },
-        { l: "Add photo", d: "Describe or analyze an image", i: "image" as const, f: () => photoRef.current?.click() },
-        { l: imageMode ? "Image mode is on" : "Image mode", d: "Next message becomes a picture", i: "palette" as const, f: () => { setImageMode(!imageMode); setMenu(null); } },
-        { l: "Skills & tools", d: "Web, GitHub, sandbox, memory", i: "wand" as const, f: () => setMenu("skills") },
+        { l: "Attach file", i: "clip" as const, f: () => fileRef.current?.click() },
+        { l: "Photo", i: "image" as const, f: () => photoRef.current?.click() },
+        { l: imageMode ? "Image mode · on" : "Image mode", i: "image" as const, f: () => { setImageMode(!imageMode); setMenu(null); } },
+        { l: "Skills & MCP", i: "plug" as const, f: () => setMenu("skills") },
       ].map((x) => (
-        <button key={x.l} type="button" role="menuitem" onClick={x.f} className="pop-row">
-          <span className="pop-ico"><CIcon name={x.i} size={16} /></span>
-          <span className="min-w-0"><span className="t block">{x.l}</span><span className="d">{x.d}</span></span>
+        <button key={x.l} type="button" role="menuitem" onClick={x.f} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-[13.5px] hover:bg-[var(--surface-2)]">
+          <CIcon name={x.i} size={17} /> {x.l}
         </button>
       ))}
     </motion.div>
@@ -187,7 +194,7 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
         {compact ? (
           <motion.div key="compact" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ type: "spring", stiffness: 380, damping: 34 }}>
             {chips}
-            <div className="dock-pill beam" data-live={busy}>
+            <div className="dock-pill">
               <button type="button" className="ibtn" aria-label="Add attachment, image mode or skills" aria-expanded={menu === "plus"} data-on={menu === "plus"} onClick={() => setMenu(menu === "plus" ? null : "plus")}>
                 <CIcon name="plus" size={20} style={{ transform: menu === "plus" ? "rotate(45deg)" : undefined, transition: "transform .2s" }} />
               </button>
@@ -199,10 +206,10 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
             </div>
           </motion.div>
         ) : (
-          <motion.div key="home" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ type: "spring", stiffness: 380, damping: 34 }} className="halo beam" data-live={busy}>
+          <motion.div key="home" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ type: "spring", stiffness: 380, damping: 34 }} className="halo">
             <div className="halo-strip">
-              <span className="flex min-w-0 items-center gap-1.5"><CIcon name={statusIcon} size={13} className="shrink-0" /><span className="truncate">{statusLeft}</span></span>
-              <button type="button" onClick={statusRight.onClick} className="calm-chip !h-8 shrink-0 !bg-[var(--surface)] !text-[var(--halo-ink)]">
+              <span className="truncate"><i aria-hidden="true" />{statusLeft}</span>
+              <button type="button" onClick={statusRight.onClick} className="shrink-0 rounded-full px-2 py-1 underline-offset-2 hover:underline">
                 {statusRight.label}
               </button>
             </div>
@@ -210,14 +217,14 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
               {chips}
               {field(2)}
               <div className="mt-2 flex items-center gap-0.5">
-                <button type="button" className="ibtn" aria-label="Attach file or photo" onClick={() => fileRef.current?.click()}>
+                <button type="button" className="ibtn" aria-label="Attach" title="Attach" onClick={() => fileRef.current?.click()}>
                   <CIcon name="clip" size={19} />
                 </button>
-                <button type="button" className="ibtn" aria-label="Image mode" aria-pressed={imageMode} data-on={imageMode} onClick={() => setImageMode(!imageMode)}>
+                <button type="button" className="ibtn" aria-label="Create image" title="Create image" aria-pressed={imageMode} data-on={imageMode} onClick={() => setImageMode(!imageMode)}>
                   <CIcon name="image" size={19} />
                 </button>
-                <button type="button" className="ibtn" aria-label="Skills and MCP" aria-expanded={menu === "skills"} data-on={menu === "skills"} onClick={() => setMenu(menu === "skills" ? null : "skills")}>
-                  <CIcon name="wand" size={19} />
+                <button type="button" className="ibtn" aria-label="Skills and MCP" title="Skills and MCP" aria-expanded={menu === "skills"} data-on={menu === "skills"} onClick={() => setMenu(menu === "skills" ? null : "skills")}>
+                  <CIcon name="plug" size={19} />
                 </button>
                 <button type="button" className="ibtn" aria-label={voice.recording ? "Stop recording" : "Voice input"} data-on={voice.recording} onClick={toggleMic}>
                   <CIcon name="mic" size={19} />

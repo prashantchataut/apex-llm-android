@@ -2,16 +2,14 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useRef, useState, type KeyboardEvent } from "react";
-import { Icon } from "@/components/ui/Icon";
-import { RippleButton } from "@/components/ui/Glass";
+import { CIcon } from "@/components/calm/icons";
 import type { ChoiceOption } from "@/lib/richtext";
 import { RichInline } from "./Rich";
 
 /**
- * Clarifying-choice cards. When a request is ambiguous the assistant asks one short question and offers
- * a few options (like the choice chips in modern AI chat apps). There is no right or wrong answer:
- * picking sends your choice back as your next message. "Something else…" lets you type your own.
- * Keyboard: 1–9 pick, ↑/↓ move focus, Enter/Space toggle.
+ * Follow-up / multiple-choice pills. When a request is ambiguous the assistant asks one short question and offers a
+ * few options. Each option is a full-width soft pill (no box, no border); picking sends the choice back as the next
+ * message. "Something else" lets you type your own. Keyboard: 1–9 pick, ↑/↓ move focus, Enter/Space toggle.
  */
 export function ChoiceCards({ question, options, multi, onAnswer }: { question: string; options: ChoiceOption[]; multi: boolean; onAnswer?: (text: string) => void }) {
   const [picked, setPicked] = useState<number[]>([]);
@@ -54,66 +52,74 @@ export function ChoiceCards({ question, options, multi, onAnswer }: { question: 
     }
   };
 
-  const row = (on: boolean) => (on ? "border-accent/60 bg-accent/15" : "border-white/10 bg-white/[0.05] hover:bg-white/[0.09]");
+  const pill = (on: boolean, dim: boolean) =>
+    `flex min-h-[52px] w-full items-center gap-3 rounded-[16px] px-4 py-2.5 text-left text-[14.5px] transition-[background,opacity,box-shadow] duration-200 ${on ? "bg-[var(--halo-a)] text-[var(--halo-ink)] shadow-[var(--shadow-card)]" : "bg-[var(--surface-2)] hover:bg-[color-mix(in_oklab,var(--surface-2)_70%,var(--surface))]"} ${dim ? "opacity-40" : ""}`;
 
   return (
-    <div role={multi ? "group" : "radiogroup"} aria-label={question} onKeyDown={onKey} className="glass-dark rounded-[22px] p-3.5">
-      <div className="mb-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
-        <Icon name="prism" size={14} /> Help me narrow this down{multi && <span className="ml-auto normal-case tracking-normal">pick any</span>}
-      </div>
-      <p className="mb-3 text-[15px] font-medium text-white">
+    <div role={multi ? "group" : "radiogroup"} aria-label={question} onKeyDown={onKey} className="mt-5">
+      <p className="mb-3 text-[15.5px] leading-snug">
         <RichInline text={question} />
+        {multi && <span className="ml-2 text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">pick any</span>}
       </p>
-      <div className="grid gap-2">
+      <div className="flex flex-col gap-2">
         {options.map((o, i) => {
           const on = picked.includes(i);
           return (
-            <motion.div key={i} whileHover={locked ? undefined : { y: -1 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
-              <RippleButton
-                ref={(el: HTMLButtonElement | null) => {
-                  refs.current[i] = el;
-                }}
-                role={multi ? "checkbox" : "radio"}
-                aria-checked={on}
-                disabled={locked && !on}
-                onClick={() => toggle(i)}
-                className={`flex min-h-[52px] w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left text-[14px] text-white transition-colors ${row(on)} ${locked && !on ? "opacity-40" : ""}`}
-              >
-                <span className={`mono grid h-6 w-6 shrink-0 place-items-center text-[11px] ${multi ? "rounded-md" : "rounded-full"} ${on ? "bg-accent text-white" : "bg-white/10 text-ink-2"}`}>{on ? <Icon name="check" size={13} strokeWidth={3} /> : i + 1}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-medium leading-snug">
-                    <RichInline text={o.label} />
-                  </span>
-                  {o.hint && (
-                    <span className="mt-0.5 block text-[12px] leading-snug text-ink-3">
-                      <RichInline text={o.hint} />
-                    </span>
-                  )}
+            <motion.button
+              key={i}
+              ref={(el: HTMLButtonElement | null) => {
+                refs.current[i] = el;
+              }}
+              type="button"
+              role={multi ? "checkbox" : "radio"}
+              aria-checked={on}
+              disabled={locked && !on}
+              onClick={() => toggle(i)}
+              whileTap={locked ? undefined : { scale: 0.985 }}
+              whileHover={locked ? undefined : { scale: 1.003 }}
+              transition={{ type: "spring", stiffness: 420, damping: 28 }}
+              className={pill(on, locked && !on)}
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block leading-snug">
+                  <RichInline text={o.label} />
                 </span>
-              </RippleButton>
-            </motion.div>
+                {o.hint && (
+                  <span className="mt-0.5 block text-[12.5px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">
+                    <RichInline text={o.hint} />
+                  </span>
+                )}
+              </span>
+              <AnimatePresence initial={false}>
+                {on && (
+                  <motion.span initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }}>
+                    <CIcon name="check" size={17} />
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.button>
           );
         })}
-        <RippleButton
+        <motion.button
           ref={(el: HTMLButtonElement | null) => {
             refs.current[OTHER] = el;
           }}
+          type="button"
           role={multi ? "checkbox" : "radio"}
           aria-checked={other !== null}
           disabled={locked && other === null}
           onClick={() => toggle(OTHER)}
-          className={`flex min-h-[48px] w-full items-center gap-3 rounded-2xl border border-dashed px-3.5 py-2 text-left text-[14px] ${other !== null ? "border-accent/60 bg-accent/10 text-white" : "border-white/15 text-ink-2"} ${locked && other === null ? "opacity-40" : ""}`}
+          whileTap={locked ? undefined : { scale: 0.985 }}
+          transition={{ type: "spring", stiffness: 420, damping: 28 }}
+          className={`${pill(other !== null, locked && other === null)} text-[rgb(var(--ink-rgb)/var(--ink-2-a))]`}
         >
-          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/10">
-            <Icon name="pencil" size={13} />
-          </span>
-          Something else…
-        </RippleButton>
+          <CIcon name="pencil" size={16} /> Something else
+        </motion.button>
         <AnimatePresence initial={false}>
           {other !== null && !locked && (
             <motion.input
               initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 46 }}
+              animate={{ opacity: 1, height: 48 }}
               exit={{ opacity: 0, height: 0 }}
               autoFocus
               value={other}
@@ -121,23 +127,23 @@ export function ChoiceCards({ question, options, multi, onAnswer }: { question: 
               onKeyDown={(e) => e.key === "Enter" && submit()}
               placeholder="Tell me in your own words"
               aria-label="Your own answer"
-              className="glass-dark rounded-2xl px-4 text-[14px] text-white outline-none placeholder:text-ink-3"
+              className="calm-field !rounded-[16px]"
             />
           )}
         </AnimatePresence>
       </div>
       {locked ? (
-        <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="mt-3 flex items-center gap-1.5 text-[12.5px] text-ink-3">
-          <Icon name="check" size={14} className="text-ok" /> Sent: {sent}
+        <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="mt-3 flex items-center gap-1.5 text-[13px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">
+          <CIcon name="check" size={14} /> Sent: {sent}
         </motion.p>
       ) : (
         <div className="mt-3 flex items-center justify-end gap-2">
-          <button type="button" onClick={() => setSent("Skipped") /* local only: nothing is sent */} className="min-h-11 rounded-full px-4 text-[13px] text-ink-3 active:scale-95">
+          <button type="button" onClick={() => setSent("Skipped") /* local only: nothing is sent */} className="min-h-11 rounded-full px-4 text-[13.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))] active:scale-95">
             Skip
           </button>
-          <RippleButton type="button" onClick={submit} disabled={!answer} className="flex h-11 items-center gap-1.5 rounded-full bg-white px-5 text-[13px] font-semibold text-black disabled:bg-white/20 disabled:text-ink-3">
-            Continue <Icon name="send" size={14} strokeWidth={2.4} />
-          </RippleButton>
+          <button type="button" onClick={submit} disabled={!answer} className="calm-btn" data-primary="true">
+            Continue <CIcon name="arrow" size={15} />
+          </button>
         </div>
       )}
     </div>

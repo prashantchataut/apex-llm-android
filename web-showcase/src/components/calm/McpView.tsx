@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { SKILLS, getGithubToken, setGithubToken, toggleSkill, useSkills } from "@/lib/skills";
 import { addMcpServer, connectMcp, removeMcpServer, toggleMcpServer, toggleMcpTool, useMcp } from "@/lib/mcp";
-import { CIcon, Glyph } from "./icons";
+import { CIcon, KeyIcon } from "./icons";
 import { ViewTitle } from "./Chrome";
 
 export function McpView() {
@@ -29,14 +29,14 @@ export function McpView() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[720px] px-5 pb-10 pt-3">
-      <ViewTitle title="MCP Servers & Skills" sub="Skills run inside Apex. MCP servers add outside tools over HTTP (JSON-RPC 2.0). Enabled tools are offered to the model in keyless chats." />
+    <div className="mx-auto w-full max-w-[640px] px-5 pb-10 pt-3">
+      <ViewTitle title="Skills & MCP" sub="Skills run inside Apex. MCP servers add outside tools. Enabled tools are offered to the model in keyless chats." />
 
       <h2 className="mb-2 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Agent skills</h2>
-      <div className="calm-card divide-y divide-[var(--hairline)]">
+      <div className="calm-card py-1">
         {SKILLS.map((s) => (
           <div key={s.id} className="flex items-center gap-3 px-4 py-3">
-            <span className="pop-ico" aria-hidden="true"><Glyph e={s.emoji} size={17} /></span>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--surface-2)]" aria-hidden="true"><KeyIcon k={s.emoji} size={18} /></span>
             <div className="min-w-0 flex-1">
               <p className="text-[14px] font-medium">{s.name}</p>
               <p className="text-[12.5px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{s.desc}</p>
@@ -47,7 +47,7 @@ export function McpView() {
       </div>
 
       <div className="calm-card mt-3 p-4">
-        <h3 className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[14px] font-medium"><span className="inline-flex items-center gap-2"><CIcon name="branch" size={16} /> GitHub token</span> <span className="text-[12px] font-normal text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">optional · private repos, higher rate limit, Gists</span></h3>
+        <h3 className="flex items-center gap-2 text-[14px] font-medium">GitHub token <span className="text-[12.5px] font-normal text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">optional</span></h3>
         <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); setGithubToken(pat); setSaved(true); window.setTimeout(() => setSaved(false), 1600); }}>
           <input type="password" autoComplete="off" value={pat} onChange={(e) => setPat(e.target.value)} placeholder="ghp_… (stored only on this device)" aria-label="GitHub personal access token" className="calm-field !rounded-full" />
           <button type="submit" className="calm-btn" data-primary="true">{saved ? "Saved" : "Save"}</button>

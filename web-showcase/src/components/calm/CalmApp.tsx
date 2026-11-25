@@ -2,7 +2,7 @@
 
 import "./calm.css";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useChat } from "@/components/app/useChat";
 import { ServerScreen, type KeyRec } from "@/components/app/ServerScreen";
 import type { Attachment } from "@/lib/attachments";
@@ -23,22 +23,20 @@ import { useKeyboardInset } from "@/lib/useKeyboard";
 import { Composer, type ComposerHandle } from "./Composer";
 import { Conversation } from "./Conversation";
 import { Drawer, Header, Lightbox, ModelSheet, Toast, ViewTitle, type View } from "./Chrome";
-import { Home, type TileId } from "./Home";
-import { Onboarding, type OnbChoice } from "./Onboarding";
+import { Home, type Suggestion } from "./Home";
 import { ImageStudio } from "./ImageStudio";
 import { McpView } from "./McpView";
 import { MemoryView } from "./MemoryView";
 import { ModelHub } from "./ModelHub";
+import { Onboarding, type Route } from "./Onboarding";
 import { SettingsView } from "./SettingsView";
 
 const newId = () => Math.random().toString(36).slice(2, 10);
 
 /** Apex — Calm Atmospheric Minimalism. One header, one slide-over drawer, one halo composer. No bottom navigation. */
-export function CalmApp({ embedded = false, forcedMode }: { embedded?: boolean; forcedMode?: "light" | "dark" }) {
+export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   const persistent = !embedded;
   const [mode, setMode] = useState<CalmMode>("light");
-  const [onb, setOnb] = useState(false);
-  const [hubTab, setHubTab] = useState<"trending" | "uncensored" | "search">("trending");
   const [sysDark, setSysDark] = useState(false);
   const [view, setView] = useState<View>("chat");
   const [drawer, setDrawer] = useState(false);
@@ -50,6 +48,8 @@ export function CalmApp({ embedded = false, forcedMode }: { embedded?: boolean; 
   const [toast, setToast] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [keys, setKeys] = useState<KeyRec[]>([]);
+  const [onboard, setOnboard] = useState(false);
+  const [hubTab, setHubTab] = useState<"trending" | "uncensored">("trending");
 
   const chat = useChat();
   const cart = useCartridges();
@@ -64,18 +64,15 @@ export function CalmApp({ embedded = false, forcedMode }: { embedded?: boolean; 
   const composer = useRef<ComposerHandle>(null);
   const toastTimer = useRef<number | null>(null);
 
-  useLayoutEffect(() => {
-    /* runs before first paint after hydration: saved theme + first-run flag, no flash, no hydration mismatch */
+  useEffect(() => {
     setMode(readMode());
-    if (!embedded) {
+    if (!embedded && !new URLSearchParams(window.location.search).has("skip-intro")) {
       try {
-        if (!localStorage.getItem("apex.onboarded.v1")) setOnb(true);
+        if (!localStorage.getItem("apex.onboarded")) setOnboard(true);
       } catch {
-        /* storage blocked */
+        /* private mode: skip */
       }
     }
-  }, [embedded]);
-  useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     setSysDark(mq.matches);
     const f = () => setSysDark(mq.matches);
@@ -83,8 +80,9 @@ export function CalmApp({ embedded = false, forcedMode }: { embedded?: boolean; 
     void refreshLive();
     void checkForUpdate();
     return () => mq.removeEventListener("change", f);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const resolved = forcedMode ?? (mode === "system" ? (sysDark ? "dark" : "light") : mode);
+  const resolved = mode === "system" ? (sysDark ? "dark" : "light") : mode;
 
   const say = useCallback((t: string) => {
     setToast(t);
@@ -175,16 +173,16 @@ export function CalmApp({ embedded = false, forcedMode }: { embedded?: boolean; 
   };
   const opts = () => ({ cartridge: cart.selected, ctx: cart.selected.ctx, system: systemPromptFor(cart.selected) + memoryBlock() + (localModel?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (choice.kind === "keyless" ? toolsHint(skills) : ""), choice, skills, tools: choice.kind === "keyless" });
 
-  const tile = (t: TileId) => {
-    if (t === "files") composer.current?.attach();
-    else if (t === "images") {
+  const suggest = (t: Suggestion) => {
+    if (t === "illustrate") {
       setImageMode(true);
-      composer.current?.focus();
-    } else if (t === "voice") composer.current?.voice();
-    else {
-      setDraft("Explore github.com/");
-      composer.current?.focus();
+      setDraft("");
+    } else if (t === "summarize") {
+      setDraft("Summarize this for me: ");
+    } else {
+      setDraft("Brainstorm with me, no filters. Start with ");
     }
+    composer.current?.focus();
   };
 
   const useImageInChat = (url: string, prompt: string, src: string) => {
@@ -195,41 +193,13 @@ export function CalmApp({ embedded = false, forcedMode }: { embedded?: boolean; 
   const installed = CATALOG.filter((m) => dl[m.id]?.status === "done").length;
   const toolCount = servers.filter((s) => s.enabled && s.status === "ready").reduce((n, s) => n + s.tools.filter((x) => x.enabled).length, 0);
   const setTheme = (m: CalmMode) => {
-    const root = document.documentElement;
-    root.classList.add("no-tx"); /* switching is instant: no cross-fading half-themed frames */
     setMode(m);
     writeMode(m);
-    const r = m === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : m;
-    if (!embedded) {
-      root.dataset.cmode = r;
-      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", r === "dark" ? "#0a0b0f" : "#f8f9fa");
-    }
-    requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove("no-tx")));
   };
-  const finishOnboarding = (c: OnbChoice) => {
-    try {
-      localStorage.setItem("apex.onboarded.v1", "1");
-    } catch {
-      /* storage blocked */
-    }
-    setOnb(false);
-    if (c === "keyless") setChoice({ kind: "keyless", id: "gpt-oss" });
-    else {
-      setHubTab(c === "uncensored" ? "uncensored" : "trending");
-      goView("hub");
-    }
-  };
-  const edge = useRef<{ x: number; y: number } | null>(null);
   const title = (msgs.find((m) => m.role === "user")?.text ?? "New chat").slice(0, 48);
 
   return (
-    <div
-      className="calm relative flex h-full w-full overflow-hidden"
-      data-cmode={resolved}
-      suppressHydrationWarning
-      onTouchStart={(e) => { const t = e.touches[0]; edge.current = t.clientX < 28 ? { x: t.clientX, y: t.clientY } : null; }}
-      onTouchEnd={(e) => { const s0 = edge.current; edge.current = null; if (!s0) return; const t = e.changedTouches[0]; if (t.clientX - s0.x > 64 && Math.abs(t.clientY - s0.y) < 48) setDrawer(true); }}
-    >
+    <div className="calm relative flex h-full w-full overflow-hidden" data-cmode={resolved}>
       <Drawer
         open={drawer}
         persistent={persistent}
@@ -247,14 +217,12 @@ export function CalmApp({ embedded = false, forcedMode }: { embedded?: boolean; 
         view={view}
         onNav={goView}
         update={update}
-        resolved={resolved}
-        onTheme={setTheme}
         hints={{ hub: installed ? `${installed} on device` : undefined, memory: memActive ? String(memActive) : undefined, mcp: toolCount ? `${toolCount} tools` : undefined, lan: ":11434", settings: `v${APP_VERSION}` }}
       />
 
       <motion.div className="relative flex min-w-0 flex-1 flex-col" initial={false} animate={{ paddingBottom: kb }} transition={{ type: "spring", stiffness: 520, damping: 46, mass: 0.6 }}>
         <div className="calm-glow" aria-hidden="true" />
-        <Header persistent={persistent} onMenu={() => setDrawer(true)} label={label} uncensored={!!localModel?.uncensored} onPill={() => setSheet(true)} memCount={memActive} onMemory={() => goView("memory")} onNew={newChat} />
+        <Header persistent={persistent} onMenu={() => setDrawer(true)} label={label} onPill={() => setSheet(true)} onNew={newChat} />
 
         <main className={`relative z-[1] min-h-0 flex-1 ${view === "chat" ? "overflow-hidden" : "scroll-quiet overflow-y-auto"}`}>
           <AnimatePresence mode="wait" initial={false}>
@@ -275,9 +243,9 @@ export function CalmApp({ embedded = false, forcedMode }: { embedded?: boolean; 
                     onLightbox={(url, prompt) => setZoom({ url, prompt })}
                   />
                 ) : (
-                  <Home onTile={tile} />
+                  <Home onPick={suggest} />
                 ))}
-              {view === "hub" && <ModelHub key={hubTab} initialTab={hubTab} dl={dl} choice={choice} onUse={useLocal} onKeyless={() => { pick({ kind: "keyless", id: "gpt-oss" }); goView("chat"); }} loadingId={loadingId} />}
+              {view === "hub" && <ModelHub key={hubTab} initialTab={hubTab} dl={dl} choice={choice} onUse={useLocal} loadingId={loadingId} />}
               {view === "studio" && <ImageStudio onUseInChat={useImageInChat} onZoom={(url, prompt) => setZoom({ url, prompt })} />}
               {view === "memory" && <MemoryView />}
               {view === "mcp" && <McpView />}
@@ -289,7 +257,7 @@ export function CalmApp({ embedded = false, forcedMode }: { embedded?: boolean; 
                   </div>
                 </div>
               )}
-              {view === "settings" && <SettingsView mode={mode} setMode={setTheme} onReplay={() => setOnb(true)} cart={cart} update={update} />}
+              {view === "settings" && <SettingsView mode={mode} setMode={setTheme} cart={cart} update={update} />}
             </motion.div>
           </AnimatePresence>
         </main>
@@ -306,9 +274,8 @@ export function CalmApp({ embedded = false, forcedMode }: { embedded?: boolean; 
               onSend={(t, a, ms) => void send(t, a, ms)}
               imageMode={imageMode}
               setImageMode={setImageMode}
-              statusLeft={choice.kind === "keyless" ? `Keyless AI ready · Memory ${memActive ? "active" : "on"}` : `On-device · ${localModel ? shortModelName(localModel) : "model"} · Memory ${memActive ? "active" : "on"}`}
-              statusIcon={choice.kind === "keyless" ? "bolt" : "lock"}
-              statusRight={update.s === "available" ? { label: "Update available", onClick: () => goView("settings") } : { label: "Switch Model", onClick: () => setSheet(true) }}
+              statusLeft={choice.kind === "keyless" ? "Keyless AI Ready" : `On-device · ${localModel ? shortModelName(localModel) : "model"}`}
+              statusRight={update.s === "available" ? { label: "Update available", onClick: () => goView("settings") } : { label: "Switch Engine", onClick: () => setSheet(true) }}
               onOpenMcp={() => goView("mcp")}
             />
           </div>
@@ -318,7 +285,24 @@ export function CalmApp({ embedded = false, forcedMode }: { embedded?: boolean; 
       <ModelSheet open={sheet} onClose={() => setSheet(false)} choice={choice} onPick={pick} dl={dl} onHub={() => goView("hub")} loading={loadingId} />
       <Lightbox img={zoom} onClose={() => setZoom(null)} />
       <Toast text={toast} />
-      <AnimatePresence>{onb && !embedded && <Onboarding resolved={resolved} onTheme={setTheme} onFinish={finishOnboarding} />}</AnimatePresence>
+      {onboard && (
+        <Onboarding
+          theme={resolved}
+          onTheme={setTheme}
+          onDone={(r: Route) => {
+            try {
+              localStorage.setItem("apex.onboarded", "1");
+            } catch {
+              /* ignore */
+            }
+            setOnboard(false);
+            if (r !== "keyless") {
+              setHubTab(r === "uncensored" ? "uncensored" : "trending");
+              setView("hub");
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

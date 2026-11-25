@@ -28,7 +28,7 @@ function Inline({ text }: { text: string }) {
     <>
       {parts.map((p, i) =>
         p.startsWith("**") && p.endsWith("**") && p.length > 4 ? (
-          <strong key={i} className="font-semibold text-white">
+          <strong key={i} className="font-medium text-white">
             {p.slice(2, -2)}
           </strong>
         ) : p.startsWith("`") && p.endsWith("`") && p.length > 2 ? (

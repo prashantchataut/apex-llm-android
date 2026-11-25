@@ -1,121 +1,193 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { CIcon, type CIconName } from "./icons";
 
-export type OnbChoice = "keyless" | "local" | "uncensored";
+export type Route = "keyless" | "offline" | "uncensored";
+type Theme = "light" | "dark";
 
-const PALETTE = {
-  light: { bg: "#f8f9fa", card: "#ffffff", line: "#1b1e26", soft: "#e4f2ea", edge: "rgb(27 30 38 / 0.1)", glow: "radial-gradient(70% 60% at 20% 0%, #f6d5e5, transparent 70%), radial-gradient(60% 60% at 90% 0%, #ddf3e4, transparent 70%)" },
-  dark: { bg: "#0a0b0f", card: "#12141a", line: "#eef0f6", soft: "#0f1d19", edge: "rgb(255 255 255 / 0.08)", glow: "radial-gradient(70% 60% at 15% -10%, rgb(88 96 214 / 0.35), transparent 70%), radial-gradient(60% 60% at 100% 0%, rgb(52 160 140 / 0.28), transparent 70%)" },
-} as const;
+const MODES: { id: Route; icon: CIconName; title: string; sub: string }[] = [
+  { id: "keyless", icon: "bolt", title: "Instant Keyless Cloud", sub: "Works immediately, zero setup" },
+  { id: "offline", icon: "phone", title: "Private Offline Models", sub: "Runs directly on your phone's silicon" },
+  { id: "uncensored", icon: "unlock", title: "Unfiltered & Uncensored", sub: "Zero refusals, complete creative freedom" },
+];
+const spring = { type: "spring", stiffness: 260, damping: 26 } as const;
 
-function Preview({ mode, selected, onPick }: { mode: "light" | "dark"; selected: boolean; onPick: () => void }) {
-  const p = PALETTE[mode];
+/** Words that resolve from blur to sharp, one after another (CueDesign-style entrance). */
+function BlurWords({ text, className, delay = 0 }: { text: string; className?: string; delay?: number }) {
   return (
-    <button type="button" onClick={onPick} aria-pressed={selected} aria-label={`${mode} mode preview`} className="group relative flex-1 text-left">
-      <motion.div animate={{ scale: selected ? 1 : 0.94 }} transition={{ type: "spring", stiffness: 360, damping: 28 }} className={`beam relative h-[196px] overflow-hidden rounded-[22px] ${selected ? "" : ""}`} data-live={selected} style={{ background: p.bg, boxShadow: `inset 0 0 0 1px ${p.edge}, ${mode === "dark" ? "inset 0 1px 0 rgb(255 255 255 / 0.07)," : ""} 0 18px 36px -22px rgb(0 0 0 / 0.5)` }}>
-        <div className="absolute inset-x-0 top-0 h-20" style={{ background: p.glow }} />
-        <div className="relative px-3 pt-3">
-          <div className="mx-auto h-5 w-[62%] rounded-full" style={{ background: p.card, boxShadow: `inset 0 0 0 1px ${p.edge}` }} />
-          <div className="mt-5 h-2 w-8 rounded-full" style={{ background: p.line, opacity: 0.35 }} />
-          <div className="mt-2 h-3 w-[78%] rounded-full" style={{ background: p.line, opacity: 0.9 }} />
-          <div className="mt-1.5 h-3 w-[52%] rounded-full" style={{ background: p.line, opacity: 0.9 }} />
-          <div className="mt-3 grid grid-cols-2 gap-1.5">
-            {[0, 1].map((i) => (
-              <div key={i} className="h-9 rounded-xl" style={{ background: p.card, boxShadow: `inset 0 0 0 1px ${p.edge}` }} />
-            ))}
-          </div>
-        </div>
-        <div className="absolute inset-x-2.5 bottom-2.5 rounded-2xl p-1" style={{ background: p.soft }}>
-          <div className="flex h-9 items-center justify-between rounded-xl px-2.5" style={{ background: p.card, boxShadow: `inset 0 0 0 1px ${p.edge}` }}>
-            <div className="h-1.5 w-12 rounded-full" style={{ background: p.line, opacity: 0.25 }} />
-            <div className="h-5 w-5 rounded-lg" style={{ background: p.line }} />
-          </div>
-        </div>
-      </motion.div>
-      <span className="mt-2.5 flex items-center justify-center gap-1.5 text-[13px] font-medium">
-        <CIcon name={mode === "light" ? "sun" : "moon"} size={14} /> {mode === "light" ? "Porcelain" : "Obsidian"}
-        {selected && <CIcon name="check" size={14} className="text-[var(--accent)]" />}
-      </span>
-    </button>
+    <h1 className={className}>
+      {text.split(" ").map((w, i) => (
+        <motion.span key={i} className="mr-[0.26em] inline-block" initial={{ opacity: 0, y: 10, filter: "blur(8px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.8, delay: delay + i * 0.07, ease: [0.22, 1, 0.36, 1] }}>
+          {w}
+        </motion.span>
+      ))}
+    </h1>
   );
 }
 
-const CHOICES: { id: OnbChoice; icon: CIconName; title: string; sub: string; tag: string }[] = [
-  { id: "keyless", icon: "bolt", title: "Keyless AI", sub: "Start chatting right now. No account, no key, no download.", tag: "Instant" },
-  { id: "local", icon: "lock", title: "Local models", sub: "Download a GGUF once, then chat fully offline and private.", tag: "Offline" },
-  { id: "uncensored", icon: "unlock", title: "Uncensored mode", sub: "Abliterated models that run on your phone without refusals.", tag: "On-device" },
-];
-
-export function Onboarding({ resolved, onTheme, onFinish }: { resolved: "light" | "dark"; onTheme: (m: "light" | "dark") => void; onFinish: (c: OnbChoice) => void }) {
-  const [step, setStep] = useState(0);
-  const [dir, setDir] = useState(1);
-  const [pick, setPick] = useState<OnbChoice>("keyless");
-  const go = (n: number) => {
-    setDir(n > step ? 1 : -1);
-    setStep(n);
-  };
+/** A slow, breathing prism: three blurred colour fields behind a glass core. */
+function Orb() {
   return (
-    <motion.div role="dialog" aria-modal="true" aria-label="Welcome to Apex" className="absolute inset-0 z-[60] flex flex-col bg-[var(--canvas)]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 1.02 }} transition={{ duration: 0.25 }}>
-      <div className="calm-glow" aria-hidden="true" style={{ height: "46%" }} />
-      <div className="relative z-[1] flex items-center justify-between px-5 pt-[max(16px,env(safe-area-inset-top))]">
-        <div className="flex items-center gap-1.5" aria-label={`Step ${step + 1} of 2`}>
-          {[0, 1].map((i) => (
-            <motion.span key={i} animate={{ width: i === step ? 22 : 7, opacity: i <= step ? 1 : 0.3 }} transition={{ type: "spring", stiffness: 420, damping: 32 }} className="h-[7px] rounded-full bg-[var(--ink-solid)]" />
-          ))}
-        </div>
-        <button type="button" onClick={() => onFinish("keyless")} className="calm-chip !h-9 !px-3.5">Skip</button>
+    <motion.div className="relative h-[230px] w-[230px]" animate={{ scale: [1, 1.04, 1] }} transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }} aria-hidden="true">
+      <span className="orb-blob left-[4%] top-[8%] h-[62%] w-[62%]" style={{ background: "rgb(244 190 212 / 0.9)" }} />
+      <span className="orb-blob right-[2%] top-[18%] h-[58%] w-[58%]" style={{ background: "rgb(246 214 168 / 0.9)", animationDelay: "-3s" }} />
+      <span className="orb-blob bottom-[2%] left-[22%] h-[60%] w-[60%]" style={{ background: "rgb(176 218 192 / 0.95)", animationDelay: "-6s" }} />
+      <span className="absolute inset-[22%] rounded-full bg-[color-mix(in_oklab,var(--surface)_55%,transparent)] shadow-[inset_0_1px_0_rgb(255_255_255/0.8),0_20px_50px_-18px_rgb(0_0_0/0.18)] backdrop-blur-xl" />
+    </motion.div>
+  );
+}
+
+export function Onboarding({ theme, onTheme, onDone }: { theme: Theme; onTheme: (t: Theme) => void; onDone: (r: Route) => void }) {
+  const [step, setStep] = useState(0);
+  const [route, setRoute] = useState<Route>("keyless");
+  const [morph, setMorph] = useState(false);
+  const last = step === 2;
+
+  /** Real circular reveal from the tap point (View Transitions API); plain crossfade where unsupported. */
+  const pickTheme = (t: Theme, e: React.MouseEvent) => {
+    if (t === theme) return;
+    const x = e.clientX;
+    const y = e.clientY;
+    const apply = () => flushSync(() => onTheme(t));
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => { ready: Promise<void> } };
+    if (!doc.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return apply();
+    const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    const vt = doc.startViewTransition(apply);
+    void vt.ready.then(() => {
+      document.documentElement.animate({ clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] }, { duration: 750, easing: "cubic-bezier(0.22, 1, 0.36, 1)", pseudoElement: "::view-transition-new(root)" });
+    });
+  };
+
+  const finish = () => {
+    setMorph(true);
+    window.setTimeout(() => onDone(route), 820);
+  };
+
+  return (
+    <motion.div className="absolute inset-0 z-[60] flex flex-col overflow-hidden bg-[var(--canvas)]" initial={false} animate={{ opacity: morph ? 0 : 1 }} transition={{ duration: 0.35, delay: morph ? 0.55 : 0 }} role="dialog" aria-modal="true" aria-label="Welcome to Apex">
+      <div className="calm-glow" aria-hidden="true" />
+      <div className="relative z-[1] flex items-center justify-between px-6 pt-[max(18px,env(safe-area-inset-top))]">
+        <span className="text-[17px] font-medium tracking-[-0.025em]">Apex</span>
+        {!last && (
+          <button type="button" onClick={() => setStep(2)} className="rounded-full px-3 py-2 text-[13.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">
+            Skip
+          </button>
+        )}
       </div>
 
-      <div className="relative z-[1] min-h-0 flex-1 overflow-hidden">
-        <AnimatePresence mode="popLayout" custom={dir} initial={false}>
-          <motion.section key={step} custom={dir} initial={{ x: dir * 56, opacity: 0, filter: "blur(6px)" }} animate={{ x: 0, opacity: 1, filter: "blur(0px)" }} exit={{ x: dir * -56, opacity: 0, filter: "blur(6px)" }} transition={{ type: "spring", stiffness: 300, damping: 32 }} className="scroll-quiet absolute inset-0 mx-auto flex w-full max-w-[520px] flex-col justify-center overflow-y-auto px-5 py-4">
-            {step === 0 ? (
-              <>
-                <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="text-[14px] text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">Welcome to Apex</motion.p>
-                <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-1 text-[clamp(30px,8vw,40px)] font-normal leading-[1.08] tracking-[-0.03em]">Pick your atmosphere.</motion.h1>
-                <p className="mt-3 text-[15px] leading-relaxed text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">Tap a preview. The whole app changes instantly, and we remember it.</p>
-                <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, type: "spring", stiffness: 240, damping: 26 }} className="mt-7 flex gap-3.5">
-                  <Preview mode="light" selected={resolved === "light"} onPick={() => onTheme("light")} />
-                  <Preview mode="dark" selected={resolved === "dark"} onPick={() => onTheme("dark")} />
-                </motion.div>
-              </>
-            ) : (
-              <>
-                <h1 className="text-[clamp(28px,7.4vw,38px)] font-normal leading-[1.1] tracking-[-0.028em]">How should Apex think?</h1>
-                <p className="mt-2.5 text-[15px] leading-relaxed text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">You can switch any time from the model pill.</p>
-                <div className="mt-6 space-y-2.5" role="radiogroup" aria-label="Engine">
-                  {CHOICES.map((c, i) => (
-                    <motion.button key={c.id} type="button" role="radio" aria-checked={pick === c.id} onClick={() => setPick(c.id)} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 + i * 0.06, type: "spring", stiffness: 260, damping: 26 }} className={`calm-card beam flex w-full items-center gap-3.5 p-3.5 text-left ${pick === c.id ? "" : "opacity-80"}`} data-live={pick === c.id} style={{ borderRadius: 22, outline: pick === c.id ? "1.5px solid var(--accent)" : undefined, outlineOffset: -1 }}>
-                      <span className="well"><CIcon name={c.icon} size={19} /></span>
+      <div className="relative z-[1] mx-auto flex w-full max-w-[460px] min-h-0 flex-1 flex-col px-6">
+        <AnimatePresence mode="wait" initial={false}>
+          {step === 0 && (
+            <motion.section key="s0" className="flex flex-1 flex-col items-center justify-center text-center" exit={{ opacity: 0, filter: "blur(8px)", y: -10 }} transition={{ duration: 0.25 }}>
+              <motion.div initial={{ opacity: 0, scale: 0.85, filter: "blur(14px)" }} animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }} transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}>
+                <Orb />
+              </motion.div>
+              <BlurWords text="Intelligence that lives on your phone." className="mt-8 max-w-[14ch] text-[34px] font-normal leading-[1.08] tracking-[-0.03em]" delay={0.35} />
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1, duration: 0.8 }} className="mt-4 max-w-[30ch] text-[15px] leading-relaxed text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">
+                Private, fast and quietly capable, with or without a connection.
+              </motion.p>
+            </motion.section>
+          )}
+
+          {step === 1 && (
+            <motion.section key="s1" className="flex flex-1 flex-col justify-center" exit={{ opacity: 0, filter: "blur(8px)", y: -10 }} transition={{ duration: 0.25 }}>
+              <BlurWords text="How do you want to begin?" className="mb-7 text-[30px] font-normal leading-[1.12] tracking-[-0.03em]" />
+              <div className="flex flex-col gap-3" role="radiogroup" aria-label="How to run Apex">
+                {MODES.map((m, i) => {
+                  const on = route === m.id;
+                  return (
+                    <motion.button
+                      key={m.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setRoute(m.id)}
+                      initial={{ opacity: 0, y: 34, scale: 0.97 }}
+                      animate={{ opacity: on ? 1 : 0.78, y: 0, scale: on ? 1 : 0.985 }}
+                      whileTap={{ scale: 0.97 }}
+                      transition={{ ...spring, delay: 0.12 + i * 0.08 }}
+                      className="flex items-center gap-4 rounded-[26px] bg-[var(--surface)] p-4 text-left"
+                      style={{ boxShadow: on ? "var(--specular), var(--shadow-lift)" : "var(--specular), var(--shadow-card)" }}
+                    >
+                      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full transition-colors" style={{ background: on ? "var(--halo-a)" : "var(--surface-2)", color: on ? "var(--halo-ink)" : undefined }}>
+                        <CIcon name={m.icon} size={21} />
+                      </span>
                       <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2 text-[15px] font-medium">{c.title}<span className="calm-chip !h-5 !px-2 text-[10.5px]">{c.tag}</span></span>
-                        <span className="mt-0.5 block text-[12.5px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{c.sub}</span>
+                        <span className="block text-[16.5px] font-medium leading-snug tracking-[-0.02em]">{m.title}</span>
+                        <span className="mt-0.5 block text-[13.5px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{m.sub}</span>
                       </span>
-                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full" style={{ boxShadow: "inset 0 0 0 1.5px var(--hairline-strong)", background: pick === c.id ? "var(--accent)" : "transparent" }}>
-                        {pick === c.id && <CIcon name="check" size={12} className="text-[var(--canvas)]" strokeWidth={2.6} />}
-                      </span>
+                      <AnimatePresence initial={false}>
+                        {on && (
+                          <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={spring} className="text-[var(--halo-ink)]">
+                            <CIcon name="check" size={20} />
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </motion.button>
+                  );
+                })}
+              </div>
+            </motion.section>
+          )}
+
+          {step === 2 && (
+            <motion.section key="s2" className="flex flex-1 flex-col justify-center" exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
+              <BlurWords text="Pick your atmosphere." className="text-[30px] font-normal leading-[1.12] tracking-[-0.03em]" />
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="mt-2 text-[15px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">
+                Tap to feel it change. You can switch any time.
+              </motion.p>
+              <div className="mt-8 flex justify-center">
+                <div className="seg" role="radiogroup" aria-label="Appearance">
+                  {([
+                    ["light", "Warm Porcelain", "sun"],
+                    ["dark", "Soft Carbon", "moon"],
+                  ] as const).map(([id, label, icon]) => (
+                    <button key={id} type="button" role="radio" aria-checked={theme === id} onClick={(e) => pickTheme(id, e)} className="!inline-flex items-center gap-2 !px-5">
+                      {theme === id && <motion.span layoutId="onb-theme" className="seg-thumb" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                      <CIcon name={icon} size={16} /> {label}
+                    </button>
                   ))}
                 </div>
-              </>
-            )}
-          </motion.section>
+              </div>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.3 }} className="mx-auto mt-9 w-[78%]">
+                <div className="rounded-[26px] bg-[var(--surface)] p-5 shadow-[var(--specular),var(--shadow-lift)]">
+                  <p className="text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Hi there</p>
+                  <p className="mt-1 text-[19px] leading-snug tracking-[-0.025em]">What do you want to do today?</p>
+                  <div className="mt-4 h-9 rounded-full bg-[var(--surface-2)]" />
+                </div>
+              </motion.div>
+            </motion.section>
+          )}
         </AnimatePresence>
       </div>
 
-      <div className="relative z-[1] mx-auto flex w-full max-w-[520px] gap-2.5 px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-2">
-        {step === 1 && (
-          <button type="button" onClick={() => go(0)} className="calm-btn !h-[52px] !w-[52px] !px-0" aria-label="Back">
-            <CIcon name="back" size={18} />
-          </button>
-        )}
-        <button type="button" onClick={() => (step === 0 ? go(1) : onFinish(pick))} className="calm-btn !h-[52px] flex-1 !text-[15px]" data-primary="true">
-          {step === 0 ? "Continue" : pick === "keyless" ? "Start chatting" : "Open Model Hub"}
-          <CIcon name="arrow" size={17} />
-        </button>
+      <div className="relative z-[1] flex flex-col items-center gap-5 px-6 pb-[max(20px,env(safe-area-inset-bottom))] pt-4">
+        <div className="flex gap-1.5" aria-label={`Step ${step + 1} of 3`}>
+          {[0, 1, 2].map((i) => (
+            <motion.button key={i} type="button" aria-label={`Go to step ${i + 1}`} onClick={() => setStep(i)} className="h-1.5 rounded-full bg-[rgb(var(--ink-rgb))]" animate={{ width: step === i ? 22 : 6, opacity: step === i ? 0.85 : 0.2 }} transition={spring} />
+          ))}
+        </div>
+        <div className="relative h-[54px] w-full max-w-[460px]">
+          <motion.button
+            type="button"
+            onClick={last ? finish : () => setStep(step + 1)}
+            className="absolute bottom-0 left-1/2 flex items-center justify-center overflow-hidden text-[15px] font-medium"
+            initial={false}
+            animate={morph ? { width: "100%", height: 124, borderRadius: 28, y: 0, backgroundColor: theme === "dark" ? "#161618" : "#ffffff", color: "#8a8a90" } : { width: last ? 200 : 150, height: 54, borderRadius: 27, x: "-50%", backgroundColor: theme === "dark" ? "#ececf0" : "#18181b", color: theme === "dark" ? "#18181b" : "#fafafa" }}
+            style={{ x: "-50%" }}
+            transition={{ type: "spring", stiffness: 210, damping: 26 }}
+            whileTap={morph ? undefined : { scale: 0.96 }}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span key={morph ? "ask" : last ? "go" : "next"} initial={{ opacity: 0, filter: "blur(4px)" }} animate={{ opacity: 1, filter: "blur(0px)" }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className={morph ? "absolute left-5 top-4 text-[15.5px] font-normal" : ""}>
+                {morph ? "Ask anything..." : last ? "Start chatting" : "Continue"}
+              </motion.span>
+            </AnimatePresence>
+          </motion.button>
+        </div>
       </div>
     </motion.div>
   );

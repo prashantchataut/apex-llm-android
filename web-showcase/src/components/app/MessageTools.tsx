@@ -41,7 +41,7 @@ export function MsgFooter({ m, onTelemetry, onRegenerate, onShare, disabled }: {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {m.engine && (
-        <span className={`mono flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[9.5px] font-semibold tracking-[0.12em] ${real ? "border-ok/30 text-ok" : "border-warn/30 text-warn"}`}>
+        <span className={`mono flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[9.5px] font-medium tracking-[0.12em] ${real ? "border-ok/30 text-ok" : "border-warn/30 text-warn"}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${real ? "bg-ok" : "bg-warn"}`} />
           {real ? "LIVE WEIGHTS" : "SIMULATED"}
         </span>
@@ -92,7 +92,7 @@ export function TelemetryPopover({ m, model, onClose }: { m: ChatMsg | null; mod
           <motion.div role="dialog" aria-label="Message telemetry" className="glass absolute inset-x-5 bottom-28 z-50 rounded-[28px] p-4" initial={{ opacity: 0, y: 18, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.96 }} transition={{ type: "spring", stiffness: 380, damping: 28 }}>
             <div className="relative z-[1]">
               <div className="flex items-center gap-2">
-                <span className={`mono text-[10.5px] font-semibold tracking-[0.14em] ${real ? "text-ok" : "text-warn"}`}>{real ? "MEASURED ON REAL WEIGHTS" : "SIMULATED — NO MODEL RAN"}</span>
+                <span className={`mono text-[10.5px] font-medium tracking-[0.14em] ${real ? "text-ok" : "text-warn"}`}>{real ? "MEASURED ON REAL WEIGHTS" : "SIMULATED — NO MODEL RAN"}</span>
                 <button type="button" onClick={onClose} aria-label="Close" className="ml-auto grid h-9 w-9 place-items-center rounded-full active:scale-90">
                   <Icon name="x" size={15} />
                 </button>
@@ -156,10 +156,10 @@ export function BentoModal({ input, onClose }: { input: BentoInput | null; onClo
               )}
             </div>
             <div className="flex w-full gap-2">
-              <button type="button" onClick={() => blob && download("apex-bento.png", blob)} disabled={!blob} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-white text-[14px] font-semibold text-black active:scale-95 disabled:opacity-40">
+              <button type="button" onClick={() => blob && download("apex-bento.png", blob)} disabled={!blob} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-white text-[14px] font-medium text-black active:scale-95 disabled:opacity-40">
                 <Icon name="download" size={16} /> Save PNG
               </button>
-              <button type="button" onClick={() => void share()} disabled={!blob} className="glass-dark flex h-12 flex-1 items-center justify-center gap-2 rounded-full text-[14px] font-semibold active:scale-95 disabled:opacity-40">
+              <button type="button" onClick={() => void share()} disabled={!blob} className="glass-dark flex h-12 flex-1 items-center justify-center gap-2 rounded-full text-[14px] font-medium active:scale-95 disabled:opacity-40">
                 <Icon name="share" size={16} /> Share
               </button>
               <button type="button" onClick={onClose} aria-label="Close" className="glass-dark grid h-12 w-12 place-items-center rounded-full active:scale-95">

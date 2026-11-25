@@ -32,3 +32,8 @@ Monorepo: 6 Rust crates, Tauri v2 shell skeleton, Next.js showcase/app UI, desig
 
 ## Session 8 — Session-5 evolution (v0.6.0)
 Obsidian Carbon dark mode, BeautifulUI primitives, vector icons, choreographed onboarding, drawer gestures, Model Hub keyless card. QA in `docs/qa-session-5-evolved/`. See `.agent/STATE.md` for verified facts and gaps.
+## Session 7 — anti-slop UI overhaul (v0.5.0)
+- [x] Grid/boxes/emoji/badges teardown, borderless porcelain+carbon system
+- [x] Home, composer, conversation, drawer, hub, studio, memory, MCP, settings rebuilt single-column
+- [x] 3-slide onboarding, grid-free landing, QA renders in docs/qa-anti-slop/
+- [ ] APK v0.5.0 build/publish (see PR)
