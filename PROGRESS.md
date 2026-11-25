@@ -25,3 +25,6 @@ Monorepo: 6 Rust crates, Tauri v2 shell skeleton, Next.js showcase/app UI, desig
 
 ## Session 5 — real GGUF, voice, artifacts, arena
 **Done (verified):** candle GGUF engine with real weights, wllama WASM engine with real download/inference, honest engine pill, CI fixes. **Built, not fully QA'd:** Whisper voice, artifacts, branching, bento, Arena. **Unverified:** APK release. See `.agent/STATE.md`.
+
+## Session 6 — calm redesign, keyless AI, real downloader, memory, MCP, updater
+**Done (verified in headless Chromium):** Calm Atmospheric Minimalism UI (no bottom nav, drawer, halo composer, tiles, context tree); keyless streaming chat; OPFS range-resumable model downloads with pause/resume/cancel/delete; Trending + Uncensored + live HF search + custom GGUF; Image Studio (+ in-chat `/imagine`); memory graph with auto-extraction and prompt injection; skills + MCP client; AutoUpdater + OTA registry. **Caveats:** only one keyless model is actually free right now; MCP unverified against a live server; Rust untouched (cargo not available here). See `.agent/STATE.md`.

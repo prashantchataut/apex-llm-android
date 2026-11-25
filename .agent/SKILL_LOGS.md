@@ -57,3 +57,8 @@
 - native-rust-systems: candle engine + tokenizer + tests, clippy clean, real-weights test passed.
 - design-taste-frontend / hallmark-ui / open-design-skill: engine pill, artifacts drawer, frosted telemetry popover, bento share card, Arena dual lanes (Crown + haptics). Visual QA partial (see STATE).
 - rea-reverse-engineering: wllama 4.0 and transformers.js 4.3 APIs read from their shipped type definitions.
+
+## Session 6
+- [SKILL: design-taste-frontend] [SKILL: hallmark-ui] [SKILL: open-design-skill] — Calm Atmospheric Minimalism: Porcelain Dawn / Soft Carbon tokens scoped under `.calm`, pastel mesh glow limited to the top ~38%, weight 400-500 display type, one header / one drawer / one halo composer, removed the bottom nav and all example prompts. Hallmark component: the Unified Halo Composer (home card -> compact pill). Micro-interactions: tile lift, spring composer swap, switch thumb, shimmer skeletons. Touch targets >= 38-44 px, focus rings, reduced-motion honored.
+- [SKILL: rea-reverse-engineering] — Patterns taken from Ollama (drawer + model pill), Bionic/ChatGPT (grouped history, compact dock), Claude (collapsible thinking, memory). Findings recorded in STATE (Pollinations tier change, localhost-origin block, 402 rate-limit image).
+- [SKILL: native-rust-systems] — Rust left untouched; reviewed `hf_download` event shapes and matched the TS bridge; download engine implemented as a browser-side trait-like module (OPFS + Range) with native delegation. Not compiled here (no cargo).

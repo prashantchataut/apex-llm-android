@@ -12,7 +12,7 @@ import { isNative } from "./native";
  *  - `wllama`   : llama.cpp compiled to WebAssembly SIMD, running the real GGUF inside this page / WebView
  *  - `sandbox`  : scripted sample conversations. NO neural network runs. Always labelled as such.
  */
-export type Backend = "external" | "native" | "wllama" | "sandbox";
+export type Backend = "external" | "native" | "wllama" | "keyless" | "sandbox";
 export type Slot = "a" | "b";
 
 export interface RouterConfig {
@@ -69,6 +69,7 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 export const MB = 1_000_000;
 
 export function modelUrl(m: CatalogModel): string {
+  if (m.url) return m.url;
   return `https://huggingface.co/${m.repo}/resolve/main/${m.file}`;
 }
 
@@ -207,6 +208,27 @@ export async function loadWllamaModel(modelId: string, slot: Slot = "a", onProgr
   }
   set({ loaded: { ...snap.loaded, [slot]: modelId }, progress: null });
   void refreshCache();
+}
+
+/** Load an already-downloaded GGUF (OPFS File / Blob) into a wllama slot — no network. */
+export async function loadWllamaFromBlobs(modelId: string, blobs: Blob[], slot: Slot = "a"): Promise<void> {
+  const m = CATALOG.find((c) => c.id === modelId);
+  if (!m) throw new Error(`Unknown model ${modelId}`);
+  if (snap.loaded[slot] === modelId) return;
+  const w = await instance(slot);
+  if (w.isModelLoaded()) await w.exit().catch(() => undefined);
+  pool.delete(slot);
+  const fresh = await instance(slot);
+  const size = blobs.reduce((n, b) => n + b.size, 0);
+  set({ progress: { modelId, slot, phase: "loading", loaded: size, total: size, mbps: 0 } });
+  try {
+    await fresh.loadModel(blobs, { n_ctx: 2048 });
+  } catch (e) {
+    pool.delete(slot);
+    set({ progress: { modelId, slot, phase: "error", loaded: size, total: size, mbps: 0, error: e instanceof Error ? e.message : "Could not load the model" } });
+    throw e;
+  }
+  set({ loaded: { ...snap.loaded, [slot]: modelId }, progress: null });
 }
 
 export async function unloadWllama(slot: Slot) {

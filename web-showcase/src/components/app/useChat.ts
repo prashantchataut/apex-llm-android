@@ -8,6 +8,9 @@ import { createTokenTicker, haptic } from "@/lib/haptics";
 import { invokeNative, isNative, streamNative } from "@/lib/native";
 import { CATALOG } from "@/lib/models";
 import { pickReply } from "@/lib/demo-script";
+import { keylessById, keylessChat, servedLabel } from "@/lib/keyless";
+import { parseToolCall, preRun, runTool, stripToolCall, type SkillId, type ToolNote } from "@/lib/skills";
+import type { GenStats } from "@/lib/engine";
 
 export interface ChatAttachRef {
   name: string;
@@ -50,6 +53,16 @@ export interface ChatMsg {
   stats?: MsgStats;
   engine?: EngineTag;
   notice?: "no-model";
+  images?: { url: string; prompt: string; src?: string }[];
+  tools?: ToolNote[];
+  memory?: string[];
+  voiceMs?: number;
+}
+
+export interface ChatSnapshot {
+  nodes: ChatMsg[];
+  sel: Record<string, number>;
+  next: number;
 }
 
 type ChatEvent =
@@ -81,6 +94,14 @@ export interface SendOpts {
   cartridge?: Cartridge;
   /** Context window (tokens) used to budget attachments. */
   ctx?: number;
+  /** Full system prompt (cartridge + memory + presets). */
+  system?: string;
+  choice?: { kind: "keyless" | "local"; id: string };
+  skills?: SkillId[];
+  /** Allow the model to call tools via <tool_call>. */
+  tools?: boolean;
+  memNote?: string[];
+  voiceMs?: number;
 }
 
 export interface BranchInfo {
@@ -186,14 +207,20 @@ export function useChat() {
       const ctx = opts.ctx ?? 4096;
       const context = buildContext(atts, Math.floor(ctx * 0.5));
       const content = context.text ? `${context.text}\n\n${prompt}` : prompt;
+      const sysText = opts.system ?? systemPromptFor(opts.cartridge);
       const temperature = opts.cartridge?.temperature ?? 0.7;
       const topP = opts.cartridge?.topP ?? 0.9;
-      const messages: ChatTurn[] = [{ role: "system", content: systemPromptFor(opts.cartridge) }, ...history, { role: "user", content }];
+      const messages: ChatTurn[] = [{ role: "system", content: sysText }, ...history, { role: "user", content }];
       const cartName = opts.cartridge?.name;
 
       void (async () => {
-        let backend = activeBackend();
-        if (isNative() && backend !== "external") {
+        if (opts.skills?.length) {
+          const pr = await preRun(prompt, opts.skills);
+          if (pr.notes.length) patch((m) => ({ tools: [...(m.tools ?? []), ...pr.notes] }));
+          if (pr.context) messages[messages.length - 1] = { role: "user", content: `${pr.context}\n\n${content}` };
+        }
+        let backend: Backend = opts.choice?.kind === "keyless" && !(getEngineSnapshot().router?.enabled) ? "keyless" : activeBackend();
+        if (isNative() && backend !== "external" && backend !== "keyless") {
           const model = await ensureModel();
           backend = activeBackend();
           if (!model && backend !== "wllama") {
@@ -240,18 +267,20 @@ export function useChat() {
           return;
         }
 
-        // ───────── real engines: wllama GGUF (WASM) or external router ─────────
-        if (backend === "wllama" || backend === "external") {
+        // ───────── keyless cloud · wllama GGUF (WASM) · external router ─────────
+        if (backend === "wllama" || backend === "external" || backend === "keyless") {
           const snap = getEngineSnapshot();
-          const cat = CATALOG.find((c) => c.id === snap.loaded.a);
-          const label = backend === "external" ? `${snap.router?.model ?? "router"} · ${new URL(snap.router?.baseUrl ?? "http://x").host}` : shortModelName(cat);
+          const cat = CATALOG.find((c) => c.id === (opts.choice?.kind === "local" ? opts.choice.id : snap.loaded.a));
+          const kl = keylessById(opts.choice?.id ?? "gpt-oss");
+          const label = backend === "keyless" ? `${kl.label} · Keyless` : backend === "external" ? `${snap.router?.model ?? "router"} · ${new URL(snap.router?.baseUrl ?? "http://x").host}` : shortModelName(cat);
           patch({ engine: { backend, label, cartridge: cartName } });
           const ctl = new AbortController();
           abort.current = ctl;
+          let served = "";
           let thinkSeen = false;
           const onText = (raw: string) => {
             tick();
-            const { thought, answer, open } = splitThink(raw);
+            const { thought, answer, open } = splitThink(stripToolCall(raw));
             if (thought) {
               if (!thinkSeen) {
                 thinkSeen = true;
@@ -261,14 +290,45 @@ export function useChat() {
               patch((m) => ({ steps, stepsShown: steps.length, text: answer, thinkEnd: open ? null : (m.thinkEnd ?? performance.now()) }));
             } else patch((m) => ({ text: answer, thinkEnd: m.thinkEnd ?? performance.now() }));
           };
+          const chatOnce = async (msgs: ChatTurn[]): Promise<{ st: GenStats; raw: string }> => {
+            let raw = "";
+            const cb = (r: string) => {
+              raw = r;
+              onText(r);
+            };
+            const opt = { maxTokens: 900, temperature, topP, signal: ctl.signal };
+            if (backend === "keyless") {
+              const st = await keylessChat(kl, msgs, opt, cb);
+              served = st.servedBy;
+              return { st, raw };
+            }
+            const st = backend === "external" && snap.router ? await routerChat(snap.router, msgs, opt, cb) : await wllamaChat("a", msgs, opt, cb);
+            return { st, raw };
+          };
           try {
-            const opt = { maxTokens: 700, temperature, topP, signal: ctl.signal };
-            const st = backend === "external" && snap.router ? await routerChat(snap.router, messages, opt, onText) : await wllamaChat("a", messages, opt, onText);
+            let msgs: ChatTurn[] = messages;
+            let res = await chatOnce(msgs);
+            for (let i = 0; i < 2 && opts.tools; i++) {
+              const call = parseToolCall(res.raw);
+              if (!call) break;
+              const tr = await runTool(call, opts.skills ?? []);
+              patch((m) => ({ tools: [...(m.tools ?? []), tr.note], images: [...(m.images ?? []), ...(tr.images ?? [])] }));
+              msgs = [...msgs, { role: "assistant", content: `<tool_call>${JSON.stringify(call)}</tool_call>` }, { role: "user", content: `Tool result for ${call.name}:\n${tr.text}\n\nNow answer the user.` }];
+              patch({ text: "" });
+              res = await chatOnce(msgs);
+            }
             haptic("reasoningDone");
-            patch({ streaming: false, thinkEnd: performance.now(), stats: { ...st, ramMb: backend === "wllama" ? estimateRamMb(cat) : undefined, temperature, topP } });
+            patch((m) => ({
+              streaming: false,
+              text: m.text || (m.steps?.length ? m.steps.join("\n\n") : "The model returned an empty reply — tap regenerate to try again."),
+              thinkEnd: performance.now(),
+              stats: { ...res.st, ramMb: backend === "wllama" ? estimateRamMb(cat) : undefined, temperature, topP },
+              engine: backend === "keyless" ? { backend, label: `${servedLabel(served)} · Keyless`, cartridge: cartName } : m.engine,
+            }));
           } catch (e) {
             const aborted = ctl.signal.aborted;
-            patch((m) => ({ text: m.text || (aborted ? "Stopped." : `The engine stopped: ${e instanceof Error ? e.message : "unknown error"}`), streaming: false, thinkEnd: m.thinkEnd ?? performance.now() }));
+            const why = e instanceof Error ? e.message : "unknown error";
+            patch((m) => ({ text: m.text || (aborted ? "Stopped." : backend === "keyless" ? `Couldn't reach the keyless AI (${why}). Check your connection, or download a local model in Model Hub to chat offline.` : `The engine stopped: ${why}`), streaming: false, thinkEnd: m.thinkEnd ?? performance.now() }));
           }
           return;
         }
@@ -322,7 +382,7 @@ export function useChat() {
   const spawnReply = useCallback(
     (userId: number, text: string, atts: Attachment[], opts: SendOpts, hist: ChatTurn[]) => {
       const aid = ids.current++;
-      const asst: ChatMsg = { id: aid, parentId: userId, role: "assistant", text: "", steps: [], stepsShown: 0, thinkStart: performance.now(), thinkEnd: null, streaming: true };
+      const asst: ChatMsg = { id: aid, parentId: userId, role: "assistant", text: "", steps: [], stepsShown: 0, thinkStart: performance.now(), thinkEnd: null, streaming: true, memory: opts.memNote?.length ? opts.memNote : undefined };
       setNodes((ms) => [...ms.map((x) => (x.streaming ? { ...x, streaming: false, thinkEnd: x.thinkEnd ?? performance.now() } : x)), asst]);
       setSel((s) => ({ ...s, [keyOf(userId)]: aid }));
       generate(aid, hist, text, atts, opts);
@@ -338,7 +398,7 @@ export function useChat() {
       const leaf = visiblePath(nodesRef.current, selRef.current).at(-1) ?? null;
       const uid = ids.current++;
       const attach: ChatAttachRef[] = atts.filter((a) => !a.error).map((a) => ({ name: a.name, kind: a.kind, tokens: a.tokens, preview: a.preview }));
-      const userMsg: ChatMsg = { id: uid, parentId: leaf?.id ?? null, role: "user", text: prompt, attach: attach.length ? attach : undefined };
+      const userMsg: ChatMsg = { id: uid, parentId: leaf?.id ?? null, role: "user", text: prompt, attach: attach.length ? attach : undefined, voiceMs: opts.voiceMs };
       const hist = history(leaf?.id ?? null);
       setNodes((ms) => [...ms, userMsg]);
       setSel((s) => ({ ...s, [keyOf(userMsg.parentId)]: uid }));
@@ -405,8 +465,31 @@ export function useChat() {
     setSel((s) => ({ ...s, [keyOf(u.parentId)]: uid, [keyOf(uid)]: aid }));
   }, []);
 
+  /** Add an image exchange (no LLM call): used by Image mode, `/imagine` and the Image Studio “Use in chat”. */
+  const sendImages = useCallback((prompt: string, imgs: { url: string; prompt: string; src?: string }[], note?: string) => {
+    const leaf = visiblePath(nodesRef.current, selRef.current).at(-1) ?? null;
+    const uid = ids.current++;
+    const aid = ids.current++;
+    const u: ChatMsg = { id: uid, parentId: leaf?.id ?? null, role: "user", text: prompt };
+    const a: ChatMsg = { id: aid, parentId: uid, role: "assistant", text: note ?? "", streaming: false, images: imgs, engine: { backend: "keyless", label: "Image · Pollinations" } };
+    setNodes((ms) => [...ms, u, a]);
+    setSel((s) => ({ ...s, [keyOf(u.parentId)]: uid, [keyOf(uid)]: aid }));
+  }, []);
+
+  const snapshot = useCallback((): ChatSnapshot => ({ nodes: nodesRef.current.map((n) => ({ ...n, streaming: false })), sel: selRef.current, next: ids.current }), []);
+  const restore = useCallback(
+    (sn: ChatSnapshot | null) => {
+      clear();
+      abort.current?.abort();
+      setNodes(sn?.nodes ?? []);
+      setSel(sn?.sel ?? {});
+      ids.current = sn?.next ?? 1;
+    },
+    [clear],
+  );
+
   const busy = msgs.some((m) => m.streaming);
   /** Rough KV-cache fill: every message in the transcript plus a typical system prompt. */
   const usedTokens = msgs.reduce((n, m) => n + estimateTokens(m.text) + (m.attach?.reduce((a, x) => a + x.tokens, 0) ?? 0), 120);
-  return { msgs, send, edit, regenerate, stop: stopStreaming, branchInfo, switchBranch, adopt, busy, activeModel, usedTokens };
+  return { msgs, sendImages, snapshot, restore, nodesCount: nodes.length, send, edit, regenerate, stop: stopStreaming, branchInfo, switchBranch, adopt, busy, activeModel, usedTokens };
 }
