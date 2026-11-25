@@ -1,11 +1,12 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AssistantBody } from "@/components/app/Rich";
 import { BranchPager } from "@/components/app/MessageTools";
 import type { BranchInfo, ChatMsg } from "@/components/app/useChat";
 import { downloadImage, fetchImage } from "@/lib/images";
-import { CIcon } from "./icons";
+import { CIcon, KeyIcon } from "./icons";
 
 function useNow(active: boolean) {
   const [now, setNow] = useState(() => performance.now());
@@ -70,20 +71,23 @@ function ThinkPill({ m }: { m: ChatMsg }) {
   const isOpen = open ?? false;
   return (
     <div>
-      <button type="button" onClick={() => setOpen(!isOpen)} aria-expanded={isOpen} className="calm-chip min-h-8">
-        <span className={thinking ? "pulse-dot" : ""}>💭</span>
-        {thinking ? "Thinking…" : `Thought for ${secs.toFixed(1)}s`}
-        <CIcon name="chevron" size={13} style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .2s" }} />
+      <button type="button" onClick={() => setOpen(!isOpen)} aria-expanded={isOpen} className="group inline-flex min-h-9 items-center gap-1.5 text-[14px]">
+        <span className={thinking ? "shimmer-text" : "text-[rgb(var(--ink-rgb)/var(--ink-3-a))]"}>{thinking ? "Thinking through this…" : `Thought for ${secs.toFixed(1)}s`}</span>
+        <CIcon name="chevron" size={14} className="text-[rgb(var(--ink-rgb)/var(--ink-3-a))]" style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .35s cubic-bezier(.22,1.2,.36,1)" }} />
       </button>
-      {isOpen && (
-        <div className="mt-2 max-h-56 overflow-y-auto rounded-2xl bg-[var(--surface-2)] p-3.5 text-[13px] leading-relaxed text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">
-          {(m.steps ?? []).map((s, i) => (
-            <p key={i} className="mb-1.5 last:mb-0">
-              {s}
-            </p>
-          ))}
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div initial={{ height: 0, opacity: 0, filter: "blur(4px)" }} animate={{ height: "auto", opacity: 1, filter: "blur(0px)" }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="overflow-hidden">
+            <div className="think-trace mt-1 max-h-56 overflow-y-auto py-1">
+              {(m.steps ?? []).map((st, i) => (
+                <p key={i} className="mb-1.5 last:mb-0">
+                  {st}
+                </p>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -122,7 +126,7 @@ function ImageCard({ url, prompt, preSrc, onOpen }: { url: string; prompt: strin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, nonce]);
   return (
-    <figure className="relative max-w-[420px] overflow-hidden rounded-[22px] border border-[var(--hairline)]" style={{ aspectRatio: `${q.w} / ${q.h}` }}>
+    <figure className="relative max-w-[420px] overflow-hidden rounded-[22px] shadow-[var(--shadow-card)]" style={{ aspectRatio: `${q.w} / ${q.h}` }}>
       {state !== "ok" && (
         <div className={`absolute inset-0 grid place-items-center px-5 text-center text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))] ${state === "load" ? "shimmer" : "bg-[var(--surface-2)]"}`}>
           {state === "load" ? (
@@ -167,8 +171,8 @@ function ContextTree({ msgs, title, modelLabel, memCount, branches }: { msgs: Ch
             </span>
           )}
           <span className="node text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">{modelLabel}</span>
-          {memCount > 0 && <span className="node text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">🧠 {memCount} memories</span>}
-          {branches > 0 && <span className="node text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">⑂ {branches} branch{branches > 1 ? "es" : ""}</span>}
+          {memCount > 0 && <span className="node text-[rgb(var(--ink-rgb)/var(--ink-2-a))]"><CIcon name="tree" size={13} /> {memCount} memories</span>}
+          {branches > 0 && <span className="node text-[rgb(var(--ink-rgb)/var(--ink-2-a))]"><CIcon name="branch" size={13} /> {branches} branch{branches > 1 ? "es" : ""}</span>}
         </div>
       </div>
     </nav>
@@ -203,7 +207,7 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
 
   return (
     <div ref={scroller} className="scroll-quiet h-full overflow-y-auto sm:px-4">
-      <div className="calm-sheet mx-auto mt-2 min-h-[calc(100%-8px)] max-w-[740px] px-5 pb-10 pt-6 sm:px-8">
+      <div className="calm-sheet mx-auto mt-2 min-h-[calc(100%-8px)] max-w-[740px] px-5 pb-10 pt-7 sm:px-8">
         {(msgs.filter((m) => m.role === "user").length > 1 || branches > 0) && <ContextTree msgs={msgs} title={title} modelLabel={modelLabel} memCount={memCount} branches={branches} />}
         <div className="space-y-8">
           {msgs.map((m) => {
@@ -215,7 +219,7 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
                     <div className="flex max-w-[85%] flex-wrap justify-end gap-1.5">
                       {m.attach.map((a, i) => (
                         <span key={i} className="calm-chip">
-                          {a.kind === "image" ? "🖼️" : "📄"} <span className="max-w-[120px] truncate">{a.name}</span>
+                          <CIcon name={a.kind === "image" ? "image" : "file"} size={13} /> <span className="max-w-[120px] truncate">{a.name}</span>
                         </span>
                       ))}
                     </div>
@@ -235,7 +239,7 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
                   ) : m.voiceMs ? (
                     <VoiceBubble ms={m.voiceMs} text={m.text} />
                   ) : (
-                    <div className="max-w-[85%] whitespace-pre-wrap rounded-[22px] rounded-br-lg bg-[var(--surface-2)] px-4 py-2.5 text-[15.5px] leading-relaxed">{m.text}</div>
+                    <div className="max-w-[85%] whitespace-pre-wrap rounded-[22px_22px_6px_22px] bg-[var(--surface-2)] px-4 py-3 text-[15.5px] leading-[1.55]">{m.text}</div>
                   )}
                   {m.voiceMs ? <p className="max-w-[85%] text-right text-[12px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">“{m.text}”</p> : null}
                   <div className="flex items-center gap-1">
@@ -253,26 +257,24 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
             return (
               <div key={m.id} className="space-y-3">
                 {m.memory && m.memory.length > 0 && (
-                  <div className="calm-chip" style={{ background: "var(--halo-a)", color: "var(--halo-ink)", borderColor: "transparent", height: "auto", padding: "5px 11px", whiteSpace: "normal" }}>
-                    🧠 Memory updated · Saved “{m.memory[0]}”{m.memory.length > 1 ? ` +${m.memory.length - 1}` : ""}
+                  <div className="calm-chip" style={{ background: "var(--halo-a)", color: "var(--halo-ink)", height: "auto", padding: "6px 12px", whiteSpace: "normal" }}>
+                    <CIcon name="tree" size={13} /> Remembered “{m.memory[0]}”{m.memory.length > 1 ? ` +${m.memory.length - 1}` : ""}
                   </div>
                 )}
                 {m.tools && m.tools.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {m.tools.map((t, i) => (
                       <span key={i} className="calm-chip" style={t.ok ? undefined : { color: "var(--bad)" }}>
-                        {t.icon} <span className="max-w-[240px] truncate">{t.label}</span>
+                        <KeyIcon k={t.icon} size={13} /> <span className="max-w-[240px] truncate">{t.label}</span>
                       </span>
                     ))}
                   </div>
                 )}
                 {m.steps && m.steps.length > 0 && m.thinkStart !== undefined && <ThinkPill m={m} />}
                 {wait && (
-                  <div className="flex items-center gap-1.5 py-2 text-[rgb(var(--ink-rgb)/var(--ink-3-a))]" role="status" aria-label="Apex is thinking">
-                    {[0, 1, 2].map((i) => (
-                      <span key={i} className="pulse-dot h-1.5 w-1.5 rounded-full bg-current" style={{ animationDelay: `${i * 0.18}s` }} />
-                    ))}
-                  </div>
+                  <p className="py-1 text-[15px]" role="status" aria-label="Apex is thinking">
+                    <span className="shimmer-text">Thinking through this…</span>
+                  </p>
                 )}
                 {m.images && m.images.length > 0 && (
                   <div className="flex flex-wrap gap-3">
@@ -282,7 +284,7 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
                   </div>
                 )}
                 {m.text && (
-                  <div className="text-[15.5px] leading-[1.7] text-[rgb(var(--ink-rgb)/0.9)]">
+                  <div className="text-[15.5px] leading-[1.65] text-[rgb(var(--ink-rgb)/0.9)]">
                     <AssistantBody text={m.text} streaming={!!m.streaming} onChoice={(a) => onSend(a)} />
                   </div>
                 )}

@@ -20,7 +20,7 @@ export function CodeBlock({ lang, code, closed, onOpen }: { lang: string; code: 
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/35">
       <div className="flex items-center justify-between px-3.5 pt-2.5">
-        <span className="mono text-[10.5px] uppercase tracking-[0.14em] text-ink-3">{lang || "code"}</span>
+        <span className="mono text-[10.5px] text-ink-3">{lang || "code"}</span>
         <button
           type="button"
           onClick={() => {
@@ -40,7 +40,7 @@ export function CodeBlock({ lang, code, closed, onOpen }: { lang: string; code: 
       </pre>
       {kind && closed && (
         <div className="border-t border-white/10 p-2">
-          <RippleButton type="button" onClick={() => onOpen?.({ kind, lang, code })} className="glass flex h-11 w-full items-center justify-center gap-2 rounded-full text-[13px] font-semibold">
+          <RippleButton type="button" onClick={() => onOpen?.({ kind, lang, code })} className="glass flex h-11 w-full items-center justify-center gap-2 rounded-full text-[13px] font-medium">
             <span className="relative z-[1] flex items-center gap-2">
               <Icon name="layers" size={15} /> Open Live Artifact
               <span className="mono text-[10px] font-normal text-ink-3">{KIND_LABEL[kind]}</span>
@@ -128,7 +128,7 @@ export function ArtifactDrawer({ artifact, onClose }: { artifact: Artifact | nul
                 <Icon name="layers" size={16} />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[15px] font-semibold tracking-tight">Apex Artifact</div>
+                <div className="truncate text-[15px] font-medium tracking-tight">Apex Artifact</div>
                 <div className="mono text-[10.5px] text-ink-3">{kind ? KIND_LABEL[kind] : ""} · sandboxed</div>
               </div>
               <button type="button" onClick={onClose} aria-label="Close" className="grid h-11 w-11 place-items-center rounded-full text-ink-2 active:scale-90">
@@ -139,7 +139,7 @@ export function ArtifactDrawer({ artifact, onClose }: { artifact: Artifact | nul
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 px-4 pb-3">
               <div className="flex rounded-full border border-white/10 bg-white/[0.06] p-1" role="tablist">
                 {(["preview", "code"] as const).map((t) => (
-                  <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => { haptic("detentClick"); setTab(t); }} className={`relative h-9 rounded-full px-4 text-[12.5px] font-semibold capitalize ${tab === t ? "text-black" : "text-ink-2"}`}>
+                  <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => { haptic("detentClick"); setTab(t); }} className={`relative h-9 rounded-full px-4 text-[12.5px] font-medium capitalize ${tab === t ? "text-black" : "text-ink-2"}`}>
                     {tab === t && <motion.span layoutId="art-tab" className="absolute inset-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
                     <span className="relative">{t}</span>
                   </button>
@@ -152,7 +152,7 @@ export function ArtifactDrawer({ artifact, onClose }: { artifact: Artifact | nul
                 <button type="button" onClick={exportHtml} className="mono flex h-10 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-2.5 text-[11px] active:scale-95">
                   <Icon name="download" size={13} /> {kind === "svg" || kind === "mermaid" ? "SVG" : "HTML"}
                 </button>
-                <button type="button" onClick={() => void exportPng()} className="mono flex h-10 items-center gap-1.5 rounded-full bg-white px-2.5 text-[11px] font-semibold text-black active:scale-95">
+                <button type="button" onClick={() => void exportPng()} className="mono flex h-10 items-center gap-1.5 rounded-full bg-white px-2.5 text-[11px] font-medium text-black active:scale-95">
                   <Icon name="image" size={13} /> PNG
                 </button>
               </div>
