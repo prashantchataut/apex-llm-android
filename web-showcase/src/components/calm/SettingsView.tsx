@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useState } from "react";
 import { HapticsControl } from "@/components/theme/HapticsControl";
 import type { useCartridges } from "@/lib/cartridges";
@@ -47,22 +48,19 @@ export function SettingsView({ mode, setMode, cart, update }: { mode: CalmMode; 
   const MODES: { id: CalmMode; label: string; sub: string; icon: "sun" | "moon" | "gear" }[] = [
     { id: "light", label: "Porcelain Dawn", sub: "Light", icon: "sun" },
     { id: "dark", label: "Soft Carbon", sub: "Dark", icon: "moon" },
-    { id: "system", label: "Match device", sub: "Auto", icon: "gear" },
+    { id: "system", label: "System", sub: "Auto", icon: "gear" },
   ];
 
   return (
-    <div className="mx-auto w-full max-w-[720px] px-5 pb-10 pt-3">
+    <div className="mx-auto w-full max-w-[640px] px-5 pb-10 pt-3">
       <ViewTitle title="Settings" sub="Appearance, voice and updates." />
 
       <h2 className="mb-2 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Theme</h2>
-      <div role="radiogroup" aria-label="Theme" className="grid grid-cols-3 gap-2">
+      <div role="radiogroup" aria-label="Theme" className="seg">
         {MODES.map((m) => (
-          <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} onClick={() => setMode(m.id)} className="calm-card flex min-h-[84px] flex-col items-start justify-between p-3 text-left" style={mode === m.id ? { outline: "2px solid var(--accent)", outlineOffset: -1 } : undefined}>
-            <CIcon name={m.icon} size={18} />
-            <span>
-              <span className="block text-[13px] font-medium leading-tight">{m.label}</span>
-              <span className="block text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{m.sub}</span>
-            </span>
+          <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} onClick={() => setMode(m.id)} className="!inline-flex items-center gap-2">
+            {mode === m.id && <motion.span layoutId="theme-thumb" className="seg-thumb" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+            <CIcon name={m.icon} size={16} /> {m.label}
           </button>
         ))}
       </div>
@@ -70,7 +68,7 @@ export function SettingsView({ mode, setMode, cart, update }: { mode: CalmMode; 
       <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Assistant style</h2>
       <div className="flex flex-wrap gap-1.5">
         {cart.all.map((c) => (
-          <button key={c.id} type="button" aria-pressed={cart.selected.id === c.id} onClick={() => cart.select(c.id)} className="min-h-10 rounded-full border px-3.5 text-[13px]" style={cart.selected.id === c.id ? { background: "var(--ink-solid)", color: "var(--canvas)", borderColor: "transparent" } : { background: "var(--surface)", borderColor: "var(--hairline-strong)" }}>
+          <button key={c.id} type="button" aria-pressed={cart.selected.id === c.id} onClick={() => cart.select(c.id)} className="min-h-10 rounded-full px-4 text-[13px] transition-colors" style={cart.selected.id === c.id ? { background: "var(--ink-solid)", color: "var(--canvas)" } : { background: "var(--surface-2)" }}>
             {c.name}
           </button>
         ))}
@@ -84,7 +82,7 @@ export function SettingsView({ mode, setMode, cart, update }: { mode: CalmMode; 
       <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Version & updates</h2>
       <div className="calm-card p-4">
         <p className="text-[14.5px] font-medium">
-          {update.s === "available" ? `✨ Update available (${update.latest})` : update.s === "error" ? "⚠️ Couldn't check for updates" : `✅ Apex v${APP_VERSION} · ${update.s === "checking" ? "Checking…" : "Up to date"}`}
+          {update.s === "available" ? `Update available (${update.latest})` : update.s === "error" ? "Couldn't check for updates" : `Apex v${APP_VERSION} · ${update.s === "checking" ? "Checking…" : "Up to date"}`}
         </p>
         <p className="mt-0.5 text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">
           {update.s === "uptodate" && `Latest release ${update.latest} · checked ${ago(update.at)}`}

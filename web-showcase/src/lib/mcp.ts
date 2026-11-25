@@ -128,7 +128,7 @@ async function streamable(url: string): Promise<Session> {
   const notify = async (method: string, params?: unknown) => {
     await post({ jsonrpc: "2.0", method, params });
   };
-  await call("initialize", { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "apex", version: "0.4.0" } });
+  await call("initialize", { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "apex", version: "0.5.0" } });
   await notify("notifications/initialized");
   return { call, notify, transport: "streamable" };
 }
@@ -191,7 +191,7 @@ async function legacySse(url: string): Promise<Session> {
   const notify = async (method: string, params?: unknown) => {
     await send({ jsonrpc: "2.0", method, params });
   };
-  await call("initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "apex", version: "0.4.0" } });
+  await call("initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "apex", version: "0.5.0" } });
   await notify("notifications/initialized");
   return { call, notify, transport: "sse" };
 }

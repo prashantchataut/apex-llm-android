@@ -5,7 +5,7 @@ import { useCallback, useImperativeHandle, useRef, useState, type Ref } from "re
 import { readAttachment, TEXT_ACCEPT, type Attachment } from "@/lib/attachments";
 import { SKILLS, toggleSkill, useSkills } from "@/lib/skills";
 import { useVoice } from "@/components/app/useVoice";
-import { CIcon } from "./icons";
+import { CIcon, KeyIcon } from "./icons";
 
 export interface ComposerHandle {
   attach: () => void;
@@ -80,7 +80,7 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   };
 
-  const placeholder = imageMode ? "Describe the image you want…" : compact ? "Message Apex…" : "Describe your task or ask anything...";
+  const placeholder = imageMode ? "Describe the image you want…" : compact ? "Message Apex…" : "Ask anything...";
   const field = (rows: number) => (
     <textarea
       ref={textRef}
@@ -102,21 +102,30 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
     />
   );
 
-  const sendBtn = busy ? (
-    <button type="button" onClick={onStop} aria-label="Stop generating" className="send">
-      <CIcon name="stop" size={15} />
-    </button>
-  ) : (
-    <button type="button" onClick={submit} disabled={!canSend} aria-label="Send" className="send">
-      <CIcon name="up" size={18} />
-    </button>
+  const sendBtn = (
+    <motion.button
+      type="button"
+      onClick={busy ? onStop : submit}
+      disabled={!busy && !canSend}
+      aria-label={busy ? "Stop generating" : "Send"}
+      className="send"
+      data-stop={busy}
+      whileTap={{ scale: 0.88 }}
+      transition={{ type: "spring", stiffness: 500, damping: 26 }}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span key={busy ? "stop" : "up"} className="grid place-items-center" initial={{ opacity: 0, scale: 0.5, rotate: busy ? -45 : 45 }} animate={{ opacity: 1, scale: 1, rotate: 0 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.16 }}>
+          {busy ? <span className="block h-[13px] w-[13px] rounded-[4px] bg-current" /> : <CIcon name="up" size={18} />}
+        </motion.span>
+      </AnimatePresence>
+    </motion.button>
   );
 
   const chips = (atts.length > 0 || imageMode || voice.recording || voice.busy || voice.notice) && (
     <div className="mb-2 flex flex-wrap items-center gap-1.5">
       {imageMode && (
-        <span className="calm-chip" style={{ background: "var(--halo-a)", color: "var(--halo-ink)", borderColor: "transparent" }}>
-          🎨 Image mode
+        <span className="calm-chip" style={{ background: "var(--halo-a)", color: "var(--halo-ink)" }}>
+          <CIcon name="image" size={13} /> Image mode
           <button type="button" aria-label="Turn off image mode" onClick={() => setImageMode(false)} className="-mr-1 grid h-5 w-5 place-items-center rounded-full">
             <CIcon name="x" size={12} />
           </button>
@@ -124,7 +133,7 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
       )}
       {atts.map((a) => (
         <span key={a.id} className="calm-chip" title={a.error ?? `${a.tokens} tokens`}>
-          {a.kind === "image" ? "🖼️" : "📄"} <span className="max-w-[120px] truncate">{a.name}</span>
+          <CIcon name={a.kind === "image" ? "image" : "file"} size={13} /> <span className="max-w-[120px] truncate">{a.name}</span>
           {a.error ? <span className="text-[var(--bad)]">!</span> : <span className="tnum opacity-60">~{a.tokens}</span>}
           <button type="button" aria-label={`Remove ${a.name}`} onClick={() => setAtts((x) => x.filter((y) => y.id !== a.id))} className="-mr-1 grid h-5 w-5 place-items-center rounded-full">
             <CIcon name="x" size={12} />
@@ -147,14 +156,14 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
         const on = skills.includes(s.id);
         return (
           <button key={s.id} type="button" role="menuitemcheckbox" aria-checked={on} onClick={() => toggleSkill(s.id)} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2.5 text-left hover:bg-[var(--surface-2)]">
-            <span className="text-[17px]">{s.emoji}</span>
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--surface-2)]"><KeyIcon k={s.emoji} size={16} /></span>
             <span className="min-w-0 flex-1 truncate text-[13.5px]">{s.name}</span>
             <span className="switch" role="presentation" aria-checked={on} />
           </button>
         );
       })}
       <button type="button" onClick={onOpenMcp} className="mt-1 flex min-h-11 w-full items-center gap-2 rounded-xl px-2.5 text-[13px] text-[var(--accent)]">
-        <CIcon name="plug" size={16} /> MCP servers &amp; skills…
+        <CIcon name="plug" size={16} /> Skills &amp; MCP servers
       </button>
     </motion.div>
   );
@@ -165,7 +174,7 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
         { l: "Attach file", i: "clip" as const, f: () => fileRef.current?.click() },
         { l: "Photo", i: "image" as const, f: () => photoRef.current?.click() },
         { l: imageMode ? "Image mode · on" : "Image mode", i: "image" as const, f: () => { setImageMode(!imageMode); setMenu(null); } },
-        { l: "Skills", i: "wand" as const, f: () => setMenu("skills") },
+        { l: "Skills & MCP", i: "plug" as const, f: () => setMenu("skills") },
       ].map((x) => (
         <button key={x.l} type="button" role="menuitem" onClick={x.f} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-[13.5px] hover:bg-[var(--surface-2)]">
           <CIcon name={x.i} size={17} /> {x.l}
@@ -199,7 +208,7 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
         ) : (
           <motion.div key="home" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ type: "spring", stiffness: 380, damping: 34 }} className="halo">
             <div className="halo-strip">
-              <span className="truncate">{statusLeft}</span>
+              <span className="truncate"><i aria-hidden="true" />{statusLeft}</span>
               <button type="button" onClick={statusRight.onClick} className="shrink-0 rounded-full px-2 py-1 underline-offset-2 hover:underline">
                 {statusRight.label}
               </button>
@@ -208,14 +217,14 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
               {chips}
               {field(2)}
               <div className="mt-2 flex items-center gap-0.5">
-                <button type="button" className="ibtn" aria-label="Attach file or photo" onClick={() => fileRef.current?.click()}>
+                <button type="button" className="ibtn" aria-label="Attach" title="Attach" onClick={() => fileRef.current?.click()}>
                   <CIcon name="clip" size={19} />
                 </button>
-                <button type="button" className="ibtn" aria-label="Image mode" aria-pressed={imageMode} data-on={imageMode} onClick={() => setImageMode(!imageMode)}>
+                <button type="button" className="ibtn" aria-label="Create image" title="Create image" aria-pressed={imageMode} data-on={imageMode} onClick={() => setImageMode(!imageMode)}>
                   <CIcon name="image" size={19} />
                 </button>
-                <button type="button" className="ibtn" aria-label="Skills and MCP" aria-expanded={menu === "skills"} data-on={menu === "skills"} onClick={() => setMenu(menu === "skills" ? null : "skills")}>
-                  <CIcon name="wand" size={19} />
+                <button type="button" className="ibtn" aria-label="Skills and MCP" title="Skills and MCP" aria-expanded={menu === "skills"} data-on={menu === "skills"} onClick={() => setMenu(menu === "skills" ? null : "skills")}>
+                  <CIcon name="plug" size={19} />
                 </button>
                 <button type="button" className="ibtn" aria-label={voice.recording ? "Stop recording" : "Voice input"} data-on={voice.recording} onClick={toggleMic}>
                   <CIcon name="mic" size={19} />

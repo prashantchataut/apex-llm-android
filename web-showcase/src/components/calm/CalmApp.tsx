@@ -23,11 +23,12 @@ import { useKeyboardInset } from "@/lib/useKeyboard";
 import { Composer, type ComposerHandle } from "./Composer";
 import { Conversation } from "./Conversation";
 import { Drawer, Header, Lightbox, ModelSheet, Toast, ViewTitle, type View } from "./Chrome";
-import { Home, type TileId } from "./Home";
+import { Home, type Suggestion } from "./Home";
 import { ImageStudio } from "./ImageStudio";
 import { McpView } from "./McpView";
 import { MemoryView } from "./MemoryView";
 import { ModelHub } from "./ModelHub";
+import { Onboarding, type Route } from "./Onboarding";
 import { SettingsView } from "./SettingsView";
 
 const newId = () => Math.random().toString(36).slice(2, 10);
@@ -47,6 +48,8 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   const [toast, setToast] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [keys, setKeys] = useState<KeyRec[]>([]);
+  const [onboard, setOnboard] = useState(false);
+  const [hubTab, setHubTab] = useState<"trending" | "uncensored">("trending");
 
   const chat = useChat();
   const cart = useCartridges();
@@ -63,6 +66,13 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
 
   useEffect(() => {
     setMode(readMode());
+    if (!embedded && !new URLSearchParams(window.location.search).has("skip-intro")) {
+      try {
+        if (!localStorage.getItem("apex.onboarded")) setOnboard(true);
+      } catch {
+        /* private mode: skip */
+      }
+    }
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     setSysDark(mq.matches);
     const f = () => setSysDark(mq.matches);
@@ -70,6 +80,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     void refreshLive();
     void checkForUpdate();
     return () => mq.removeEventListener("change", f);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const resolved = mode === "system" ? (sysDark ? "dark" : "light") : mode;
 
@@ -162,16 +173,16 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   };
   const opts = () => ({ cartridge: cart.selected, ctx: cart.selected.ctx, system: systemPromptFor(cart.selected) + memoryBlock() + (localModel?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (choice.kind === "keyless" ? toolsHint(skills) : ""), choice, skills, tools: choice.kind === "keyless" });
 
-  const tile = (t: TileId) => {
-    if (t === "files") composer.current?.attach();
-    else if (t === "images") {
+  const suggest = (t: Suggestion) => {
+    if (t === "illustrate") {
       setImageMode(true);
-      composer.current?.focus();
-    } else if (t === "voice") composer.current?.voice();
-    else {
-      setDraft("Explore github.com/");
-      composer.current?.focus();
+      setDraft("");
+    } else if (t === "summarize") {
+      setDraft("Summarize this for me: ");
+    } else {
+      setDraft("Brainstorm with me, no filters. Start with ");
     }
+    composer.current?.focus();
   };
 
   const useImageInChat = (url: string, prompt: string, src: string) => {
@@ -211,7 +222,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
 
       <motion.div className="relative flex min-w-0 flex-1 flex-col" initial={false} animate={{ paddingBottom: kb }} transition={{ type: "spring", stiffness: 520, damping: 46, mass: 0.6 }}>
         <div className="calm-glow" aria-hidden="true" />
-        <Header persistent={persistent} onMenu={() => setDrawer(true)} label={label} uncensored={!!localModel?.uncensored} onPill={() => setSheet(true)} memCount={memActive} onMemory={() => goView("memory")} onNew={newChat} />
+        <Header persistent={persistent} onMenu={() => setDrawer(true)} label={label} onPill={() => setSheet(true)} onNew={newChat} />
 
         <main className={`relative z-[1] min-h-0 flex-1 ${view === "chat" ? "overflow-hidden" : "scroll-quiet overflow-y-auto"}`}>
           <AnimatePresence mode="wait" initial={false}>
@@ -232,9 +243,9 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
                     onLightbox={(url, prompt) => setZoom({ url, prompt })}
                   />
                 ) : (
-                  <Home onTile={tile} />
+                  <Home onPick={suggest} />
                 ))}
-              {view === "hub" && <ModelHub dl={dl} choice={choice} onUse={useLocal} loadingId={loadingId} />}
+              {view === "hub" && <ModelHub key={hubTab} initialTab={hubTab} dl={dl} choice={choice} onUse={useLocal} loadingId={loadingId} />}
               {view === "studio" && <ImageStudio onUseInChat={useImageInChat} onZoom={(url, prompt) => setZoom({ url, prompt })} />}
               {view === "memory" && <MemoryView />}
               {view === "mcp" && <McpView />}
@@ -263,8 +274,8 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
               onSend={(t, a, ms) => void send(t, a, ms)}
               imageMode={imageMode}
               setImageMode={setImageMode}
-              statusLeft={choice.kind === "keyless" ? `⚡ Keyless AI Ready · Memory ${memActive ? "Active" : "On"}` : `🔒 On-device · ${localModel ? shortModelName(localModel) : "model"} · Memory ${memActive ? "Active" : "On"}`}
-              statusRight={update.s === "available" ? { label: "✨ Update Available", onClick: () => goView("settings") } : { label: "Switch Model", onClick: () => setSheet(true) }}
+              statusLeft={choice.kind === "keyless" ? "Keyless AI Ready" : `On-device · ${localModel ? shortModelName(localModel) : "model"}`}
+              statusRight={update.s === "available" ? { label: "Update available", onClick: () => goView("settings") } : { label: "Switch Engine", onClick: () => setSheet(true) }}
               onOpenMcp={() => goView("mcp")}
             />
           </div>
@@ -274,6 +285,24 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
       <ModelSheet open={sheet} onClose={() => setSheet(false)} choice={choice} onPick={pick} dl={dl} onHub={() => goView("hub")} loading={loadingId} />
       <Lightbox img={zoom} onClose={() => setZoom(null)} />
       <Toast text={toast} />
+      {onboard && (
+        <Onboarding
+          theme={resolved}
+          onTheme={setTheme}
+          onDone={(r: Route) => {
+            try {
+              localStorage.setItem("apex.onboarded", "1");
+            } catch {
+              /* ignore */
+            }
+            setOnboard(false);
+            if (r !== "keyless") {
+              setHubTab(r === "uncensored" ? "uncensored" : "trending");
+              setView("hub");
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

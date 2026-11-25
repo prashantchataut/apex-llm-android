@@ -16,11 +16,11 @@ export interface Skill {
   desc: string;
 }
 export const SKILLS: Skill[] = [
-  { id: "web", emoji: "🌐", name: "Live web search & URL reader", desc: "Paste a link or say “search for …”. Reads pages via r.jina.ai and Wikipedia." },
-  { id: "github", emoji: "🐙", name: "GitHub repo architect", desc: "Paste github.com/owner/repo to read its tree, README and files. Add a token to create Gists." },
-  { id: "image", emoji: "🎨", name: "Image generator tool", desc: "Lets the model draw inline images when you ask." },
-  { id: "sandbox", emoji: "🧮", name: "JS / math sandbox", desc: "Runs calculations and short scripts in an isolated worker." },
-  { id: "memory", emoji: "🧠", name: "Memory manager", desc: "Reads and writes your long-term memory." },
+  { id: "web", emoji: "globe", name: "Live web search & URL reader", desc: "Paste a link or say “search for …”. Reads pages via r.jina.ai and Wikipedia." },
+  { id: "github", emoji: "branch", name: "GitHub repo architect", desc: "Paste github.com/owner/repo to read its tree, README and files. Add a token to create Gists." },
+  { id: "image", emoji: "image", name: "Image generator tool", desc: "Lets the model draw inline images when you ask." },
+  { id: "sandbox", emoji: "code", name: "JS / math sandbox", desc: "Runs calculations and short scripts in an isolated worker." },
+  { id: "memory", emoji: "tree", name: "Memory manager", desc: "Reads and writes your long-term memory." },
 ];
 
 const KEY = "apex.skills.v1";
@@ -122,7 +122,7 @@ export async function githubRead(repo: string, path?: string): Promise<string> {
   const m = (await meta.json()) as { description?: string; language?: string; stargazers_count?: number; default_branch?: string };
   const t = tree.ok ? ((await tree.json()) as { tree?: { path: string; type: string }[] }).tree ?? [] : [];
   const files = t.filter((x) => x.type === "blob").slice(0, 120).map((x) => x.path);
-  return `Repository ${repo} — ${m.description ?? "no description"} (${m.language ?? "n/a"}, ★${m.stargazers_count ?? 0}, branch ${m.default_branch ?? "main"})\n\nFile tree (${files.length}${t.length > 120 ? "+" : ""} files):\n${files.join("\n")}\n\nREADME:\n${readme.ok ? clip(await readme.text(), 3500) : "(none)"}`;
+  return `Repository ${repo} — ${m.description ?? "no description"} (${m.language ?? "n/a"}, ${m.stargazers_count ?? 0} stars, branch ${m.default_branch ?? "main"})\n\nFile tree (${files.length}${t.length > 120 ? "+" : ""} files):\n${files.join("\n")}\n\nREADME:\n${readme.ok ? clip(await readme.text(), 3500) : "(none)"}`;
 }
 
 async function gist(filename: string, content: string): Promise<string> {
@@ -166,7 +166,7 @@ export function runJs(code: string): Promise<string> {
 
 function makeImage(prompt: string, engine = "flux"): ToolResult {
   const job: ImageJob = { prompt, engine: IMAGE_ENGINES.some((e) => e.id === engine && !e.local) ? engine : "flux", aspect: "1:1", style: "none", negative: "", seed: randomSeed() };
-  return { text: "The image was generated and is shown to the user.", note: { icon: "🎨", label: `Image · ${prompt.slice(0, 40)}`, ok: true }, images: [{ url: imageUrl(job), prompt }] };
+  return { text: "The image was generated and is shown to the user.", note: { icon: "image", label: `Image · ${prompt.slice(0, 40)}`, ok: true }, images: [{ url: imageUrl(job), prompt }] };
 }
 
 /** Context injection from what the user typed. */
@@ -182,18 +182,18 @@ export async function preRun(prompt: string, on: SkillId[]): Promise<{ context: 
     }
   };
   const gh = prompt.match(/github\.com\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:\/blob\/[^/\s]+\/([^\s)]+))?(?=[\s)]|$)/i);
-  if (gh && on.includes("github")) await add("🐙", `GitHub ${gh[1]}/${gh[2]}${gh[3] ? `/${gh[3]}` : ""}`, () => githubRead(`${gh[1]}/${gh[2]}`, gh[3]));
+  if (gh && on.includes("github")) await add("branch", `GitHub ${gh[1]}/${gh[2]}${gh[3] ? `/${gh[3]}` : ""}`, () => githubRead(`${gh[1]}/${gh[2]}`, gh[3]));
   else if (on.includes("web")) {
     const urls = [...prompt.matchAll(/https?:\/\/[^\s)]+/g)].map((m) => m[0]).slice(0, 2);
-    for (const u of urls) await add("🌐", `Read ${new URL(u).host}`, () => jina(u));
+    for (const u of urls) await add("globe", `Read ${new URL(u).host}`, () => jina(u));
   }
   if (on.includes("web") && !parts.length) {
     const q = prompt.match(/^\/search\s+(.+)/i)?.[1] ?? prompt.match(/\b(?:search(?: the web| online)? for|look up|google|news about|latest on)\s+(.{3,80})/i)?.[1];
-    if (q) await add("🔎", `Searched “${q.replace(/[?.!]+$/, "")}”`, () => wiki(q.replace(/[?.!]+$/, "")));
+    if (q) await add("search", `Searched “${q.replace(/[?.!]+$/, "")}”`, () => wiki(q.replace(/[?.!]+$/, "")));
   }
   if (on.includes("sandbox")) {
     const e = prompt.match(/^\/calc\s+(.+)/i)?.[1] ?? (/^[\d\s+\-*/().^%]+$/.test(prompt.trim()) && /[+\-*/^%]/.test(prompt) ? prompt.trim() : null);
-    if (e) await add("🧮", `Computed ${e.slice(0, 40)}`, async () => `${e} = ${calc(e)}`);
+    if (e) await add("code", `Computed ${e.slice(0, 40)}`, async () => `${e} = ${calc(e)}`);
   }
   return { context: parts.length ? `Context gathered by tools (use it to answer):\n\n${parts.join("\n\n")}` : "", notes };
 }
@@ -234,35 +234,35 @@ export async function runTool(call: ToolCall, on: SkillId[]): Promise<ToolResult
   try {
     switch (call.name) {
       case "web_fetch":
-        return { text: await jina(s("url")), note: { icon: "🌐", label: `Read ${s("url").slice(0, 40)}`, ok: true } };
+        return { text: await jina(s("url")), note: { icon: "globe", label: `Read ${s("url").slice(0, 40)}`, ok: true } };
       case "web_search":
-        return { text: await wiki(s("query")), note: { icon: "🔎", label: `Searched “${s("query").slice(0, 40)}”`, ok: true } };
+        return { text: await wiki(s("query")), note: { icon: "search", label: `Searched “${s("query").slice(0, 40)}”`, ok: true } };
       case "github_read":
-        return { text: await githubRead(s("repo"), a.path ? s("path") : undefined), note: { icon: "🐙", label: `GitHub ${s("repo")}`, ok: true } };
+        return { text: await githubRead(s("repo"), a.path ? s("path") : undefined), note: { icon: "branch", label: `GitHub ${s("repo")}`, ok: true } };
       case "github_gist":
-        return { text: `Gist created: ${await gist(s("filename") || "apex.md", s("content"))}`, note: { icon: "🐙", label: "Created Gist", ok: true } };
+        return { text: `Gist created: ${await gist(s("filename") || "apex.md", s("content"))}`, note: { icon: "branch", label: "Created Gist", ok: true } };
       case "generate_image":
         if (!on.includes("image")) throw new Error("Image skill is off");
         return makeImage(s("prompt"));
       case "calc":
-        return { text: `${s("expression")} = ${calc(s("expression"))}`, note: { icon: "🧮", label: `Computed ${s("expression").slice(0, 36)}`, ok: true } };
+        return { text: `${s("expression")} = ${calc(s("expression"))}`, note: { icon: "code", label: `Computed ${s("expression").slice(0, 36)}`, ok: true } };
       case "run_js":
-        return { text: await runJs(s("code")), note: { icon: "🧮", label: "Ran JavaScript", ok: true } };
+        return { text: await runJs(s("code")), note: { icon: "code", label: "Ran JavaScript", ok: true } };
       case "remember": {
         const m = addMemory(s("text"), "Preferences", "auto");
-        return { text: m ? "Saved." : "Already known or invalid.", note: { icon: "🧠", label: `Saved “${s("text").slice(0, 40)}”`, ok: !!m } };
+        return { text: m ? "Saved." : "Already known or invalid.", note: { icon: "tree", label: `Saved “${s("text").slice(0, 40)}”`, ok: !!m } };
       }
       case "list_memories":
-        return { text: getMemories().map((m) => `- ${m.text}`).join("\n") || "(empty)", note: { icon: "🧠", label: "Read memory", ok: true } };
+        return { text: getMemories().map((m) => `- ${m.text}`).join("\n") || "(empty)", note: { icon: "tree", label: "Read memory", ok: true } };
       default: {
         const mm = call.name.match(/^mcp__([^_]+(?:_[^_]+)*?)__(.+)$/);
-        if (mm) return { text: clip(await callMcpTool(mm[1], mm[2], a), 5000), note: { icon: "🔌", label: `MCP · ${mm[2]}`, ok: true } };
+        if (mm) return { text: clip(await callMcpTool(mm[1], mm[2], a), 5000), note: { icon: "plug", label: `MCP · ${mm[2]}`, ok: true } };
         throw new Error(`Unknown tool ${call.name}`);
       }
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "failed";
-    return { text: `Tool error: ${msg}`, note: { icon: "⚠️", label: `${call.name} — ${msg}`, ok: false } };
+    return { text: `Tool error: ${msg}`, note: { icon: "alert", label: `${call.name} — ${msg}`, ok: false } };
   }
 }
 

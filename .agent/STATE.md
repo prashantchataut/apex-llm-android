@@ -1,4 +1,21 @@
-# STATE — last updated: end of Session 6 (PR: feat/calm-ui-keyless-mcp-uncensored)
+# STATE — last updated: end of Session 7 (branch feat/anti-slop-ui-overhaul; PR #4 was already merged)
+
+## [SESSION 7 — WHAT ACTUALLY HAPPENED]
+- PR #4 was merged, so the work is on a new branch off `main`. Shell had no `gh`/`cargo`: PR + release driven through the GitHub REST API.
+- UI teardown: grid/Swiss/crosshair CSS+components, bento tiles, hairline boxes, emoji, badge rows, heavy weights removed; 33 unreachable dashboard files deleted. New calm.css v2 (Warm Porcelain / Soft Carbon).
+- Rebuilt: Home (greeting + 3 floating pills + halo composer), Composer (send<->stop morph), Conversation (shimmer thinking, borderless AI text, 22/22/6/22 user pill), ChoiceCards (soft pills), Drawer (20px active pill), Model Hub (sliding tabs, single-column list, circular progress, info reveal), Image Studio / Memory / MCP / Settings (single column), 3-slide Onboarding, grid-free landing with live prompt bar + tabs.
+- Version bumped to 0.5.0 (version.ts, tauri.conf.json, workflow default tag).
+- QA: Playwright (headless Chromium) renders in `docs/qa-anti-slop/` (390x844@2x and 1440x900@2x). Chat renders used a mocked Pollinations SSE response (the shimmer frame holds the request open), so they do not prove live provider output.
+- Fixed from self-critique: leaking drawer shadow strip, invisible onboarding CTA text (theme bridge maps `text-white` to ink), dark-mode CTA contrast.
+
+## Honest gaps
+- cuedesign.space and UiHall are JS-rendered; only their titles/shell were retrievable. See COMPONENT_EXTRACTION.md.
+- Local server (LAN) view still uses the older ServerScreen component, only re-skinned via shared tokens (borderless); its internals were not redesigned.
+- Dead code remains in `components/app/{MessageTools,Artifacts}.tsx` (telemetry/bento-share exports no longer routed).
+- Not device-tested in the Tauri WebView. View Transitions circular reveal needs Chromium >= 111 (falls back to instant switch).
+- APK: see PR description / Actions run; do not assume.
+- **Rotate the GitHub PAT** (pasted in chat again).
+
 
 ## [SESSION 6 — WHAT ACTUALLY HAPPENED]
 No PR was open at session start (PR #3 already merged). Branch `feat/calm-ui-keyless-mcp-uncensored`, 3 checkpoint commits.

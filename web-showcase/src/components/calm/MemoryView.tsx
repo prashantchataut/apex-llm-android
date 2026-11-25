@@ -14,7 +14,7 @@ export function MemoryView() {
   const [confirm, setConfirm] = useState(false);
 
   return (
-    <div className="mx-auto w-full max-w-[720px] px-5 pb-10 pt-3">
+    <div className="mx-auto w-full max-w-[640px] px-5 pb-10 pt-3">
       <ViewTitle title="Memory" sub="Facts Apex remembers across chats and models. Say “remember that I…” in any chat, or add one here. Everything stays on this device." />
 
       <form
@@ -50,13 +50,13 @@ export function MemoryView() {
                 <div className="tree-link mt-1">
                   {items.map((m) => (
                     <div key={m.id} className="tree-item">
-                      <div className="flex min-h-11 items-center gap-2 rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] py-1 pl-3.5 pr-1.5" style={{ opacity: m.on ? 1 : 0.5 }}>
+                      <div className="flex min-h-11 items-center gap-2 rounded-[18px] bg-[var(--surface)] py-1 pl-4 pr-1.5 shadow-[var(--specular),var(--shadow-card)]" style={{ opacity: m.on ? 1 : 0.5 }}>
                         {edit?.id === m.id ? (
                           <input autoFocus aria-label="Edit memory" value={edit.v} onChange={(e) => setEdit({ id: m.id, v: e.target.value })} onBlur={() => { if (edit.v.trim().length > 2) updateMemory(m.id, { text: edit.v.trim() }); setEdit(null); }} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} className="min-w-0 flex-1 bg-transparent text-[14px] outline-none" />
                         ) : (
                           <span className="min-w-0 flex-1 text-[14px] leading-snug">{m.text}</span>
                         )}
-                        <span className="hidden shrink-0 text-[10.5px] uppercase tracking-wide text-[rgb(var(--ink-rgb)/var(--ink-3-a))] sm:block">{m.source}</span>
+                        <span className="hidden shrink-0 text-[12px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))] sm:block">{m.source}</span>
                         <button type="button" className="ibtn !h-9 !w-9" aria-label={`Edit “${m.text}”`} onClick={() => setEdit({ id: m.id, v: m.text })}>
                           <CIcon name="pencil" size={14} />
                         </button>
