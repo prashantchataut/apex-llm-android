@@ -14,7 +14,7 @@ import { ViewTitle } from "./Chrome";
 
 const fmtMb = (b: number) => `${(b / 1e6).toFixed(1)} MB`;
 
-export function SettingsView({ mode, setMode, cart, update }: { mode: CalmMode; setMode: (m: CalmMode) => void; cart: ReturnType<typeof useCartridges>; update: UpdateState }) {
+export function SettingsView({ mode, setMode, onReplay, cart, update }: { onReplay?: () => void; mode: CalmMode; setMode: (m: CalmMode) => void; cart: ReturnType<typeof useCartridges>; update: UpdateState }) {
   const [dl, setDl] = useState<{ loaded: number; total: number } | null>(null);
   const [dlMsg, setDlMsg] = useState("");
   const [sync, setSync] = useState<string>("");
@@ -64,6 +64,12 @@ export function SettingsView({ mode, setMode, cart, update }: { mode: CalmMode; 
           </button>
         ))}
       </div>
+
+      {onReplay && (
+        <button type="button" onClick={onReplay} className="calm-btn mt-3">
+          <CIcon name="sparkle" size={15} /> Replay welcome
+        </button>
+      )}
 
       <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Assistant style</h2>
       <div className="flex flex-wrap gap-1.5">

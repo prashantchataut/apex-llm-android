@@ -1,3 +1,27 @@
+# STATE — last updated: end of Session 8 (branch feat/session-5-evolution-darkmode-ux)
+
+## [SESSION 8 — WHAT ACTUALLY HAPPENED]
+- **Baseline**: "Session 5 UI" was resolved to the calm pastel UI in `docs/qa-session-5-redesign/` (commit dd0b524, 2x2 capability tiles, halo composer). Branch cut from there, NOT from the Session 7 anti-slop `main`. Session 7 work (borderless porcelain/carbon rewrite, 3-slide onboarding) is therefore not included; this is a judgment call about an ambiguous instruction.
+- **Skills**: the named skills (`design-taste-frontend`, `hallmark-ui`, `open-design-skill`, `rea`) are NOT installed in this runtime; there is no skill loader. They were not invoked. I applied their stated principles manually and logged that in `.agent/SKILL_LOGS.md`.
+- **beautifului.dev** was really scraped (headless Chromium, computed CSS + screenshots). Extracted: oklch tokens, Inter + JetBrains Mono, ease curves (.23,1,.32,1)/(.16,1,.3,1), segmented pill, prompt bar + popover rows, Thinking trace chip, pixel-grid loader. Re-implemented (not copied) as `calm/ui.tsx` + CSS in `calm.css`.
+- **Dark mode** "Obsidian Carbon": 4 lit surface layers, light-based hairlines (6%), inner specular top edge via `--spec`, atmospheric glow, calibrated ink alphas. Instant switch (`no-tx` class for 2 frames), persisted (`apex.calm.mode`), pre-paint `data-cmode` on `<html>` + theme-color meta, theme toggle in the drawer header, landing page toggle.
+- **Emoji removed** from the calm UI and replaced with vector icons (`Glyph` maps the few emoji that still come from data such as skill notes).
+- **UX**: drawer swipe-to-close + left-edge swipe-to-open; popover rows with descriptions for attach/skills; border-beam on composer while focused/streaming; pixel-loader + spring-collapse reasoning trace; Model Hub gets an always-visible "Keyless AI is active" card, segmented tabs, mono byte progress; onboarding (2 steps, live Porcelain/Obsidian preview, Keyless / Local / Uncensored choice, lands in Hub tab) with Replay in Settings.
+- **Version** bumped to 0.6.0 (the previous 0.4.0 made the app report v0.5.0 as an "update").
+
+## Verified in this sandbox (Playwright, production static export, 127.0.0.1)
+- Theme persists across reload; onboarding does not reappear; no React hydration errors.
+- Real Hugging Face download of Gemma 3 1B: 10-15% at ~65 MB/s with Pause/Cancel shown (`06b`, `06c` renders).
+- Chat renders use a MOCKED Pollinations SSE response (so they prove layout, not live provider output).
+
+## Honest gaps
+- Not device-tested in the Tauri WebView. Native (Tauri) download Pause/Cancel is still a stub (hidden).
+- MCP client still only spec-tested; no live MCP server available.
+- Image generation hits Pollinations' free limit; not exercised in QA captures.
+- Old session-4 files (`app/ArenaView`, etc.) remain unrouted.
+- **Rotate the GitHub PAT**: it was pasted in chat again.
+
+# STATE — last updated: end of Session 6 (PR: feat/calm-ui-keyless-mcp-uncensored)
 # STATE — last updated: end of Session 7 (branch feat/anti-slop-ui-overhaul; PR #4 was already merged)
 
 ## [SESSION 7 — WHAT ACTUALLY HAPPENED]
