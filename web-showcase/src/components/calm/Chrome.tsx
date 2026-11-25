@@ -186,7 +186,7 @@ export function Drawer({ open, persistent, onClose, convos, activeId, onOpenConv
         aria-label="Navigation"
         aria-hidden={!open && !persistent ? true : undefined}
         {...(!open ? { inert: persistent ? undefined : true } : {})}
-        className={`absolute inset-y-0 left-0 z-40 flex w-[86%] max-w-[340px] flex-col bg-[var(--canvas)] pt-[max(14px,env(safe-area-inset-top))] shadow-[0_0_70px_-24px_rgb(0_0_0/0.3)] transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${open ? "translate-x-0" : "-translate-x-full"} ${persistent ? "lg:static lg:z-10 lg:w-[300px] lg:translate-x-0 lg:shadow-none" : ""}`}
+        className={`absolute inset-y-0 left-0 z-40 flex w-[86%] max-w-[340px] flex-col bg-[var(--canvas)] pt-[max(14px,env(safe-area-inset-top))] ${open ? "shadow-[0_0_70px_-24px_rgb(0_0_0/0.3)]" : ""} transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${open ? "translate-x-0" : "-translate-x-full"} ${persistent ? "lg:static lg:z-10 lg:w-[300px] lg:translate-x-0 lg:shadow-none" : ""}`}
       >
         <div className="px-3">
           <div className="mb-3 flex items-center justify-between px-1">
@@ -274,10 +274,10 @@ export function Lightbox({ img, onClose }: { img: { url: string; prompt: string 
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={img.url} alt={img.prompt} className="max-h-[82%] max-w-full rounded-2xl object-contain shadow-2xl" onClick={(e) => e.stopPropagation()} />
           <div className="absolute right-3 top-[max(12px,env(safe-area-inset-top))] flex gap-2">
-            <button type="button" aria-label="Download" className="grid h-11 w-11 place-items-center rounded-full bg-white/15 text-white" onClick={(e) => { e.stopPropagation(); void downloadImage(img.url); }}>
+            <button type="button" aria-label="Download" className="grid h-11 w-11 place-items-center rounded-full bg-[rgb(255_255_255/0.15)] text-[#fff]" onClick={(e) => { e.stopPropagation(); void downloadImage(img.url); }}>
               <CIcon name="download" size={19} />
             </button>
-            <button type="button" aria-label="Close preview" className="grid h-11 w-11 place-items-center rounded-full bg-white/15 text-white" onClick={onClose}>
+            <button type="button" aria-label="Close preview" className="grid h-11 w-11 place-items-center rounded-full bg-[rgb(255_255_255/0.15)] text-[#fff]" onClick={onClose}>
               <CIcon name="x" size={19} />
             </button>
           </div>

@@ -28,3 +28,9 @@ Monorepo: 6 Rust crates, Tauri v2 shell skeleton, Next.js showcase/app UI, desig
 
 ## Session 6 — calm redesign, keyless AI, real downloader, memory, MCP, updater
 **Done (verified in headless Chromium):** Calm Atmospheric Minimalism UI (no bottom nav, drawer, halo composer, tiles, context tree); keyless streaming chat; OPFS range-resumable model downloads with pause/resume/cancel/delete; Trending + Uncensored + live HF search + custom GGUF; Image Studio (+ in-chat `/imagine`); memory graph with auto-extraction and prompt injection; skills + MCP client; AutoUpdater + OTA registry. **Caveats:** only one keyless model is actually free right now; MCP unverified against a live server; Rust untouched (cargo not available here). See `.agent/STATE.md`.
+
+## Session 7 — anti-slop UI overhaul (v0.5.0)
+- [x] Grid/boxes/emoji/badges teardown, borderless porcelain+carbon system
+- [x] Home, composer, conversation, drawer, hub, studio, memory, MCP, settings rebuilt single-column
+- [x] 3-slide onboarding, grid-free landing, QA renders in docs/qa-anti-slop/
+- [ ] APK v0.5.0 build/publish (see PR)

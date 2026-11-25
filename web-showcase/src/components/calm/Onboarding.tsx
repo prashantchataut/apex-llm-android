@@ -174,9 +174,9 @@ export function Onboarding({ theme, onTheme, onDone }: { theme: Theme; onTheme: 
           <motion.button
             type="button"
             onClick={last ? finish : () => setStep(step + 1)}
-            className="absolute bottom-0 left-1/2 flex items-center justify-center overflow-hidden bg-[#18181b] text-[15px] font-medium text-white"
+            className="absolute bottom-0 left-1/2 flex items-center justify-center overflow-hidden text-[15px] font-medium"
             initial={false}
-            animate={morph ? { width: "100%", height: 124, borderRadius: 28, y: 0, backgroundColor: "#ffffff", color: "#8a8a90" } : { width: last ? 200 : 150, height: 54, borderRadius: 27, x: "-50%" }}
+            animate={morph ? { width: "100%", height: 124, borderRadius: 28, y: 0, backgroundColor: theme === "dark" ? "#161618" : "#ffffff", color: "#8a8a90" } : { width: last ? 200 : 150, height: 54, borderRadius: 27, x: "-50%", backgroundColor: theme === "dark" ? "#ececf0" : "#18181b", color: theme === "dark" ? "#18181b" : "#fafafa" }}
             style={{ x: "-50%" }}
             transition={{ type: "spring", stiffness: 210, damping: 26 }}
             whileTap={morph ? undefined : { scale: 0.96 }}

@@ -62,3 +62,11 @@
 - [SKILL: design-taste-frontend] [SKILL: hallmark-ui] [SKILL: open-design-skill] — Calm Atmospheric Minimalism: Porcelain Dawn / Soft Carbon tokens scoped under `.calm`, pastel mesh glow limited to the top ~38%, weight 400-500 display type, one header / one drawer / one halo composer, removed the bottom nav and all example prompts. Hallmark component: the Unified Halo Composer (home card -> compact pill). Micro-interactions: tile lift, spring composer swap, switch thumb, shimmer skeletons. Touch targets >= 38-44 px, focus rings, reduced-motion honored.
 - [SKILL: rea-reverse-engineering] — Patterns taken from Ollama (drawer + model pill), Bionic/ChatGPT (grouped history, compact dock), Claude (collapsible thinking, memory). Findings recorded in STATE (Pollinations tier change, localhost-origin block, 402 rate-limit image).
 - [SKILL: native-rust-systems] — Rust left untouched; reviewed `hf_download` event shapes and matched the TS bridge; download engine implemented as a browser-side trait-like module (OPFS + Range) with native delegation. Not compiled here (no cargo).
+
+## Session 7 — anti-slop overhaul (PR branch feat/anti-slop-ui-overhaul)
+No skill loader in this runtime; protocols applied manually.
+- [SKILL: rea-reverse-engineering] Fetched the 4 reference sites. 21st.dev and beautifului.dev returned server-rendered component catalogues (names + descriptions, no CSS); cuedesign.space and UiHall returned only a shell/title (JS-rendered). Findings and limits recorded in `.agent/COMPONENT_EXTRACTION.md`.
+- [SKILL: open-design-skill] Rebuilt Composer send/stop morph, shimmer thinking text + vertical trace, soft follow-up pills, sliding segmented pills, spring switches, circular progress Get -> Use.
+- [SKILL: design-taste-frontend] Borderless tint-shift depth (#fff over #F8F7F4 / #161618 over #0D0D0F), 400-500 weights with -0.03em tracking, blur-to-sharp entrances, spring press states.
+- [SKILL: hallmark-ui] Signature moments: halo composer with floating speech-bubble pills; onboarding breathing orb + circular theme reveal + button-to-prompt-box morph.
+- [SKILL: native-rust-systems] Rust untouched (cargo not available in this sandbox); CI runs fmt/clippy/test.
