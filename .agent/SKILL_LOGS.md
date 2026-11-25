@@ -78,3 +78,11 @@ No skill loader in this runtime; protocols applied manually.
 - [SKILL: design-taste-frontend] Borderless tint-shift depth (#fff over #F8F7F4 / #161618 over #0D0D0F), 400-500 weights with -0.03em tracking, blur-to-sharp entrances, spring press states.
 - [SKILL: hallmark-ui] Signature moments: halo composer with floating speech-bubble pills; onboarding breathing orb + circular theme reveal + button-to-prompt-box morph.
 - [SKILL: native-rust-systems] Rust untouched (cargo not available in this sandbox); CI runs fmt/clippy/test.
+
+## Session 8
+No skill loader exists in this runtime; the five protocols were applied manually (stated honestly, not "executed").
+- [design-taste-frontend] Safe-area floor classes, dark surface hierarchy kept (tint-shift, no borders), 40px+ touch targets, tidy message action row.
+- [hallmark-ui] Onboarding: hardware profile -> starter cards -> circular theme reveal -> morphing CTA; /admin Keyless Control Center with kill-switch, key cards, publish dock.
+- [open-design-skill] beautifului.dev is a JS/catalogue site (see COMPONENT_EXTRACTION.md); patterns re-implemented on the existing calm tokens: segmented control, status badges, sheet modal, spring switch.
+- [rea] Diagnosed the status-bar overlap from code (native vars never consumed; one-shot injection), resolved PR #6 conflicts by diffing both sides against the merge base, verified local download -> load -> offline reply in Chromium. Found the dark-mode reply colour bug during that check.
+- [native-rust-systems] No Rust changed. Android Kotlin insets bridge rewritten; compiled by CI only.

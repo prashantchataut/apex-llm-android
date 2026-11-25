@@ -264,7 +264,7 @@ export function AdminConsole() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto w-[min(880px,calc(100%-32px))] pb-24">
+      <main className="relative z-10 mx-auto w-[min(880px,calc(100%-32px))] pb-44">
         {!who || !reg ? (
           <motion.section initial={{ opacity: 0, y: 18, filter: "blur(8px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }} className="mx-auto mt-10 max-w-[460px] sm:mt-20">
             <span className="grid h-14 w-14 place-items-center rounded-full bg-[var(--surface)] shadow-[var(--specular),var(--shadow-card)]">
@@ -345,13 +345,11 @@ export function AdminConsole() {
               </button>
             </div>
 
-            <AnimatePresence initial={false}>
-              {form && (
-                <div className="mt-3">
-                  <KeyForm key={`${form.kind}-${"id" in form ? form.id : "new"}`} form={form} reg={reg} onCancel={() => setForm(null)} onSave={upsert} />
-                </div>
-              )}
-            </AnimatePresence>
+            {form && (
+              <div className="mt-3">
+                <KeyForm key={`${form.kind}-${"id" in form ? form.id : "new"}`} form={form} reg={reg} onCancel={() => setForm(null)} onSave={upsert} />
+              </div>
+            )}
 
             <ul className="mt-3 grid gap-3">
               <AnimatePresence initial={false}>

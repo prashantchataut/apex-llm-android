@@ -608,3 +608,9 @@ html.is-android { --safe-top-default: 38px; --safe-bottom-default: 14px; }
 
 /* user message: edit affordance sits in a tidy row under the bubble instead of floating beside it */
 .msg-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 4px; padding-right: 6px; min-height: 36px; }
+
+/* Legacy utility colours (Rich text, choice cards) were bound to <html data-mode>, not the calm theme, so AI replies
+   rendered near-black on the dark canvas. Bind them to the calm ink tokens instead. */
+.calm .text-ink { color: rgb(var(--ink-rgb)); }
+.calm .text-ink-2 { color: rgb(var(--ink-rgb) / var(--ink-2-a)); }
+.calm .text-ink-3 { color: rgb(var(--ink-rgb) / var(--ink-3-a)); }

@@ -37,3 +37,6 @@ Obsidian Carbon dark mode, BeautifulUI primitives, vector icons, choreographed o
 - [x] Home, composer, conversation, drawer, hub, studio, memory, MCP, settings rebuilt single-column
 - [x] 3-slide onboarding, grid-free landing, QA renders in docs/qa-anti-slop/
 - [ ] APK v0.5.0 build/publish (see PR)
+
+## Session 8 (v0.7.0)
+PR #6 conflicts resolved and merged; Android status-bar fix; /admin keyless access-key console + in-app gating; local-first onboarding; model selector restructure; dark-mode reply colour fix. See .agent/STATE.md for verified vs. unverified.

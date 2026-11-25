@@ -1,4 +1,28 @@
-# STATE — last updated: end of Session 8 (branch feat/session-5-evolution-darkmode-ux)
+# STATE — last updated: end of Session 8 (branch feat/session-8-android-insets-admin-keyless-local-first, PR #7)
+
+## [SESSION 8 — WHAT ACTUALLY HAPPENED]
+- **PR #6 resolved + merged.** It was branched off before PR #5's calm/borderless redesign, so 14 UI files conflicted. Resolution: main's calm UI kept for every conflicting UI file (the design the owner likes); PR #6's non-conflicting additions (ui.tsx primitives, docs, QA renders) kept; docs merged by hand. tsc clean, merged via REST API.
+- **Android status-bar collision (root cause):** MainActivity pushed `--apex-inset-top` once, before the document existed, and *nothing in the web layer read it*; the header used only `env(safe-area-inset-top)` which is 0 in an edge-to-edge Android WebView. Fix: native Insets store + repeated push + `ApexBars.insets()` pull; `lib/insets.ts`; `.pt-safe/.pb-safe` classes = `max(env, --safe-*, 38px/14px Android floor) + 10/8px`. `setDecorFitsSystemWindows(true)` is NOT used: ignored on API 35+ (targetSdk 37).
+- **Keyless Cloud is now gated.** `lib/access.ts` (pure-JS SHA-256, registry fetch with `cache:no-store` + `?t=`, raw.githubusercontent first then bundled copy, 24 h offline grace, per-device daily quota, model allow-list, fallback to local on revoke). `/admin` (`AdminConsole.tsx`) signs in with the owner's GitHub token (sessionStorage only), edits keys, kill-switch, Publish = GitHub Contents API PUT to `web-showcase/public/config/keyless-registry.json` on `main`. `/#/admin` and `/?admin=1` redirect to `/admin/`.
+- **Default key** `APEX-PRO-2025` (registry stores only its SHA-256). Rotate/revoke it in /admin.
+- **Onboarding rebuilt** (3 steps, no mode choice): welcome, hardware profile + 1-tap starter download (real MB progress, loads into wllama, sets active model), theme + optional key. Model selector: installed local models first, download entry points, Keyless Cloud rows with lock badges.
+- **Found while QA-ing:** AI reply paragraphs used legacy `text-ink-2` bound to `<html data-mode>`, so they rendered near-black on the dark canvas (existing bug in main). Fixed in calm.css.
+- Version 0.7.0.
+
+## Verified (headless Chromium, `docs/qa-session-8/`)
+- Header buttons sit >= 48px (38px simulated bar + 10px) with native bridge AND with no bridge (CSS floor only).
+- Real HF download of SmolLM2 135M (145 MB) -> loaded in ~6 s -> answered offline at ~30 tok/s with the cloud endpoint blocked.
+- Key flow: invalid key shows "Invalid / Revoked by Admin", APEX-PRO-2025 verifies, keyless model unlocks; registry flipped to revoked -> next check locks and the pill falls back to the local model.
+- Admin publish payload: branch main, sha passed, only hashes written (plaintext not in payload).
+
+## Honest gaps
+- **Admin <-> GitHub was tested against a mocked api.github.com** (the registry is not on main until this PR merges). The request shapes follow the documented Contents API.
+- raw.githubusercontent.com is CDN cached; the `?t=` buster avoids it in practice but propagation is not guaranteed to be "the exact second".
+- The gate is app-level: the upstream cloud endpoint (Pollinations) is anonymous, so a modified APK could bypass it. The public registry holds hashes; short keys are brute-forceable, use long random ones.
+- Kotlin changes could only be compiled by CI (no JDK/Android SDK in the sandbox); not device-tested on a physical phone.
+- The 491 MB Qwen starter was observed downloading (211/491 MB at 2 min in this sandbox, throttled); full completion was verified with the 145 MB model.
+- Rotate the GitHub PAT that was pasted in chat.
+
 
 ## [SESSION 8 — WHAT ACTUALLY HAPPENED]
 - **Baseline**: "Session 5 UI" was resolved to the calm pastel UI in `docs/qa-session-5-redesign/` (commit dd0b524, 2x2 capability tiles, halo composer). Branch cut from there, NOT from the Session 7 anti-slop `main`. Session 7 work (borderless porcelain/carbon rewrite, 3-slide onboarding) is therefore not included; this is a judgment call about an ambiguous instruction.
