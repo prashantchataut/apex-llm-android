@@ -7,7 +7,7 @@ import { Icon } from "@/components/ui/Icon";
 import { haptic } from "@/lib/haptics";
 import { REPO, RELEASES_URL } from "@/lib/site";
 
-export const APK_VERSION = "v0.3.0-beta";
+export const APK_VERSION = "v0.4.0";
 const API = `https://api.github.com/repos/${REPO}/releases/tags/${APK_VERSION}`;
 
 interface Asset {

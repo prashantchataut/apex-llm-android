@@ -1,0 +1,421 @@
+/*
+ * Calm Atmospheric Minimalism — "Porcelain Dawn" (light, default) and "Soft Carbon" (dark).
+ * Scoped to `.calm`: re-points the legacy token names (ink, canvas, glass…) so shared components follow the palette.
+ */
+.calm {
+  --font-sans: "Inter", "Inter Tight", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  position: relative;
+  color: rgb(var(--ink-rgb));
+  background: var(--canvas);
+  --r-card: 24px;
+  --ok: #2f8f6b;
+  --warn: #a8691b;
+  --bad: #c2415c;
+}
+.calm[data-cmode="light"] {
+  color-scheme: light;
+  --canvas: #f8f9fa;
+  --surface: #ffffff;
+  --surface-2: #f1f3f5;
+  --ink-rgb: 27 30 38;
+  --inv-rgb: 255 255 255;
+  --ink-2-a: 0.78;
+  --ink-3-a: 0.62;
+  --accent: #2f7d6b;
+  --accent-2: #6a63c9;
+  --hairline: rgb(27 30 38 / 0.08);
+  --hairline-strong: rgb(27 30 38 / 0.14);
+  --glass-bg: rgb(255 255 255 / 0.7);
+  --glass-dark-bg: rgb(27 30 38 / 0.04);
+  --glass-hi: rgb(255 255 255 / 0.9);
+  --glass-shadow: 0 8px 30px rgb(60 70 90 / 0.08);
+  --card-hi: rgb(255 255 255 / 0.9);
+  --ink-ghost: rgb(27 30 38 / 0.3);
+  --ink-solid: #1b1e26;
+  --ink-body: rgb(27 30 38 / 0.8);
+  --matte: #ffffff;
+  --sel: rgb(47 125 107 / 0.22);
+  --halo-a: #e4f2ea;
+  --halo-b: #eef6f1;
+  --halo-ink: #2c6b5b;
+  --shadow-card: 0 1px 2px rgb(30 40 60 / 0.04), 0 10px 30px -12px rgb(30 40 60 / 0.14);
+}
+.calm[data-cmode="dark"] {
+  color-scheme: dark;
+  --canvas: #14161c;
+  --surface: #1c1f27;
+  --surface-2: #242834;
+  --ink-rgb: 234 236 242;
+  --inv-rgb: 20 22 28;
+  --ink-2-a: 0.78;
+  --ink-3-a: 0.6;
+  --accent: #8fd3b6;
+  --accent-2: #a9a4f2;
+  --hairline: rgb(255 255 255 / 0.08);
+  --hairline-strong: rgb(255 255 255 / 0.14);
+  --glass-bg: rgb(255 255 255 / 0.08);
+  --glass-dark-bg: rgb(255 255 255 / 0.05);
+  --glass-hi: rgb(255 255 255 / 0.2);
+  --glass-shadow: 0 8px 30px rgb(0 0 0 / 0.3);
+  --card-hi: rgb(255 255 255 / 0.05);
+  --ink-ghost: rgb(234 236 242 / 0.3);
+  --ink-solid: #eaecf2;
+  --ink-body: rgb(234 236 242 / 0.8);
+  --matte: #1c1f27;
+  --ok: #6fd1a6;
+  --warn: #e0b36a;
+  --bad: #f08aa0;
+  --sel: rgb(143 211 182 / 0.28);
+  --halo-a: #1d2a27;
+  --halo-b: #1a2422;
+  --halo-ink: #9fdcc3;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -14px rgb(0 0 0 / 0.55);
+}
+
+/* ── ambient top glow (top ~35% of the canvas) ── */
+.calm-glow {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 38%;
+  min-height: 260px;
+  pointer-events: none;
+  z-index: 0;
+  -webkit-mask-image: linear-gradient(#000 35%, transparent);
+  mask-image: linear-gradient(#000 35%, transparent);
+}
+.calm[data-cmode="light"] .calm-glow {
+  background:
+    radial-gradient(60% 75% at 10% 0%, #f6d5e5 0%, transparent 70%),
+    radial-gradient(55% 70% at 58% -12%, #f9e4c8 0%, transparent 72%),
+    radial-gradient(52% 70% at 100% 6%, #ddf3e4 0%, transparent 70%);
+}
+.calm[data-cmode="dark"] .calm-glow {
+  background:
+    radial-gradient(70% 80% at 15% -10%, #181b26 0%, transparent 75%),
+    radial-gradient(50% 70% at 85% 0%, rgb(110 150 210 / 0.2) 0%, transparent 70%),
+    radial-gradient(45% 60% at 50% 5%, rgb(120 200 180 / 0.12) 0%, transparent 70%);
+}
+
+/* ── surfaces ── */
+.calm-card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 22px;
+  box-shadow: var(--shadow-card);
+}
+.calm-tile {
+  background: color-mix(in oklab, var(--surface) 72%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--hairline);
+  border-radius: 22px;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s;
+}
+.calm-tile:hover {
+  transform: translateY(-2px);
+}
+.calm-tile:active {
+  transform: scale(0.985);
+}
+.calm-sheet {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-bottom: 0;
+  border-radius: 28px 28px 0 0;
+  box-shadow: 0 -12px 40px -24px rgb(30 40 60 / 0.25);
+}
+.calm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  color: rgb(var(--ink-rgb) / var(--ink-2-a));
+  white-space: nowrap;
+}
+.calm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 500;
+  background: var(--surface);
+  border: 1px solid var(--hairline-strong);
+  transition: transform 0.18s, background 0.18s;
+}
+.calm-btn:active {
+  transform: scale(0.97);
+}
+.calm-btn[data-primary="true"] {
+  background: var(--ink-solid);
+  color: var(--canvas);
+  border-color: transparent;
+}
+.calm-btn[data-tone="sage"] {
+  background: var(--halo-a);
+  color: var(--halo-ink);
+  border-color: transparent;
+}
+.calm-field {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 14px;
+  padding: 11px 14px;
+  font-size: 14.5px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.calm-field:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent);
+}
+.calm-field::placeholder {
+  color: rgb(var(--ink-rgb) / 0.42);
+}
+.calm :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── halo composer ── */
+.halo {
+  border-radius: 28px;
+  padding: 4px;
+  background: linear-gradient(180deg, var(--halo-a), var(--halo-b));
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-card);
+}
+.halo-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 14px 8px;
+  font-size: 11.5px;
+  color: var(--halo-ink);
+  font-weight: 500;
+}
+.halo-inner {
+  background: var(--surface);
+  border-radius: 24px;
+  box-shadow: 0 1px 2px rgb(30 40 60 / 0.05);
+  padding: 12px 12px 10px 16px;
+}
+.dock-pill {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 26px;
+  padding: 5px 5px 5px 6px;
+  box-shadow: var(--shadow-card);
+}
+.ibtn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 999px;
+  color: rgb(var(--ink-rgb) / var(--ink-2-a));
+  transition: background 0.18s, transform 0.18s, color 0.18s;
+}
+.ibtn:hover {
+  background: var(--surface-2);
+}
+.ibtn:active {
+  transform: scale(0.92);
+}
+.ibtn[data-on="true"] {
+  background: var(--halo-a);
+  color: var(--halo-ink);
+}
+.send {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 999px;
+  background: var(--ink-solid);
+  color: var(--canvas);
+  transition: transform 0.18s, opacity 0.18s;
+}
+.send:active {
+  transform: scale(0.92);
+}
+.send:disabled {
+  opacity: 0.28;
+}
+
+/* ── history rows / nav rows ── */
+.nav-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 14px;
+  font-size: 14px;
+  text-align: left;
+  color: rgb(var(--ink-rgb) / 0.88);
+  transition: background 0.18s;
+}
+.nav-row:hover,
+.nav-row[data-active="true"] {
+  background: var(--surface-2);
+}
+.nav-row small {
+  margin-left: auto;
+  font-size: 11px;
+  color: rgb(var(--ink-rgb) / var(--ink-3-a));
+}
+
+/* ── context / memory node tree ── */
+.node {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+}
+.node[data-tone="topic"] {
+  background: var(--halo-a);
+  color: var(--halo-ink);
+  border-color: transparent;
+  font-weight: 500;
+}
+.tree-link {
+  position: relative;
+  margin-left: 14px;
+  padding-left: 18px;
+  border-left: 1.5px solid var(--hairline-strong);
+}
+.tree-link > .tree-item {
+  position: relative;
+  padding-top: 8px;
+}
+.tree-link > .tree-item::before {
+  content: "";
+  position: absolute;
+  left: -18px;
+  top: 0;
+  width: 16px;
+  height: 22px;
+  border-left: 0;
+  border-bottom: 1.5px solid var(--hairline-strong);
+  border-bottom-left-radius: 10px;
+}
+
+/* ── voice note bubble ── */
+.vbars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 22px;
+}
+.vbars i {
+  width: 2.5px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+/* ── skeleton shimmer for images ── */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  animation: calm-shimmer 1.6s infinite;
+}
+.calm[data-cmode="dark"] .shimmer::after {
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.08), transparent);
+}
+@keyframes calm-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes calm-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.pulse-dot {
+  animation: calm-pulse 1.3s ease-in-out infinite;
+}
+.switch {
+  position: relative;
+  width: 42px;
+  height: 25px;
+  min-width: 42px;
+  border-radius: 999px;
+  background: var(--hairline-strong);
+  transition: background 0.2s;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 19px;
+  height: 19px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  transition: transform 0.22s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.switch[aria-checked="true"] {
+  background: var(--accent);
+}
+.switch[aria-checked="true"]::after {
+  transform: translateX(17px);
+}
+.calm .scroll-quiet {
+  scrollbar-width: none;
+}
+.calm .scroll-quiet::-webkit-scrollbar {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .calm *,
+  .calm *::before,
+  .calm *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.calm textarea.bare:focus-visible {
+  outline: none;
+}
