@@ -20,6 +20,7 @@ import { deleteConvo, getConvo, pinConvo, readMode, renameConvo, saveConvo, setC
 import { checkForUpdate, useUpdater } from "@/lib/updater";
 import { APP_VERSION } from "@/lib/version";
 import { useKeyboardInset } from "@/lib/useKeyboard";
+import { initInsets } from "@/lib/insets";
 import { Composer, type ComposerHandle } from "./Composer";
 import { Conversation } from "./Conversation";
 import { Drawer, Header, Lightbox, ModelSheet, Toast, ViewTitle, type View } from "./Chrome";
@@ -28,7 +29,9 @@ import { ImageStudio } from "./ImageStudio";
 import { McpView } from "./McpView";
 import { MemoryView } from "./MemoryView";
 import { ModelHub } from "./ModelHub";
-import { Onboarding, type Route } from "./Onboarding";
+import { Onboarding } from "./Onboarding";
+import { AccessKeyModal } from "./AccessKeyModal";
+import { gateKeyless, getAccess, startAccessWatch, useAccess } from "@/lib/access";
 import { SettingsView } from "./SettingsView";
 
 const newId = () => Math.random().toString(36).slice(2, 10);
@@ -49,7 +52,8 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [keys, setKeys] = useState<KeyRec[]>([]);
   const [onboard, setOnboard] = useState(false);
-  const [hubTab, setHubTab] = useState<"trending" | "uncensored">("trending");
+  const [hubTab, setHubTab] = useState<"trending" | "uncensored" | "search">("trending");
+  const [keyModal, setKeyModal] = useState(false);
 
   const chat = useChat();
   const cart = useCartridges();
@@ -61,11 +65,21 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   const servers = useMcp();
   const update = useUpdater();
   const kb = useKeyboardInset();
+  const access = useAccess();
   const composer = useRef<ComposerHandle>(null);
   const toastTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    setMode(readMode());
+    initInsets();
+    // First run inside the app (not the landing demo) starts in Obsidian Dark; an explicit choice always wins.
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem("apex.calm.mode");
+    } catch {
+      /* private mode */
+    }
+    setMode(!embedded && !stored ? "dark" : readMode());
+    startAccessWatch();
     if (!embedded && !new URLSearchParams(window.location.search).has("skip-intro")) {
       try {
         if (!localStorage.getItem("apex.onboarded")) setOnboard(true);
@@ -91,7 +105,8 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   }, []);
 
   const localModel = choice.kind === "local" ? CATALOG.find((m) => m.id === choice.id) : undefined;
-  const label = choice.kind === "keyless" ? `${keylessById(choice.id).label} · Keyless` : localModel ? `${shortModelName(localModel)} · Local` : "Choose a model";
+  const keyOk = access.state === "active";
+  const label = choice.kind === "keyless" ? `${keylessById(choice.id).label} · ${keyOk ? "Keyless" : "Locked"}` : localModel ? `${shortModelName(localModel)} · Local` : "Choose a model";
   const memActive = mems.filter((m) => m.on).length;
   const started = chat.msgs.length > 0;
 
@@ -142,7 +157,43 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     [say],
   );
 
+  /** Fall back to a local model (installed first, else the starter). Used when a key is revoked or removed. */
+  const fallbackLocal = useCallback(
+    (why: string) => {
+      const done = CATALOG.find((m) => dl[m.id]?.status === "done");
+      setChoice({ kind: "local", id: done?.id ?? "smollm2-135m" });
+      say(why);
+    },
+    [dl, say],
+  );
+  /** Keyless Cloud is gated: fresh registry check + model allow-list + daily quota before every cloud request. */
+  const guardKeyless = useCallback(
+    async (c: Choice): Promise<boolean> => {
+      if (c.kind !== "keyless") return true;
+      const g = await gateKeyless(c.id);
+      if (g.ok) return true;
+      if (!getAccess().key) {
+        say(g.reason);
+        setKeyModal(true);
+      } else fallbackLocal(g.reason);
+      return false;
+    },
+    [fallbackLocal, say],
+  );
+  /* A key that is revoked / removed / expired (or a global kill-switch) drops the chat back to local models. */
+  useEffect(() => {
+    if (choice.kind !== "keyless") return;
+    if (["revoked", "invalid", "expired", "disabled", "none"].includes(access.state)) {
+      fallbackLocal(access.state === "none" ? "Keyless Cloud is locked. Switched to your local model." : "Your access key is no longer active. Switched to your local model.");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [access.state, choice.kind]);
+
   const pick = (c: Choice) => {
+    if (c.kind === "keyless" && access.state !== "active") {
+      setKeyModal(true);
+      return;
+    }
     setChoice(c);
     if (c.kind === "local") {
       const m = CATALOG.find((x) => x.id === c.id);
@@ -165,6 +216,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
       setImageMode(false);
       return;
     }
+    if (!(await guardKeyless(choice))) return;
     if (choice.kind === "local" && localModel && !(await activate(localModel))) return;
     const added = learnFrom(t);
     const tools = choice.kind === "keyless";
@@ -199,7 +251,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   const title = (msgs.find((m) => m.role === "user")?.text ?? "New chat").slice(0, 48);
 
   return (
-    <div className="calm relative flex h-full w-full overflow-hidden" data-cmode={resolved}>
+    <div className="calm relative flex h-full w-full overflow-hidden" data-cmode={resolved} data-embedded={embedded ? "true" : "false"}>
       <Drawer
         open={drawer}
         persistent={persistent}
@@ -237,8 +289,8 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
                     memCount={memActive}
                     branchInfo={chat.branchInfo}
                     onSwitch={chat.switchBranch}
-                    onEdit={(id, t) => chat.edit(id, t, opts())}
-                    onRegenerate={(id) => chat.regenerate(id, opts())}
+                    onEdit={(id, t) => void guardKeyless(choice).then((ok) => ok && chat.edit(id, t, opts()))}
+                    onRegenerate={(id) => void guardKeyless(choice).then((ok) => ok && chat.regenerate(id, opts()))}
                     onSend={(t) => void send(t)}
                     onLightbox={(url, prompt) => setZoom({ url, prompt })}
                   />
@@ -257,13 +309,13 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
                   </div>
                 </div>
               )}
-              {view === "settings" && <SettingsView mode={mode} setMode={setTheme} cart={cart} update={update} />}
+              {view === "settings" && <SettingsView mode={mode} setMode={setTheme} cart={cart} update={update} onAccessKey={() => setKeyModal(true)} />}
             </motion.div>
           </AnimatePresence>
         </main>
 
         {view === "chat" && (
-          <div className="relative z-[2] mx-auto w-full max-w-[740px] px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-2">
+          <div className="relative z-[2] mx-auto w-full max-w-[740px] px-3 pb-safe pt-2">
             <Composer
               ref={composer}
               compact={started}
@@ -274,7 +326,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
               onSend={(t, a, ms) => void send(t, a, ms)}
               imageMode={imageMode}
               setImageMode={setImageMode}
-              statusLeft={choice.kind === "keyless" ? "Keyless AI Ready" : `On-device · ${localModel ? shortModelName(localModel) : "model"}`}
+              statusLeft={choice.kind === "keyless" ? (keyOk ? "Keyless Cloud · key active" : "Keyless Cloud · locked") : `On-device · ${localModel ? shortModelName(localModel) : "model"}`}
               statusRight={update.s === "available" ? { label: "Update available", onClick: () => goView("settings") } : { label: "Switch Engine", onClick: () => setSheet(true) }}
               onOpenMcp={() => goView("mcp")}
             />
@@ -282,24 +334,21 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
         )}
       </motion.div>
 
-      <ModelSheet open={sheet} onClose={() => setSheet(false)} choice={choice} onPick={pick} dl={dl} onHub={() => goView("hub")} loading={loadingId} />
+      <ModelSheet open={sheet} onClose={() => setSheet(false)} choice={choice} onPick={pick} dl={dl} onHub={(t) => { setHubTab(t); goView("hub"); }} loading={loadingId} access={access} onKey={() => setKeyModal(true)} />
+      <AccessKeyModal open={keyModal} onClose={() => setKeyModal(false)} onUnlocked={() => say("Keyless Cloud unlocked. Local models stay free.")} />
       <Lightbox img={zoom} onClose={() => setZoom(null)} />
       <Toast text={toast} />
       {onboard && (
         <Onboarding
           theme={resolved}
           onTheme={setTheme}
-          onDone={(r: Route) => {
+          onDone={() => {
             try {
               localStorage.setItem("apex.onboarded", "1");
             } catch {
               /* ignore */
             }
             setOnboard(false);
-            if (r !== "keyless") {
-              setHubTab(r === "uncensored" ? "uncensored" : "trending");
-              setView("hub");
-            }
           }}
         />
       )}

@@ -9,12 +9,14 @@ import type { CalmMode } from "@/lib/store";
 import { REGISTRY_URL, ago, checkForUpdate, downloadApk, type UpdateState } from "@/lib/updater";
 import { APP_VERSION } from "@/lib/version";
 import { RELEASES_URL } from "@/lib/site";
+import { useAccess } from "@/lib/access";
 import { CIcon } from "./icons";
 import { ViewTitle } from "./Chrome";
 
 const fmtMb = (b: number) => `${(b / 1e6).toFixed(1)} MB`;
 
-export function SettingsView({ mode, setMode, onReplay, cart, update }: { onReplay?: () => void; mode: CalmMode; setMode: (m: CalmMode) => void; cart: ReturnType<typeof useCartridges>; update: UpdateState }) {
+export function SettingsView({ mode, setMode, onReplay, cart, update, onAccessKey }: { onReplay?: () => void; onAccessKey?: () => void; mode: CalmMode; setMode: (m: CalmMode) => void; cart: ReturnType<typeof useCartridges>; update: UpdateState }) {
+  const access = useAccess();
   const [dl, setDl] = useState<{ loaded: number; total: number } | null>(null);
   const [dlMsg, setDlMsg] = useState("");
   const [sync, setSync] = useState<string>("");
@@ -46,8 +48,8 @@ export function SettingsView({ mode, setMode, onReplay, cart, update }: { onRepl
   };
 
   const MODES: { id: CalmMode; label: string; sub: string; icon: "sun" | "moon" | "gear" }[] = [
-    { id: "light", label: "Porcelain Dawn", sub: "Light", icon: "sun" },
-    { id: "dark", label: "Soft Carbon", sub: "Dark", icon: "moon" },
+    { id: "dark", label: "Obsidian Dark", sub: "Dark", icon: "moon" },
+    { id: "light", label: "Porcelain Light", sub: "Light", icon: "sun" },
     { id: "system", label: "System", sub: "Auto", icon: "gear" },
   ];
 
@@ -70,6 +72,19 @@ export function SettingsView({ mode, setMode, onReplay, cart, update }: { onRepl
           <CIcon name="sparkle" size={15} /> Replay welcome
         </button>
       )}
+
+      <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Keyless access key</h2>
+      <div className="calm-card p-4">
+        <div className="flex items-center justify-between gap-3">
+          <span className="min-w-0">
+            <span className="block text-[14.5px] font-medium">{access.state === "active" ? (access.label ?? "Access key") : "Keyless Cloud is locked"}</span>
+            <span className="mt-0.5 block text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{access.key ? access.message : "Local and uncensored models are free. A key unlocks cloud models."}</span>
+          </span>
+          <button type="button" className="calm-btn shrink-0" data-tone={access.state === "active" ? "sage" : undefined} onClick={onAccessKey}>
+            <CIcon name={access.state === "active" ? "key" : "lock"} size={15} /> {access.key ? "Manage" : "Enter key"}
+          </button>
+        </div>
+      </div>
 
       <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Assistant style</h2>
       <div className="flex flex-wrap gap-1.5">
