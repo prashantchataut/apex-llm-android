@@ -9,6 +9,7 @@ import { headSize, parseGgufUrl, registerCustom, repoGgufs, searchHf, type HfFil
 import type { Choice } from "@/lib/store";
 import { CIcon } from "./icons";
 import { ViewTitle } from "./Chrome";
+import { Segmented } from "./ui";
 
 type Tab = "trending" | "uncensored" | "search";
 const mb = (b: number) => (b / 1e6).toFixed(b >= 1e9 ? 0 : 1);
@@ -23,8 +24,8 @@ function Card({ m, d, active, onUse, busy }: { m: CatalogModel; d: DlItem; activ
         <div className="min-w-0 flex-1">
           <h3 className="flex flex-wrap items-center gap-x-2 text-[15px] font-medium leading-snug">
             {m.name}
-            {m.uncensored && <span className="calm-chip !h-6 !px-2 text-[11px]" style={{ background: "var(--halo-a)", color: "var(--halo-ink)", borderColor: "transparent" }}>🔓 Uncensored</span>}
-            {m.reasoning && <span className="calm-chip !h-6 !px-2 text-[11px]">💭 Reasoning</span>}
+            {m.uncensored && <span className="calm-chip !h-6 !px-2 text-[11px]" style={{ background: "var(--halo-a)", color: "var(--halo-ink)", borderColor: "transparent" }}><CIcon name="unlock" size={12} /> Uncensored</span>}
+            {m.reasoning && <span className="calm-chip !h-6 !px-2 text-[11px]"><CIcon name="sparkle" size={12} /> Reasoning</span>}
           </h3>
           <p className="mt-0.5 text-[12.5px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{BLURBS[m.id] ?? `${m.repo}`}</p>
           <p className="tnum mt-1.5 text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">
@@ -34,12 +35,12 @@ function Card({ m, d, active, onUse, busy }: { m: CatalogModel; d: DlItem; activ
         <div className="shrink-0">
           {d.status === "idle" && (
             <button type="button" className="calm-btn" data-primary="true" onClick={() => void startDownload(m.id)} aria-label={`Download ${m.name}`}>
-              <CIcon name="download" size={15} /> Get
+              <CIcon name="download" size={15} /> Download
             </button>
           )}
           {d.status === "done" && (
             <button type="button" className="calm-btn" data-tone={active ? "sage" : undefined} data-primary={!active} disabled={busy} onClick={onUse}>
-              {active ? <><CIcon name="check" size={15} /> Active</> : busy ? "Loading…" : "Use"}
+              {active ? <><CIcon name="check" size={15} /> Active</> : busy ? "Loading…" : "Use model"}
             </button>
           )}
           {d.status === "error" && (
@@ -52,12 +53,12 @@ function Card({ m, d, active, onUse, busy }: { m: CatalogModel; d: DlItem; activ
 
       {(d.status === "downloading" || d.status === "paused") && (
         <div className="mt-3.5">
-          <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100} aria-label={`${m.name} download`}>
-            <div className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-300" style={{ width: `${pct}%` }} />
+          <div className="bar" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100} aria-label={`${m.name} download`}>
+            <i style={{ width: `${pct}%` }} />
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="tnum text-[12px] text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">
-              {mb(d.loaded)} / {mb(d.total)} MB{d.status === "downloading" ? ` · ${d.mbps.toFixed(1)} MB/s` : " · paused"}
+            <span className="mono tnum text-[12px] text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">
+              {Math.round(pct)}% · {mb(d.loaded)} / {mb(d.total)} MB{d.status === "downloading" ? ` · ${d.mbps.toFixed(1)} MB/s` : " · paused"}
             </span>
             <span className="flex-1" />
             {!native && d.status === "downloading" && (
@@ -148,7 +149,7 @@ function SearchTab({ onInstall }: { onInstall: (m: CatalogModel) => void }) {
             <button type="button" onClick={() => expand(r.id)} aria-expanded={open === r.id} className="flex min-h-[56px] w-full items-center gap-3 px-4 text-left">
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[14px] font-medium">{r.id}</span>
-                <span className="tnum block text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">↓ {r.downloads.toLocaleString()} · ♥ {r.likes}</span>
+                <span className="tnum block text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{r.downloads.toLocaleString()} downloads · {r.likes} likes</span>
               </span>
               <CIcon name="chevron" size={16} style={{ transform: open === r.id ? "rotate(180deg)" : undefined, transition: "transform .2s" }} />
             </button>
@@ -184,8 +185,8 @@ function SearchTab({ onInstall }: { onInstall: (m: CatalogModel) => void }) {
   );
 }
 
-export function ModelHub({ dl, choice, onUse, loadingId }: { dl: Record<string, DlItem>; choice: Choice; onUse: (m: CatalogModel) => void; loadingId: string | null }) {
-  const [tab, setTab] = useState<Tab>("trending");
+export function ModelHub({ dl, choice, onUse, onKeyless, initialTab = "trending", loadingId }: { initialTab?: Tab; dl: Record<string, DlItem>; choice: Choice; onUse: (m: CatalogModel) => void; onKeyless: () => void; loadingId: string | null }) {
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [rev, setRev] = useState(0);
   const [store, setStore] = useState<{ used: number; quota: number } | null>(null);
   useEffect(() => {
@@ -202,10 +203,10 @@ export function ModelHub({ dl, choice, onUse, loadingId }: { dl: Record<string, 
     return CATALOG.filter((m) => m.group === "custom");
   }, [rev]);
   const installed = CATALOG.filter((m) => dlOf(dl, m.id).status === "done").length;
-  const TABS: { id: Tab; label: string }[] = [
-    { id: "trending", label: "🔥 Trending" },
-    { id: "uncensored", label: "🔓 Uncensored" },
-    { id: "search", label: "🔍 Search" },
+  const TABS: { id: Tab; label: string; icon: "flame" | "unlock" | "search" }[] = [
+    { id: "trending", label: "Trending", icon: "flame" },
+    { id: "uncensored", label: "Uncensored", icon: "unlock" },
+    { id: "search", label: "Search", icon: "search" },
   ];
   const install = (m: CatalogModel) => {
     setRev((r) => r + 1);
@@ -220,16 +221,22 @@ export function ModelHub({ dl, choice, onUse, loadingId }: { dl: Record<string, 
         <span className="calm-chip">{installed} on device</span>
         {store && <span className="calm-chip tnum">Storage {fmtSize(store.used)} used of {fmtSize(store.quota)}</span>}
       </div>
-      <div role="tablist" aria-label="Model groups" className="mb-4 flex gap-1.5 overflow-x-auto rounded-full bg-[var(--surface-2)] p-1 scroll-quiet">
-        {TABS.map((t) => (
-          <button key={t.id} role="tab" type="button" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className="min-h-10 flex-1 whitespace-nowrap rounded-full px-3 text-[13px] font-medium transition-colors" style={tab === t.id ? { background: "var(--surface)", boxShadow: "var(--shadow-card)" } : { opacity: 0.7 }}>
-            {t.label}
-          </button>
-        ))}
+      <div className="mb-4 flex items-center gap-3 rounded-[20px] bg-[var(--halo-a)] p-3.5">
+        <span className="well !bg-[var(--surface)]"><CIcon name={choice.kind === "keyless" ? "bolt" : "lock"} size={19} /></span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-medium text-[var(--halo-ink)]">{choice.kind === "keyless" ? "Keyless AI is active" : "Running on this device"}</p>
+          <p className="text-[12px] leading-snug text-[var(--halo-ink)] opacity-75">{choice.kind === "keyless" ? "Chat now with no setup. Download a model below to go offline." : "Switch back any time — no account needed."}</p>
+        </div>
+        {choice.kind === "keyless" ? null : (
+          <button type="button" className="calm-btn" onClick={onKeyless}>Use Keyless</button>
+        )}
+      </div>
+      <div className="mb-4">
+        <Segmented value={tab} onChange={setTab} label="Model groups" options={TABS} />
       </div>
 
       {tab === "uncensored" && (
-        <div className="mb-4 rounded-2xl bg-[var(--halo-a)] p-4 text-[13px] leading-relaxed text-[var(--halo-ink)]">
+        <div className="mb-4 rounded-[20px] bg-[var(--halo-a)] p-4 text-[13px] leading-relaxed text-[var(--halo-ink)]">
           Open-weight models with alignment refusals removed (abliterated) or trained to comply. Selecting one adds this preset to the system prompt:
           <p className="mt-2 rounded-xl bg-[var(--surface)] p-3 text-[12.5px] italic text-[rgb(var(--ink-rgb)/0.8)]">“{UNCENSORED_PROMPT}”</p>
           <p className="mt-2 text-[12px] opacity-80">You are responsible for what you generate. Runs fully on your device.</p>

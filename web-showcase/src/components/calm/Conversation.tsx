@@ -5,7 +5,8 @@ import { AssistantBody } from "@/components/app/Rich";
 import { BranchPager } from "@/components/app/MessageTools";
 import type { BranchInfo, ChatMsg } from "@/components/app/useChat";
 import { downloadImage, fetchImage } from "@/lib/images";
-import { CIcon } from "./icons";
+import { CIcon, Glyph } from "./icons";
+import { Collapse, PixelLoader } from "./ui";
 
 function useNow(active: boolean) {
   const [now, setNow] = useState(() => performance.now());
@@ -70,20 +71,21 @@ function ThinkPill({ m }: { m: ChatMsg }) {
   const isOpen = open ?? false;
   return (
     <div>
-      <button type="button" onClick={() => setOpen(!isOpen)} aria-expanded={isOpen} className="calm-chip min-h-8">
-        <span className={thinking ? "pulse-dot" : ""}>💭</span>
-        {thinking ? "Thinking…" : `Thought for ${secs.toFixed(1)}s`}
-        <CIcon name="chevron" size={13} style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .2s" }} />
+      <button type="button" onClick={() => setOpen(!isOpen)} aria-expanded={isOpen} className="trace">
+        {thinking ? <PixelLoader /> : <CIcon name="sparkle" size={14} />}
+        <span className={thinking ? "shimmer-text" : ""}>{thinking ? "Thinking" : "Thought for"}</span>
+        <span className="mono tnum opacity-70">{secs.toFixed(1)}s</span>
+        <CIcon name="chevron" size={13} style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .25s var(--ease-out-strong)" }} />
       </button>
-      {isOpen && (
-        <div className="mt-2 max-h-56 overflow-y-auto rounded-2xl bg-[var(--surface-2)] p-3.5 text-[13px] leading-relaxed text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">
+      <Collapse open={isOpen}>
+        <div className="trace-body scroll-quiet max-h-56 overflow-y-auto">
           {(m.steps ?? []).map((s, i) => (
             <p key={i} className="mb-1.5 last:mb-0">
               {s}
             </p>
           ))}
         </div>
-      )}
+      </Collapse>
     </div>
   );
 }
@@ -167,7 +169,7 @@ function ContextTree({ msgs, title, modelLabel, memCount, branches }: { msgs: Ch
             </span>
           )}
           <span className="node text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">{modelLabel}</span>
-          {memCount > 0 && <span className="node text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">🧠 {memCount} memories</span>}
+          {memCount > 0 && <span className="node text-[rgb(var(--ink-rgb)/var(--ink-2-a))]"><CIcon name="brain" size={13} /> {memCount} memories</span>}
           {branches > 0 && <span className="node text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">⑂ {branches} branch{branches > 1 ? "es" : ""}</span>}
         </div>
       </div>
@@ -215,7 +217,7 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
                     <div className="flex max-w-[85%] flex-wrap justify-end gap-1.5">
                       {m.attach.map((a, i) => (
                         <span key={i} className="calm-chip">
-                          {a.kind === "image" ? "🖼️" : "📄"} <span className="max-w-[120px] truncate">{a.name}</span>
+                          <CIcon name={a.kind === "image" ? "image" : "file"} size={13} /> <span className="max-w-[120px] truncate">{a.name}</span>
                         </span>
                       ))}
                     </div>
@@ -254,14 +256,14 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
               <div key={m.id} className="space-y-3">
                 {m.memory && m.memory.length > 0 && (
                   <div className="calm-chip" style={{ background: "var(--halo-a)", color: "var(--halo-ink)", borderColor: "transparent", height: "auto", padding: "5px 11px", whiteSpace: "normal" }}>
-                    🧠 Memory updated · Saved “{m.memory[0]}”{m.memory.length > 1 ? ` +${m.memory.length - 1}` : ""}
+                    <CIcon name="brain" size={13} className="mr-1 inline" /> Memory updated · Saved “{m.memory[0]}”{m.memory.length > 1 ? ` +${m.memory.length - 1}` : ""}
                   </div>
                 )}
                 {m.tools && m.tools.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {m.tools.map((t, i) => (
-                      <span key={i} className="calm-chip" style={t.ok ? undefined : { color: "var(--bad)" }}>
-                        {t.icon} <span className="max-w-[240px] truncate">{t.label}</span>
+                      <span key={i} className="toolchip" style={t.ok ? undefined : { color: "var(--bad)" }}>
+                        <Glyph e={t.icon} size={13} /> <span className="max-w-[240px] truncate">{t.label}</span>
                       </span>
                     ))}
                   </div>

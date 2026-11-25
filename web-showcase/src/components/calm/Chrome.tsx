@@ -10,6 +10,7 @@ import { ago, type UpdateState } from "@/lib/updater";
 import { APP_VERSION } from "@/lib/version";
 import type { Choice, Convo } from "@/lib/store";
 import { CIcon, type CIconName } from "./icons";
+import { ThemeToggle } from "./ui";
 import type { DlItem } from "@/lib/downloader";
 
 export type View = "chat" | "hub" | "studio" | "memory" | "mcp" | "lan" | "settings";
@@ -25,7 +26,7 @@ export function Header({ persistent, onMenu, label, uncensored, onPill, memCount
       <button type="button" onClick={onPill} aria-haspopup="dialog" aria-label={`Model: ${label}. Switch model`} className="flex h-10 max-w-[54vw] items-center gap-2 rounded-full border border-[var(--hairline)] bg-[var(--glass-bg)] px-3.5 text-[13px] font-medium shadow-[var(--shadow-card)] backdrop-blur-xl transition-transform active:scale-[0.98] sm:max-w-[420px]">
         <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--ok)]" />
         <span className="truncate">{label}</span>
-        {uncensored && <span aria-label="Uncensored">🔓</span>}
+        {uncensored && <CIcon name="unlock" size={13} aria-label="Uncensored" className="shrink-0 text-[var(--accent)]" />}
         <CIcon name="chevron" size={14} className="shrink-0 opacity-60" />
       </button>
       <div className="flex items-center justify-end gap-0.5">
@@ -96,7 +97,7 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading }
       {installed.map((m) => (
         <Row key={m.id} disabled={loading === m.id} active={choice.kind === "local" && choice.id === m.id} onClick={() => { onPick({ kind: "local", id: m.id }); onClose(); }}>
           <span className="min-w-0">
-            <span className="block truncate text-[14px]">{shortModelName(m)} {m.uncensored && <span aria-label="Uncensored">🔓</span>}</span>
+            <span className="block truncate text-[14px]"><span className="inline-flex items-center gap-1.5">{shortModelName(m)} {m.uncensored && <CIcon name="unlock" size={12} aria-label="Uncensored" className="text-[var(--accent)]" />}</span></span>
             <span className="block truncate text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{loading === m.id ? "Loading into memory…" : `Local · ${(m.sizeGB * 1000).toFixed(0)} MB`}</span>
           </span>
         </Row>
@@ -108,13 +109,13 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading }
   );
 }
 
-const NAV: { id: View; icon: string; label: string }[] = [
-  { id: "hub", icon: "📦", label: "Model Hub" },
-  { id: "studio", icon: "🎨", label: "Image Studio" },
-  { id: "memory", icon: "🧠", label: "Memory & Context Graph" },
-  { id: "mcp", icon: "🔌", label: "MCP Servers & Skills" },
-  { id: "lan", icon: "🖥️", label: "Local Ollama LAN Server" },
-  { id: "settings", icon: "⚙️", label: "Settings & Auto-Update" },
+const NAV: { id: View; icon: CIconName; label: string }[] = [
+  { id: "hub", icon: "cube", label: "Model Hub" },
+  { id: "studio", icon: "palette", label: "Image Studio" },
+  { id: "memory", icon: "brain", label: "Memory & Context Graph" },
+  { id: "mcp", icon: "plug", label: "MCP Servers & Skills" },
+  { id: "lan", icon: "monitor", label: "Local Ollama LAN Server" },
+  { id: "settings", icon: "gear", label: "Settings & Auto-Update" },
 ];
 
 function bucket(c: Convo, now: number): string {
@@ -141,9 +142,12 @@ export interface DrawerProps {
   onNav: (v: View) => void;
   hints: Partial<Record<View, string>>;
   update: UpdateState;
+  resolved: "light" | "dark";
+  onTheme: (m: "light" | "dark") => void;
 }
 
-export function Drawer({ open, persistent, onClose, convos, activeId, onOpenConvo, onNew, onRename, onDelete, onPin, view, onNav, hints, update }: DrawerProps) {
+export function Drawer({ open, persistent, onClose, convos, activeId, onOpenConvo, onNew, onRename, onDelete, onPin, view, onNav, hints, update, resolved, onTheme }: DrawerProps) {
+  const sx = useRef<{ x: number; y: number } | null>(null);
   const [q, setQ] = useState("");
   const [menuId, setMenuId] = useState<string | null>(null);
   const [rename, setRename] = useState<{ id: string; v: string } | null>(null);
@@ -165,11 +169,11 @@ export function Drawer({ open, persistent, onClose, convos, activeId, onOpenConv
   const pill =
     update.s === "available" ? (
       <button type="button" onClick={() => onNav("settings")} className="flex w-full items-center gap-2 rounded-2xl bg-[var(--halo-a)] px-3.5 py-2.5 text-left text-[12.5px] text-[var(--halo-ink)]">
-        ✨ <span className="min-w-0 flex-1">Update available ({update.latest}) · tap to download &amp; install</span>
+        <CIcon name="sparkle" size={15} /> <span className="min-w-0 flex-1">Update available ({update.latest}) · tap to download &amp; install</span>
       </button>
     ) : (
       <button type="button" onClick={() => onNav("settings")} className="flex w-full items-center gap-2 rounded-2xl bg-[var(--surface-2)] px-3.5 py-2.5 text-left text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">
-        {update.s === "error" ? "⚠️" : "✅"}{" "}
+        <CIcon name={update.s === "error" ? "alert" : "check"} size={15} className="shrink-0" />
         <span className="min-w-0 flex-1">
           Apex v{APP_VERSION} · {update.s === "checking" ? "Checking…" : update.s === "uptodate" ? `Up to date (Checked ${ago(update.at)})` : update.s === "error" ? "Couldn't check for updates" : "Up to date"}
         </span>
@@ -183,14 +187,19 @@ export function Drawer({ open, persistent, onClose, convos, activeId, onOpenConv
         aria-label="Navigation"
         aria-hidden={!open && !persistent ? true : undefined}
         {...(!open ? { inert: persistent ? undefined : true } : {})}
-        className={`absolute inset-y-0 left-0 z-40 flex w-[86%] max-w-[340px] flex-col border-r border-[var(--hairline)] bg-[var(--canvas)] pt-[max(14px,env(safe-area-inset-top))] shadow-[0_0_60px_-20px_rgb(0_0_0/0.35)] transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${open ? "translate-x-0" : "-translate-x-full"} ${persistent ? "lg:static lg:z-10 lg:w-[300px] lg:translate-x-0 lg:shadow-none" : ""}`}
+        onTouchStart={(e) => { sx.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }}
+        onTouchEnd={(e) => { const s0 = sx.current; sx.current = null; if (!s0 || persistent && window.innerWidth >= 1024) return; const dx = e.changedTouches[0].clientX - s0.x; const dy = Math.abs(e.changedTouches[0].clientY - s0.y); if (dx < -56 && dy < 48) onClose(); }}
+        className={`drawer-panel absolute inset-y-0 left-0 z-40 flex w-[86%] max-w-[340px] flex-col border-r border-[var(--hairline)] bg-[var(--canvas)] pt-[max(14px,env(safe-area-inset-top))] shadow-[0_0_60px_-20px_rgb(0_0_0/0.5)] ${open ? "translate-x-0" : "-translate-x-full"} ${persistent ? "lg:static lg:z-10 lg:w-[300px] lg:translate-x-0 lg:shadow-none" : ""}`}
       >
         <div className="px-3">
           <div className="mb-3 flex items-center justify-between px-1">
             <span className="text-[15px] font-medium tracking-tight">Apex</span>
+            <span className="flex items-center gap-1.5">
+            <ThemeToggle resolved={resolved} onToggle={onTheme} />
             <button type="button" onClick={onClose} aria-label="Close menu" className={`ibtn ${persistent ? "lg:hidden" : ""}`}>
               <CIcon name="x" size={18} />
             </button>
+            </span>
           </div>
           <label className="relative block">
             <span className="sr-only">Search chats</span>
@@ -206,7 +215,7 @@ export function Drawer({ open, persistent, onClose, convos, activeId, onOpenConv
           {groups.length === 0 && <p className="px-2 py-3 text-[13px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{q ? "No chats match." : "Your chats will appear here."}</p>}
           {groups.map(({ g, items }) => (
             <section key={g} aria-label={g} className="mb-2">
-              <h3 className="px-2 pb-1 pt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{g === "Pinned" ? "📌 Pinned" : g}</h3>
+              <h3 className="px-2 pb-1 pt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{g}</h3>
               {items.map((c) => (
                 <div key={c.id} className="group relative">
                   {rename?.id === c.id ? (
@@ -244,9 +253,7 @@ export function Drawer({ open, persistent, onClose, convos, activeId, onOpenConv
           <nav aria-label="Workspace">
             {NAV.map((n) => (
               <button key={n.id} type="button" className="nav-row" data-active={view === n.id} aria-current={view === n.id ? "page" : undefined} onClick={() => onNav(n.id)}>
-                <span className="w-5 text-center text-[16px]" aria-hidden="true">
-                  {n.icon}
-                </span>
+                <CIcon name={n.icon} size={18} className="shrink-0 opacity-75" />
                 <span className="min-w-0 truncate">{n.label}</span>
                 {hints[n.id] && <small>{hints[n.id]}</small>}
               </button>
