@@ -98,3 +98,18 @@ No skill loader exists in this runtime; the four protocols were applied manually
 - rea: full-history `git grep` for PAT shapes, built-bundle scan (PAT, key, passphrase, provider URLs), Playwright assertion that the PAT is never in storage/URL/commit bodies; read the Session 11 QA screenshots to reconstruct the sealed catalog.
 - native-rust-systems: AES-256-GCM / PBKDF2 dual-envelope vault in WebCrypto (browser) and node:crypto (generator), cross-checked end to end by Playwright. No Rust changed; the APK is built by CI (no Android SDK / Java here).
 - design-taste-frontend / hallmark-ui / open-design-skill: key cards, strength meter, allow-list chips, zero-trust badge using the existing calm primitives. beautifului.dev was not re-scraped this session.
+
+## Session 13
+
+**Honest note:** no skills named `rea`, `native-rust-systems`, `design-taste-frontend`, `hallmark-ui` or `open-design-skill` are installed in the
+environment that ran this session, so none could be "loaded". The work below was done by hand following the same intent; nothing
+here claims a skill ran.
+
+- **Reverse engineering / analysis (manual):** downloaded the published `v1.1.0` APK and inspected it with `zipfile`, `readelf`
+  and a binary scan. Findings: v2 signature block present, `resources.arsc` and `.so` aligned, arm64-only, **but** ELF `LOAD` align
+  `0x1000` (not 16 KB), `targetSdk/compileSdk = 37`, throw-away signing key per CI run. Could NOT reproduce the exact on-device
+  install error without the device's message. Probed 12 keyless endpoints live (see `KEYLESS_PROVIDERS_RESEARCH.md`).
+- **Android pipeline (manual):** Gradle SDK/ABI/packaging, manifest cleanup, `zipalign -> apksigner` order, permanent keystore
+  in repo secrets, `scripts/verify-apk.sh` gate, workflow builds every push.
+- **UI:** one new admin panel using the existing Calm design tokens; Android status-bar fallback raised 38 -> 40 px.
+- **Not done:** `https://www.beautifului.dev/` components were not pulled in; no on-device test (no phone/emulator available).

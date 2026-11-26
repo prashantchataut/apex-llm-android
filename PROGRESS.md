@@ -52,3 +52,10 @@ PR #6 conflicts resolved and merged; Android status-bar fix; /admin keyless acce
 - [x] Any custom key string (strength meter is advice only); no hardcoded fallback keys
 - [x] postbuild asserts out/admin/index.html + out/app/index.html
 - [x] v1.1.0 version bump; Playwright E2E (mobile 390x844@2x, desktop 1440x900@2x) in docs/qa-session-12
+
+## Session 13 — Android 15 install hardening, keyless mesh, v1.2.0
+- [x] APK analysis, Gradle/manifest/packaging fixes, permanent signing key (secrets), verify gate, build-on-every-push workflow
+- [x] Keyless Provider Mesh service + failover + `/admin` panel + `mesh.json`
+- [x] Live research of 12 endpoints (`.agent/KEYLESS_PROVIDERS_RESEARCH.md`)
+- [ ] On-device install test on Nothing Phone 4a (owner)
+- [ ] beautifului.dev component pass, genuine Flux image models (not available keyless)

@@ -8,6 +8,7 @@ import { MIN_KEY_LEN, OWNER_LOGIN, generateSecretKey, hashKey, keyStrength, mint
 import { REPO, REPO_URL } from "@/lib/site";
 import { CIcon } from "./icons";
 import { AdminCatalog } from "./AdminCatalog";
+import { AdminMesh } from "./AdminMesh";
 
 const dim = "text-[rgb(var(--ink-rgb)/var(--ink-3-a))]";
 const spring = { type: "spring", stiffness: 380, damping: 34 } as const;
@@ -666,6 +667,10 @@ function Console({ session, setSession, onLock }: { session: Session; setSession
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="mt-8">
+        <AdminMesh token={token} />
       </div>
 
       <div className="mt-8">

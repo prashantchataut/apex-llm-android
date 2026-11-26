@@ -1,16 +1,35 @@
-# Builds the arm64-v8a Apex LLM APK (Tauri v2 Mobile + pure-Rust candle GGUF engine), signs it and publishes it to a GitHub Release.
-# Trigger: push a tag `v*` or run manually (workflow_dispatch). The signing key is generated per run (alpha channel):
-# updating an installed alpha build with a newer one requires uninstalling first until a stable release key exists.
+# Builds, signs, VERIFIES and (for tags / manual dispatch) publishes the arm64-v8a Apex LLM APK.
+#
+# Runs on EVERY push (any branch) so each commit yields a downloadable, gate-checked APK artifact.
+# A GitHub Release is created only for `v*` tags, or a manual run with `publish: true`.
+#
+# Pipeline order (required for Android 14-16 / Nothing OS strict installers):
+#   1. cargo tauri android build  -> UNSIGNED universal release APK (targetSdk 34, arm64-v8a only, 16 KB-linked ELF)
+#   2. zipalign -p -f -v 4        -> BEFORE signing (signing invalidates alignment, never the other way round)
+#   3. apksigner sign             -> v1 + v2 + v3 with the permanent keystore from repo secrets
+#   4. scripts/verify-apk.sh      -> hard gate: signatures, manifest, ABI, ELF alignment; any failure aborts the job
+#
+# Signing key: repo secrets APEX_KEYSTORE_B64 (base64 PKCS12) + APEX_KS_PASS. The SAME certificate signs every release,
+# so updates install over each other. Without the secret a throwaway key is used for non-release builds only.
 name: Android APK
 
 on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
         description: Release tag to publish to (created if missing)
-        default: v1.1.0
-  push:
-    tags: ["v*"]
+        default: v1.2.0
+      publish:
+        description: Publish a GitHub Release
+        type: boolean
+        default: false
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -20,7 +39,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      NDK_VERSION: 26.3.11579264
+      NDK_VERSION: 28.0.12433566
+      # 16 KB page alignment is set in app-ui/src-tauri/build.rs (the Tauri CLI overrides CARGO_TARGET_*_RUSTFLAGS) + NDK r28 defaults.
+      PUBLISH: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish) }}
       TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
@@ -33,16 +54,15 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: SDK / NDK (runner image ships the Android SDK)
+      - name: Android SDK and NDK
         run: |
           set -x
-          echo "ANDROID_HOME=$ANDROID_HOME"
           SM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | sort -V | tail -1)
           echo "$SM" >> "$GITHUB_PATH"
           export PATH="$SM:$PATH"
           SDK=$(grep -oP 'compileSdk = \K[0-9]+' app-ui/src-tauri/gen/android/app/build.gradle.kts)
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "ndk;${NDK_VERSION}" "platforms;android-${SDK}" "build-tools;35.0.0" || sdkmanager "ndk;${NDK_VERSION}" "platforms;android-${SDK}.0" "build-tools;35.0.0" || sdkmanager "ndk;${NDK_VERSION}" "build-tools;35.0.0"
+          sdkmanager "ndk;${NDK_VERSION}" "platforms;android-${SDK}" "build-tools;35.0.0"
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android
@@ -52,54 +72,77 @@ jobs:
       - name: Frontend deps
         working-directory: web-showcase
         run: ONNXRUNTIME_NODE_INSTALL=skip npm ci
-      # Gradle's rust plugin shells out to `cargo tauri android-studio-script`; the npm CLI does NOT provide the
-      # `cargo tauri` subcommand (Session 4 failed with "no such command: tauri"). Install the real cargo plugin.
       - name: Tauri CLI (cargo subcommand)
         run: cargo install tauri-cli --version "^2" --locked
-      - name: Signing key (alpha channel)
+      - name: Version and tag sanity
         run: |
-          KS="$RUNNER_TEMP/apex-alpha.jks"
-          PASS=$(openssl rand -hex 16)
-          keytool -genkeypair -v -keystore "$KS" -storetype PKCS12 -alias apex -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass "$PASS" -keypass "$PASS" -dname "CN=Apex LLM alpha, O=Apex, C=US"
-          echo "APEX_KEYSTORE=$KS" >> "$GITHUB_ENV"
-          echo "APEX_KS_PASS=$PASS" >> "$GITHUB_ENV"
-          echo "APEX_KEY_ALIAS=apex" >> "$GITHUB_ENV"
-      - name: Build APK (arm64-v8a, release)
+          VERSION=$(jq -r .version app-ui/src-tauri/tauri.conf.json)
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          if [ "$PUBLISH" = "true" ] && [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::tag $TAG does not match tauri.conf.json version $VERSION"; exit 1
+          fi
+      - name: Build UNSIGNED release APK (arm64-v8a)
         working-directory: app-ui
         run: |
           export NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
           export ANDROID_NDK_HOME="$NDK_HOME"
           cargo tauri android build --apk --target aarch64 --features android
-      - name: Verify + name the artifact
+      - name: Align, sign (v2+v3, v1 when apksigner emits it) and verify
         id: pack
+        env:
+          APEX_KEYSTORE_B64: ${{ secrets.APEX_KEYSTORE_B64 }}
+          APEX_KS_PASS: ${{ secrets.APEX_KS_PASS }}
         run: |
-          APK=$(find app-ui/src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -1)
-          echo "built: $APK"
-          OUT="apex-llm-${TAG}-arm64-v8a.apk"
-          cp "$APK" "$OUT"
-          APKSIGNER=$(ls $ANDROID_HOME/build-tools/*/apksigner | sort -V | tail -1)
-          "$APKSIGNER" verify --verbose --print-certs "$OUT" | head -12
-          unzip -l "$OUT" | grep -E "lib/arm64-v8a/.*\.so" || { echo "no arm64 native lib in APK"; exit 1; }
-          sha256sum "$OUT" | tee "$OUT.sha256"
-          echo "file=$OUT" >> "$GITHUB_OUTPUT"
-          ls -l "$OUT"
+          set -euo pipefail
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/35.* | sort -V | tail -1)
+          UNSIGNED=$(find app-ui/src-tauri/gen/android/app/build/outputs/apk -name '*.apk' -path '*release*' | head -1)
+          echo "unsigned: $UNSIGNED"
+          unzip -l "$UNSIGNED" | grep -E "lib/|classes|resources.arsc" || true
+
+          KS="$RUNNER_TEMP/apex-release.p12"
+          if [ -n "${APEX_KEYSTORE_B64:-}" ]; then
+            printf '%s' "$APEX_KEYSTORE_B64" | base64 -d > "$KS"
+            PASS="$APEX_KS_PASS"
+          else
+            if [ "$PUBLISH" = "true" ]; then echo "::error::APEX_KEYSTORE_B64 secret is missing; refusing to publish a release signed with a throwaway key"; exit 1; fi
+            echo "::warning::APEX_KEYSTORE_B64 secret not set: signing with a throwaway key (this artifact will not update over a release build)"
+            PASS=$(openssl rand -hex 16)
+            keytool -genkeypair -keystore "$KS" -storetype PKCS12 -alias apex -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$PASS" -keypass "$PASS" -dname "CN=Apex LLM throwaway, O=Apex, C=US"
+          fi
+          export PASS
+
+          mkdir -p dist
+          "$BT/zipalign" -p -f -v 4 "$UNSIGNED" "$RUNNER_TEMP/aligned.apk" >/dev/null
+          OUT="dist/apex-llm-v${VERSION}-arm64-v8a.apk"
+          "$BT/apksigner" sign --ks "$KS" --ks-type PKCS12 --ks-key-alias apex --ks-pass env:PASS --key-pass env:PASS \
+            --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --min-sdk-version 26 \
+            --out "$OUT" "$RUNNER_TEMP/aligned.apk"
+          rm -f "$KS"
+
+          bash scripts/verify-apk.sh "$OUT" | tee dist/verify-report.txt
+          cp "$OUT" "dist/apex-llm-v${VERSION}-android.apk"
+          (cd dist && sha256sum apex-llm-*.apk > "apex-llm-v${VERSION}.sha256")
+          ls -l dist
       - uses: actions/upload-artifact@v4
         with:
-          name: apex-llm-arm64-apk
-          path: |
-            apex-llm-*.apk
-            apex-llm-*.sha256
-      - name: "Publish GitHub Release asset (with retries, uploads.github.com occasionally answers 502)"
+          name: apex-llm-v${{ env.VERSION }}-${{ github.sha }}
+          path: dist/*
+          retention-days: 30
+      - name: Publish GitHub Release (retries, uploads.github.com sometimes answers 502)
+        if: env.PUBLISH == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          NOTES="Apex v1.1.0. Admin-editable Apex API keys (reveal / copy / edit / rotate / revoke inline in /admin, dual-envelope AES-256-GCM vault so keys stay encrypted in Git), any custom key string, per-key model allow-lists, change-passphrase flow, zero-trust GitHub token handling, physical /admin route. Signed with a per-run throwaway key: uninstall older builds first."
+          NOTES_FILE="docs/release-notes/${TAG}.md"
+          [ -f "$NOTES_FILE" ] || { echo "Apex LLM ${TAG}" > "$RUNNER_TEMP/notes.md"; NOTES_FILE="$RUNNER_TEMP/notes.md"; }
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --latest --target "${GITHUB_SHA}" --title "Apex LLM ${TAG}" --notes "$NOTES"
+            gh release create "$TAG" --latest --target "${GITHUB_SHA}" --title "Apex LLM ${TAG}" --notes-file "$NOTES_FILE"
+          else
+            gh release edit "$TAG" --notes-file "$NOTES_FILE" --latest
           fi
           for attempt in 1 2 3 4 5; do
-            if gh release upload "$TAG" apex-llm-*.apk apex-llm-*.sha256 --clobber; then
+            if gh release upload "$TAG" dist/apex-llm-*.apk dist/apex-llm-*.sha256 dist/verify-report.txt --clobber; then
               echo "uploaded on attempt $attempt"; exit 0
             fi
             echo "upload attempt $attempt failed, retrying in $((attempt * 20))s"; sleep $((attempt * 20))

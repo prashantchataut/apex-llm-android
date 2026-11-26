@@ -4,6 +4,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import type { ChatTurn, GenOpts, GenStats } from "./engine";
 import { getAccess, useAccess } from "./access";
 import type { ApexCatalog, ApexModel } from "./vault";
+import { candidatesFor, isMeshId, markFailure, markSuccess, meshAsApexModels, parseMeshId, syncMesh } from "@/services/apexCloudMesh";
 
 /**
  * Apex Cloud Engine client. Nothing here names a provider, an endpoint or a model: the catalog (including the
@@ -55,6 +56,14 @@ export async function refreshLive(): Promise<void> {
     }
     const imageNames = i.status === "fulfilled" && Array.isArray(i.value) ? (i.value as unknown[]).map(String) : [];
     for (const n of imageNames) if (!known.has(n)) extra.push({ id: `live-img-${n}`, label: `Apex-${pretty(n)}`, tag: "Newly discovered", group: "Discovered live", kind: "image", api: n });
+    // Keyless mesh (OVH / LLM7 / Pollinations / owner-added endpoints): live `/models`, grouped by category.
+    try {
+      await syncMesh();
+      const seen = new Set<string>([...known, ...extra.map((e) => e.api)]);
+      extra.push(...meshAsApexModels(seen));
+    } catch {
+      /* mesh is additive: the vault catalog still works */
+    }
     live = { checked: true, names, imageNames, labels, extra };
   } catch {
     live = { ...live, checked: true };
@@ -92,6 +101,7 @@ export function apexById(id: string): ApexModel | undefined {
 
 /** True if this model is currently served upstream (optimistic until the first check finishes). */
 export function isServed(m: ApexModel, l: Live): boolean {
+  if (isMeshId(m.id)) return true;
   const names = m.kind === "image" ? l.imageNames : l.names;
   return !l.checked || names.length === 0 || names.includes(m.api);
 }
@@ -104,20 +114,47 @@ interface Delta {
   choices?: { delta?: { content?: string; reasoning?: string; reasoning_content?: string; tool_calls?: { index?: number; function?: { name?: string; arguments?: string } }[] } }[];
 }
 
-async function attempt(endpoint: string, api: string, messages: ChatTurn[], opts: GenOpts, onText: (raw: string) => void, started: { v: boolean }): Promise<GenStats> {
+interface AttemptExtra {
+  headers?: Record<string, string>;
+  /** Wait and retry once on 429. Off while another provider is still queued: failover is instant instead. */
+  retry429?: boolean;
+  /** Abort if no token arrived in this time, so a hung free tier hands over to the next provider. */
+  timeoutMs?: number;
+}
+class HttpError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
+async function attempt(endpoint: string, api: string, messages: ChatTurn[], opts: GenOpts, onText: (raw: string) => void, started: { v: boolean }, extra: AttemptExtra = {}): Promise<GenStats> {
+  const ctl = new AbortController();
+  const fwd = () => ctl.abort();
+  if (opts.signal?.aborted) ctl.abort();
+  opts.signal?.addEventListener("abort", fwd);
+  const timer = extra.timeoutMs ? setTimeout(() => ctl.abort(), extra.timeoutMs) : undefined;
+  try {
+    return await attemptCore(endpoint, api, messages, { ...opts, signal: ctl.signal }, onText, started, extra, () => timer && clearTimeout(timer));
+  } finally {
+    if (timer) clearTimeout(timer);
+    opts.signal?.removeEventListener("abort", fwd);
+  }
+}
+
+async function attemptCore(endpoint: string, api: string, messages: ChatTurn[], opts: GenOpts, onText: (raw: string) => void, started: { v: boolean }, extra: AttemptExtra, firstToken: () => void): Promise<GenStats> {
   const t0 = performance.now();
   let res: Response | null = null;
   for (let i = 0; i < 2; i++) {
     res = await fetch(endpoint, {
       method: "POST",
       signal: opts.signal,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...extra.headers },
       body: JSON.stringify({ model: api, messages, stream: true, temperature: opts.temperature ?? 0.7 }),
     });
-    if (res.status !== 429) break;
+    if (res.status !== 429 || !extra.retry429) break;
     await new Promise((r) => setTimeout(r, 2500));
   }
-  if (!res || !res.ok || !res.body) throw new Error(`Apex API answered ${res?.status ?? "no response"} for ${api}`);
+  if (!res || !res.ok || !res.body) throw new HttpError(`Apex API answered ${res?.status ?? "no response"} for ${api}`, res?.status ?? 0);
   const reader = res.body.getReader();
   const dec = new TextDecoder();
   let buf = "";
@@ -150,7 +187,10 @@ async function attempt(endpoint: string, api: string, messages: ChatTurn[], opts
           calls.set(k, { name: cur.name + (tc.function?.name ?? ""), args: cur.args + (tc.function?.arguments ?? "") });
         }
         if (th || d?.content || d?.tool_calls) {
-          if (!first) first = performance.now();
+          if (!first) {
+            first = performance.now();
+            firstToken();
+          }
           started.v = true;
           tokens += 1;
           const tail = callMarkup();
@@ -166,18 +206,40 @@ async function attempt(endpoint: string, api: string, messages: ChatTurn[], opts
   return { ttftMs: Math.round((first || end) - t0), tps: tokens > 1 ? ((tokens - 1) / Math.max(1, end - first)) * 1000 : 0, tokens, promptTokens: 0, totalMs: Math.round(end - t0) };
 }
 
-/** Stream a completion with automatic fallback across models. Reasoning is surfaced as a `<think>` block. */
+interface Step {
+  endpoint: string;
+  api: string;
+  headers?: Record<string, string>;
+  /** Mesh provider id (cooldown bookkeeping). Absent for the vault upstream. */
+  provider?: string;
+}
+
+/**
+ * Stream a completion with zero-downtime failover. Order: the requested model on its own upstream (vault catalog or mesh provider),
+ * the catalog's always-on model, then a stand-in model on every other healthy keyless provider. 429 / 5xx / timeout / network errors
+ * hand over to the next step immediately; an abort by the user or an answer that already started is never retried.
+ */
 export async function apexChat(model: ApexModel, messages: ChatTurn[], opts: GenOpts, onText: (raw: string) => void): Promise<ApexStats> {
   const cat = getAccess().catalog;
   if (!cat) throw new Error("Apex API is locked. Enter your Apex API key to unlock it.");
+  const plan: Step[] = [];
+  const meshStep = (c: { provider: { id: string; chat: string; auth?: string }; api: string }): Step => ({ endpoint: c.provider.chat, api: c.api, headers: c.provider.auth ? { Authorization: c.provider.auth } : undefined, provider: c.provider.id });
+  const pref = isMeshId(model.id) ? parseMeshId(model.id) : null;
+  if (!pref) for (const api of [...new Set([model.api, cat.fallbackApi])]) plan.push({ endpoint: cat.endpoints.text, api });
+  for (const c of candidatesFor(pref ?? undefined)) plan.push(meshStep(c));
+  const uniq = plan.filter((s, i) => plan.findIndex((x) => x.endpoint === s.endpoint && x.api === s.api) === i);
   let lastErr: unknown = new Error("No Apex API model answered");
-  for (const api of [...new Set([model.api, cat.fallbackApi])]) {
+  for (let i = 0; i < uniq.length; i++) {
+    const step = uniq[i];
     const started = { v: false };
+    const last = i === uniq.length - 1;
     try {
-      const st = await attempt(cat.endpoints.text, api, messages, opts, onText, started);
-      return { ...st, servedBy: api };
+      const st = await attempt(step.endpoint, step.api, messages, opts, onText, started, { headers: step.headers, retry429: last, timeoutMs: last ? 30000 : 12000 });
+      if (step.provider) markSuccess(step.provider, step.api);
+      return { ...st, servedBy: step.api };
     } catch (e) {
       if (opts.signal?.aborted || started.v) throw e;
+      if (step.provider) markFailure(step.provider, step.api);
       lastErr = e;
     }
   }
@@ -187,6 +249,6 @@ export async function apexChat(model: ApexModel, messages: ChatTurn[], opts: Gen
 /** Friendly name of the upstream that actually answered. */
 export function servedLabel(api: string): string {
   const a = getAccess();
-  const m = a.catalog?.models.find((x) => x.api === api);
+  const m = a.catalog?.models.find((x) => x.api === api) ?? live.extra.find((x) => x.api === api);
   return m?.label ?? live.labels[api]?.replace(/\s*\(.*\)$/, "") ?? api;
 }

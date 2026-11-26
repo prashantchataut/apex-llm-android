@@ -15,15 +15,23 @@ val tauriProperties = Properties().apply {
 }
 
 android {
-    compileSdk = 37
+    compileSdk = 36
     namespace = "app.apexllm.android"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
         applicationId = "app.apexllm.android"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 34
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+        // Nothing Phone 4a (and every current flagship) is 64-bit ARM only. No x86 / armeabi stubs may ever ship:
+        // a single wrong-ABI or placeholder .so is enough for PackageManager to refuse the whole install.
+        ndk { abiFilters += listOf("arm64-v8a") }
+    }
+    packaging {
+        // Libraries are stored compressed and extracted at install time: no zip-alignment requirement on the .so itself,
+        // so the APK installs regardless of the device page size (4 KB or 16 KB). The ELF is still linked 16 KB-aligned.
+        jniLibs { useLegacyPackaging = true }
     }
     signingConfigs {
         // CI generates a keystore and exports these; without them the release APK is left unsigned.
