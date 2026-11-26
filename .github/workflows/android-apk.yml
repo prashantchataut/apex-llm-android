@@ -90,7 +90,7 @@ jobs:
           path: |
             apex-llm-*.apk
             apex-llm-*.sha256
-      - name: Publish GitHub Release asset (with retries: uploads.github.com occasionally answers 502)
+      - name: "Publish GitHub Release asset (with retries, uploads.github.com occasionally answers 502)"
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
