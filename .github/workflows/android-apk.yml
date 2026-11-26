@@ -40,8 +40,7 @@ jobs:
     timeout-minutes: 90
     env:
       NDK_VERSION: 28.0.12433566
-      # Android 15 devices can run with 16 KB pages: every LOAD segment of the Rust cdylib must be 16 KB aligned.
-      CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS: "-C link-arg=-Wl,-z,max-page-size=16384"
+      # 16 KB page alignment is set in app-ui/src-tauri/build.rs (the Tauri CLI overrides CARGO_TARGET_*_RUSTFLAGS) + NDK r28 defaults.
       PUBLISH: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish) }}
       TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
