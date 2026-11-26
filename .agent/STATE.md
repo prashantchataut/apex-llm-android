@@ -1,4 +1,12 @@
-# STATE — last updated: end of Session 12 (branch feat/session-12-editable-admin-keys-and-v110, PR #10)
+# STATE — last updated: Session 13 (branch feat/session-13-android15-fix-keyless-mesh-v120)
+
+## [SESSION 13 — WHAT ACTUALLY HAPPENED]
+- **Install bug**: the v1.1.0 APK is structurally valid (v2-signed, aligned, arm64). Real deviations found: 4 KB ELF alignment, `targetSdk 37`, throw-away signing key. The exact on-device message could not be reproduced here. Fixes: `compileSdk 35 / targetSdk 34 / minSdk 26`, `abiFilters arm64-v8a`, `useLegacyPackaging`, `-z max-page-size=16384` via `CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS`, NDK r28, unused `FOREGROUND_SERVICE` removed.
+- **Pipeline**: unsigned build -> `zipalign -p 4` -> `apksigner` v1+v2+v3 -> `scripts/verify-apk.sh`. Permanent PKCS12 key stored ONLY as repo secrets `APEX_KEYSTORE_B64` / `APEX_KS_PASS` (cert SHA-256 `05:9C:A8:97:...:FA:2F:A7`). If those secrets are deleted, the next key will not update over installed builds. Workflow now runs on every push; release only for `v*` tags / manual `publish`.
+- **Mesh**: `web-showcase/src/services/apexCloudMesh.ts`, wired into `lib/apex-cloud.ts` (failover, first-token timeout, 25 s cooldown). `/admin` has a Keyless Provider Mesh panel; owner config in `public/config/mesh.json`.
+- **Research reality check** (`.agent/KEYLESS_PROVIDERS_RESEARCH.md`): verified keyless + CORS = OVH (~18 chat), LLM7 (2-3 non-pro), Pollinations (1). "Hydrogen" = `google/gemini-4-hydrogen` on `gen.pollinations.ai`, which returns 401 without a key; the GitHub "Hydrogen" repo is a self-hosted account-pooling proxy. The 50+ figure is reached only by counting the 27 vault models.
+- `APEX-PRO-2025` is still NOT pre-configured (its hash has been public since Session 8); set it in `/admin` if you accept it being crackable.
+
 
 ## [SESSION 12 — WHAT ACTUALLY HAPPENED]
 - **PR #9 was already merged** into `main` when the session started (merge commit ce63068). Nothing to merge.

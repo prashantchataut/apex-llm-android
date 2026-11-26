@@ -10,7 +10,7 @@ import { Sheet } from "./Chrome";
 const dim = "text-[rgb(var(--ink-rgb)/var(--ink-3-a))]";
 const mb = (n: number) => (n > 0 ? `${(n / 1e6).toFixed(0)} MB` : "");
 
-/** Dismissible pill below the safe-area header: `Update v1.1.0 Available · Tap to Install APK`. */
+/** Dismissible pill below the safe-area header: `Update v1.2.0 Available · Tap to Install APK`. */
 export function UpdateBanner() {
   const u = useUpdater();
   const ui = useUpdateUi();

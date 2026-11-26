@@ -64,6 +64,8 @@ export interface ApexModel {
   reasoning?: boolean;
   vision?: boolean;
   uncensored?: boolean;
+  /** Keyless-mesh provider id (set only for models discovered at runtime, never stored in the vault). */
+  provider?: string;
 }
 export interface ApexCatalog {
   v: 1;

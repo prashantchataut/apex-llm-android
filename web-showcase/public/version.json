@@ -1,13 +1,13 @@
 {
-  "version": "1.1.0",
-  "tag": "v1.1.0",
-  "apkUrl": "https://github.com/prashantchataut/apex-llm-android/releases/download/v1.1.0/apex-llm-v1.1.0-arm64-v8a.apk",
-  "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.1.0",
-  "publishedAt": "2026-11-26T13:45:26Z",
+  "version": "1.2.0",
+  "tag": "v1.2.0",
+  "apkUrl": "https://github.com/prashantchataut/apex-llm-android/releases/download/v1.2.0/apex-llm-v1.2.0-arm64-v8a.apk",
+  "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.2.0",
+  "publishedAt": "2026-11-26T17:00:00Z",
   "changelog": [
-    "Admin-editable Apex API keys: reveal, copy, edit, rotate, revoke",
-    "Dual-envelope AES-256-GCM vault: keys stay encrypted in Git",
-    "Any custom key string and per-key model allow-lists",
-    "Physical /admin route, zero-trust GitHub token handling"
+    "Android 15 / Nothing OS install hardening: targetSdk 34, arm64-only, 16 KB-aligned native library, stable signing key",
+    "Keyless Provider Mesh: OVHcloud, LLM7.io, Pollinations with live model sync and instant failover",
+    "/admin Keyless Provider Mesh panel: health, sync, add endpoints without a rebuild",
+    "Every CI run now builds, verifies and uploads an APK"
   ]
 }
