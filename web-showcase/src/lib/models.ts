@@ -23,6 +23,8 @@ export interface CatalogModel {
   uncensored?: boolean;
   custom?: boolean;
   ota?: boolean;
+  /** A .gguf the user picked from device storage. Runs through wllama (WASM) from OPFS, even inside the Android app. */
+  imported?: boolean;
 }
 
 export const CATALOG: CatalogModel[] = [

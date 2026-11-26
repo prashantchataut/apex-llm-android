@@ -8,6 +8,7 @@ import { getToken, loadRegistry, publishRegistry, setToken, verifyAdmin, type Wh
 import { KEYLESS_MODELS } from "@/lib/keyless";
 import { REPO, REPO_URL } from "@/lib/site";
 import { CIcon } from "./icons";
+import { AdminCatalog } from "./AdminCatalog";
 
 const dim = "text-[rgb(var(--ink-rgb)/var(--ink-3-a))]";
 const spring = { type: "spring", stiffness: 380, damping: 34 } as const;
@@ -400,6 +401,7 @@ export function AdminConsole() {
                 </p>
               )}
             </div>
+            <AdminCatalog token={getToken() ?? ""} registry={reg} />
           </>
         )}
       </main>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { CATALOG } from "./models";
+import { CATALOG, registerModel, type CatalogModel } from "./models";
 import { loadWllamaFromBlobs, modelUrl, unloadWllama, getEngineSnapshot } from "./engine";
 import { haptic } from "./haptics";
 import { isNative, streamNative } from "./native";
@@ -27,6 +27,34 @@ const emit = () => subs.forEach((f) => f());
 function set(id: string, p: Partial<DlItem>) {
   items = { ...items, [id]: { ...(items[id] ?? IDLE), ...p } };
   emit();
+  syncWake();
+}
+
+/** Screen WakeLock while any download / import runs, so the OS doesn't suspend the WebView mid-transfer. Re-acquired after the app returns to the foreground. */
+type WakeSentinel = { release: () => Promise<void> };
+let wake: WakeSentinel | null = null;
+let wakeReq = false;
+function syncWake() {
+  if (typeof navigator === "undefined") return;
+  const wl = (navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<WakeSentinel> } }).wakeLock;
+  if (!wl) return;
+  const active = Object.values(items).some((i) => i.status === "downloading");
+  if (active && !wake && !wakeReq) {
+    wakeReq = true;
+    wl.request("screen").then((w) => (wake = w)).catch(() => undefined).finally(() => (wakeReq = false));
+  } else if (!active && wake) {
+    const w = wake;
+    wake = null;
+    void w.release().catch(() => undefined);
+  }
+}
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      wake = null;
+      syncWake();
+    }
+  });
 }
 
 const DIR = "apex-models";
@@ -42,10 +70,11 @@ async function dir(): Promise<FileSystemDirectoryHandle> {
 
 /** Look at what is already on disk (finished and partial files) and publish it. */
 export async function scanInstalled(): Promise<void> {
-  if (!opfsSupported() || isNative()) return;
+  if (!opfsSupported()) return;
+  const native = isNative();
   try {
     const d = await dir();
-    for (const m of CATALOG) {
+    for (const m of CATALOG.filter((x) => !native || x.imported)) {
       try {
         const f = await (await d.getFileHandle(fname(m.id))).getFile();
         const total = Math.round(m.sizeGB * 1e9);
@@ -207,6 +236,71 @@ export function useDownloadStore(): Record<string, DlItem> {
     () => items,
   );
 }
+export const dlSnapshot = (): Record<string, DlItem> => items;
 export const dlOf = (m: Record<string, DlItem>, id: string): DlItem => m[id] ?? IDLE;
 
 if (typeof window !== "undefined") void scanInstalled();
+
+/**
+ * Import a .gguf the user picked from device storage (Downloads, SD card, any DocumentsProvider the system picker offers).
+ * The bytes are streamed into OPFS (no whole-file copy in RAM), the GGUF magic is verified, and the model is registered as
+ * an installed catalog entry. It always runs through wllama, also inside the Android app (the picker yields a Blob, not a path).
+ */
+export async function importLocalModel(file: File): Promise<CatalogModel> {
+  if (!opfsSupported()) throw new Error("This WebView has no persistent file storage (OPFS), so a file can't be imported here.");
+  const magic = String.fromCharCode(...new Uint8Array(await file.slice(0, 4).arrayBuffer()));
+  if (magic !== "GGUF") throw new Error(`${file.name} is not a GGUF model file (missing the GGUF header).`);
+  const params = Number(file.name.match(/(\d+(?:\.\d+)?)\s*[bB](?![a-z])/)?.[1] ?? "1");
+  const m: CatalogModel = {
+    id: `local:${file.name}`,
+    name: file.name.replace(/\.gguf$/i, "").replace(/[-_.](I?Q\d.*|F16|BF16)$/i, ""),
+    family: "On device",
+    paramsB: params,
+    quant: file.name.match(/(I?Q\d(?:_[A-Z0-9]+)*|F16|BF16)/i)?.[1]?.toUpperCase() ?? "GGUF",
+    sizeGB: file.size / 1e9,
+    layers: Math.max(16, Math.round(params * 9 + 12)),
+    kvHeads: 4,
+    headDim: 64,
+    repo: "local",
+    file: file.name,
+    custom: true,
+    imported: true,
+    group: "custom",
+    uncensored: /uncensor|abliterat|dolphin|heretic/i.test(file.name),
+  };
+  registerModel(m);
+  set(m.id, { status: "downloading", loaded: 0, total: file.size, mbps: 0, error: undefined });
+  let writer: FileSystemWritableFileStream | null = null;
+  try {
+    void navigator.storage.persist?.();
+    const d = await dir();
+    const fh = await d.getFileHandle(fname(m.id), { create: true });
+    writer = await fh.createWritable();
+    const reader = file.stream().getReader();
+    let loaded = 0;
+    let lastT = performance.now();
+    let lastB = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      await writer.write(value as Uint8Array<ArrayBuffer>);
+      loaded += value.length;
+      const now = performance.now();
+      if (now - lastT > 250) {
+        set(m.id, { status: "downloading", loaded, total: file.size, mbps: (loaded - lastB) / 1e6 / ((now - lastT) / 1000) });
+        lastT = now;
+        lastB = loaded;
+      }
+    }
+    await writer.close();
+    writer = null;
+    set(m.id, { status: "done", loaded: file.size, total: file.size, mbps: 0 });
+    haptic("heavyLock");
+    return m;
+  } catch (e) {
+    if (writer) await writer.abort().catch(() => undefined);
+    await removeFile(m.id);
+    set(m.id, { status: "error", mbps: 0, error: e instanceof Error ? e.message : "Import failed" });
+    throw e;
+  }
+}
