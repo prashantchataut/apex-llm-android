@@ -150,7 +150,7 @@ export async function checkForUpdate(): Promise<void> {
 export function simulateUpdate(): void {
   const known = state.s === "uptodate" ? state.release : state.s === "available" ? state.release : null;
   const rel = norm(
-    known ? { ...known, version: known.version } : { version: "1.0.0", changelog: ["Encrypted Apex API with 25+ Cloud Models", "Fixed In-App Auto-Updater", "Hardened Admin Vault", "Local GGUF & Live Voice Polish"] },
+    known ? { ...known, version: known.version } : { version: APP_VERSION, changelog: ["Admin-editable Apex API keys (dual-envelope AES-256-GCM vault)", "Any custom key string, per-key model allow-lists", "Physical /admin route and zero-trust PAT handling", "Auto-updater verified end to end"] },
     "simulated",
   );
   set(toAvailable(rel, true));

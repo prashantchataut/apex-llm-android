@@ -175,7 +175,7 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, 
                   <span className="relative text-[15px] font-medium leading-snug tracking-[-0.01em]">Connect Apex API Key</span>
                   <span className="relative text-[12.5px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Unlock 25+ Cloud Flagship Models</span>
                   <span className="relative mt-1 inline-flex items-center gap-1.5 text-[12.5px] font-medium" style={{ color: "var(--halo-ink)" }}>
-                    <CIcon name="key" size={13} /> Enter sk-apex key
+                    <CIcon name="key" size={13} /> Enter Apex API key
                   </span>
                 </button>
               )}

@@ -3,7 +3,7 @@
 //     (/admin/**, /app/**, everything else -> landing) instead of showing a dead 404.
 //  2. out/.nojekyll stops Pages from dropping the `_next/` folder.
 // The Android build (NEXT_PUBLIC_APEX_TARGET=tauri) serves from the WebView root and does not need either; the files are harmless.
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,3 +22,20 @@ const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 writeFileSync(join(out, "404.html"), page);
 writeFileSync(join(out, ".nojekyll"), "");
 console.log(`[postbuild] wrote out/404.html (SPA fallback, base="${base}") and out/.nojekyll; index.html ${home.length} bytes`);
+
+// 3. Physical routes. GitHub Pages answers a 404 for any path without a real file, so /admin/ and /app/ must exist on disk.
+//    Next's `trailingSlash` export already emits them; if a refactor ever drops one we copy the home document there so the
+//    URL still returns HTTP 200 (every asset URL is absolute, so the copy boots the same bundle). Then we assert.
+for (const route of ["admin", "app"]) {
+  const f = join(out, route, "index.html");
+  if (!existsSync(f) && home) {
+    mkdirSync(join(out, route), { recursive: true });
+    writeFileSync(f, home);
+    console.warn(`[postbuild] out/${route}/index.html was missing, copied from index.html`);
+  }
+  if (!existsSync(f)) {
+    console.error(`[postbuild] FATAL: out/${route}/index.html does not exist`);
+    process.exit(1);
+  }
+}
+console.log("[postbuild] verified out/admin/index.html and out/app/index.html");

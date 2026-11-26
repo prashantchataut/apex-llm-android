@@ -92,3 +92,9 @@ No skill loader exists in this runtime (`rea`, `native-rust-systems`, `design-ta
 - [rea-style audit] PR #8 diffed; live endpoints probed (Pollinations /models: 1 text + 1 image model anonymous); updater failure diagnosed from code + release list (5 causes); NEB read-only (reverse-engineered scrapers, not used).
 - [native-rust-systems-style] No Rust changed. WebCrypto SHA-256 + PBKDF2 + AES-256-GCM implemented in TS, matching Node generator `scripts/gen-vault.mjs` (round-trip verified). Kotlin `Opener` bridge added.
 - [design-taste / hallmark / open-design] Calm tokens reused: locked card, grouped model popover, update pill with pulse, release modal, admin gate/key cards, one-time secret modal. beautifului.dev patterns were reused from the Session 8 extraction, not re-scraped.
+
+## Session 12 (honest log)
+No skill loader exists in this runtime; the four protocols were applied manually.
+- rea: full-history `git grep` for PAT shapes, built-bundle scan (PAT, key, passphrase, provider URLs), Playwright assertion that the PAT is never in storage/URL/commit bodies; read the Session 11 QA screenshots to reconstruct the sealed catalog.
+- native-rust-systems: AES-256-GCM / PBKDF2 dual-envelope vault in WebCrypto (browser) and node:crypto (generator), cross-checked end to end by Playwright. No Rust changed; the APK is built by CI (no Android SDK / Java here).
+- design-taste-frontend / hallmark-ui / open-design-skill: key cards, strength meter, allow-list chips, zero-trust badge using the existing calm primitives. beautifului.dev was not re-scraped this session.

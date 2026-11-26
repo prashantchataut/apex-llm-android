@@ -9,7 +9,7 @@ export const APK_URL = `${REPO_URL}/releases/download/v${APP_VERSION}/apex-llm-v
 
 const LINES: { i: CIconName; t: string; d: string }[] = [
   { i: "cube", t: "Local GGUF, uncensored if you want", d: "Run GGUF models fully on-device, import your own .gguf files, and keep Dolphin, Hermes and abliterated builds private." },
-  { i: "lock", t: "Encrypted Apex API", d: "25+ cloud flagship, coding, reasoning and image models stay sealed behind your sk-apex key (AES-256-GCM, decrypted only on your device)." },
+  { i: "lock", t: "Encrypted Apex API", d: "25+ cloud flagship, coding, reasoning and image models stay sealed behind your Apex API key (AES-256-GCM, decrypted only on your device)." },
   { i: "mic", t: "Live Voice and Local RAG", d: "Talk hands-free, and ask questions over your own files with clickable source citations. All of it on-device." },
   { i: "image", t: "Image Studio", d: "Describe it, and it appears. Drop it into a chat or save it." },
   { i: "tree", t: "Memory that stays yours", d: "Apex remembers your stack and tone across every model. Edit or wipe it any time." },

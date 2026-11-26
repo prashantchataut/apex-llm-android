@@ -57,7 +57,7 @@ export function ImageStudio({ onUseInChat, onZoom }: { onUseInChat: (url: string
             <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} placeholder="A quiet harbor at dawn, soft pastel light" className="calm-field resize-none" />
           </label>
           {!apex.unlocked && (
-            <p className="rounded-[18px] bg-[var(--surface-2)] px-4 py-3 text-[13px] leading-relaxed text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Image engines are part of Apex API. Unlock it with your sk-apex key (Settings → Apex API key) to generate images.</p>
+            <p className="rounded-[18px] bg-[var(--surface-2)] px-4 py-3 text-[13px] leading-relaxed text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Image engines are part of Apex API. Unlock it with your Apex API key (Settings → Apex API key) to generate images.</p>
           )}
           <fieldset>
             <legend className="mb-1.5 text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Engine</legend>

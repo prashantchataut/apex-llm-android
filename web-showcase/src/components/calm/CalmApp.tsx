@@ -249,7 +249,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
       const job: ImageJob = { prompt, engine: "", aspect: "1:1", style: "none", negative: "", seed: randomSeed() };
       const url = imageUrl(job);
       if (!url) {
-        say("Image generation is part of Apex API. Enter your sk-apex key to unlock it.");
+        say("Image generation is part of Apex API. Enter your Apex API key to unlock it.");
         setKeyModal(true);
         return;
       }

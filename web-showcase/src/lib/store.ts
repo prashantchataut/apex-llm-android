@@ -3,10 +3,10 @@
 import { useSyncExternalStore } from "react";
 import type { ChatSnapshot } from "@/components/app/useChat";
 
-/* ───────── which engine answers: a local GGUF (default) or Apex API cloud (needs an sk-apex key) ───────── */
+/* ───────── which engine answers: a local GGUF (default) or Apex API cloud (needs an Apex API key) ───────── */
 export type Choice = { kind: "apex"; id: string } | { kind: "local"; id: string };
 const CHOICE_KEY = "apex.choice.v3";
-/** Local models are the product: the default engine is the 145 MB starter. Apex API needs an sk-apex key. */
+/** Local models are the product: the default engine is the 145 MB starter. Apex API needs an Apex API key. */
 const DEFAULT_CHOICE: Choice = { kind: "local", id: "smollm2-135m" };
 let choice: Choice = DEFAULT_CHOICE;
 const cSubs = new Set<() => void>();
