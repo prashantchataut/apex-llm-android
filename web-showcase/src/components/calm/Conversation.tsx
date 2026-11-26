@@ -242,11 +242,11 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
                     <div className="max-w-[85%] whitespace-pre-wrap rounded-[22px_22px_6px_22px] bg-[var(--surface-2)] px-4 py-3 text-[15.5px] leading-[1.55]">{m.text}</div>
                   )}
                   {m.voiceMs ? <p className="max-w-[85%] text-right text-[12px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">“{m.text}”</p> : null}
-                  <div className="flex items-center gap-1">
+                  <div className="msg-actions">
                     {b && <BranchPager info={b} onSwitch={onSwitch} align="end" />}
                     {editing?.id !== m.id && !busy && !m.voiceMs && (
-                      <button type="button" aria-label="Edit prompt" onClick={() => setEditing({ id: m.id, draft: m.text })} className="ibtn !h-9 !w-9 opacity-60 hover:opacity-100">
-                        <CIcon name="pencil" size={14} />
+                      <button type="button" aria-label="Edit prompt" onClick={() => setEditing({ id: m.id, draft: m.text })} className="ibtn !h-10 !w-10 opacity-55 hover:opacity-100">
+                        <CIcon name="pencil" size={15} />
                       </button>
                     )}
                   </div>

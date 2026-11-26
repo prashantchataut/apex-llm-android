@@ -8,7 +8,7 @@ on:
     inputs:
       tag:
         description: Release tag to publish to (created if missing)
-        default: v0.5.0
+        default: v0.7.0
   push:
     tags: ["v*"]
 
@@ -95,6 +95,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --latest --target "${GITHUB_SHA}" --title "Apex LLM ${TAG}" --notes "Calm UI redesign, keyless AI, real model downloader, uncensored models, Image Studio, Memory, MCP and in-app auto-updater. Android arm64-v8a build."
+            gh release create "$TAG" --latest --target "${GITHUB_SHA}" --title "Apex LLM ${TAG}" --notes "Local-first onboarding with a 1-tap starter model, Android status-bar safe-area fix, Keyless Cloud access keys managed from /admin, plus the Obsidian dark mode from PR #6. Android arm64-v8a build. Default Keyless access key for testing: APEX-PRO-2025 (rotate or revoke it in /admin)."
           fi
           gh release upload "$TAG" apex-llm-*.apk apex-llm-*.sha256 --clobber
