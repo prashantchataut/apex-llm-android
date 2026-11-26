@@ -118,7 +118,7 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, 
       {open && (
         <>
           <motion.div className="fixed inset-0 z-30 bg-black/15 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} aria-hidden="true" />
-          <motion.div role="dialog" aria-label="Choose a model" data-testid="model-popover" initial={{ opacity: 0, y: -8, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ type: "spring", stiffness: 460, damping: 34 }} className="calm-card pop-in absolute left-1/2 top-full z-40 -mt-0.5 max-h-[min(70dvh,560px)] w-[min(380px,calc(100vw-24px))] -translate-x-1/2 overflow-y-auto p-2">
+          <motion.div role="dialog" aria-label="Choose a model" data-testid="model-popover" initial={{ opacity: 0, y: -8, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ type: "spring", stiffness: 460, damping: 34 }} className="calm-card pop-in absolute left-1/2 top-pop z-40 max-h-[min(70dvh,560px)] w-[min(380px,calc(100vw-24px))] -translate-x-1/2 overflow-y-auto p-2">
             <div className="rounded-2xl bg-[var(--surface-2)] p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">

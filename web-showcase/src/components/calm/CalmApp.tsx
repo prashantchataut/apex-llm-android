@@ -366,9 +366,10 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
             />
           </div>
         )}
+
+        <ModelSheet open={sheet} onClose={() => setSheet(false)} choice={choice} onPick={pick} dl={dl} onHub={(t) => { setHubTab(t); goView("hub"); }} loading={loadingId} access={access} onKey={() => setKeyModal(true)} />
       </motion.div>
 
-      <ModelSheet open={sheet} onClose={() => setSheet(false)} choice={choice} onPick={pick} dl={dl} onHub={(t) => { setHubTab(t); goView("hub"); }} loading={loadingId} access={access} onKey={() => setKeyModal(true)} />
       <AccessKeyModal open={keyModal} onClose={() => setKeyModal(false)} onUnlocked={() => say("Keyless Cloud unlocked. Local models stay free.")} />
       <LiveVoice open={live} onClose={() => { setLive(false); say("Voice session saved to this chat."); }} msgs={chat.msgs} busy={chat.busy} modelLabel={label} onSend={(t, ms) => void send(t, [], ms)} onStopChat={chat.stop} />
       <SourceSheet cite={cite} onClose={() => setCite(null)} />

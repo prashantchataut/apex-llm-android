@@ -601,6 +601,7 @@ html.is-android { --safe-top-default: 38px; --safe-bottom-default: 14px; }
 .pt-safe-lg { padding-top: calc(max(env(safe-area-inset-top, 0px), var(--safe-top, var(--safe-top-default, 0px))) + 16px); }
 .pb-safe { padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), var(--safe-bottom, var(--safe-bottom-default, 0px))) + 8px); }
 .pb-safe-lg { padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), var(--safe-bottom, var(--safe-bottom-default, 0px))) + 16px); }
+.top-pop { top: calc(max(env(safe-area-inset-top, 0px), var(--safe-top, var(--safe-top-default, 0px))) + 58px); }
 .top-safe { top: calc(max(env(safe-area-inset-top, 0px), var(--safe-top, var(--safe-top-default, 0px))) + 10px); }
 /* the embedded landing demo is a framed device, not the real screen: no system bars to clear */
 .calm[data-embedded="true"] .pt-safe, .calm[data-embedded="true"] .pt-safe-lg { padding-top: 12px; }
