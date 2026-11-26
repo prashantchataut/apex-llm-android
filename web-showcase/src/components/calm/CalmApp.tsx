@@ -10,14 +10,15 @@ import { systemPromptFor, useCartridges } from "@/lib/cartridges";
 import { getEngineSnapshot, shortModelName } from "@/lib/engine";
 import { activateModel, useDownloadStore } from "@/lib/downloader";
 import { imageUrl, randomSeed, type ImageJob } from "@/lib/images";
-import { keylessById, refreshLive } from "@/lib/keyless";
+import { apexById, refreshLive } from "@/lib/apex-cloud";
 import { learnFrom, memoryBlock, useMemories } from "@/lib/memory";
 import { useMcp } from "@/lib/mcp";
 import { CATALOG, UNCENSORED_PROMPT, type CatalogModel } from "@/lib/models";
 import { isNative } from "@/lib/native";
 import { getGithubToken, toolsHint, useSkills } from "@/lib/skills";
 import { deleteConvo, getConvo, pinConvo, readMode, renameConvo, saveConvo, setChoice, useChoice, useConvos, writeMode, type Choice, type CalmMode } from "@/lib/store";
-import { checkForUpdate, useUpdater } from "@/lib/updater";
+import { checkForUpdate, openUpdateModal, useUpdater } from "@/lib/updater";
+import { UpdateBanner, UpdateModal } from "./UpdateUI";
 import { APP_VERSION } from "@/lib/version";
 import { useKeyboardInset } from "@/lib/useKeyboard";
 import { initInsets } from "@/lib/insets";
@@ -31,7 +32,7 @@ import { MemoryView } from "./MemoryView";
 import { ModelHub } from "./ModelHub";
 import { Onboarding } from "./Onboarding";
 import { AccessKeyModal } from "./AccessKeyModal";
-import { gateKeyless, getAccess, startAccessWatch, useAccess } from "@/lib/access";
+import { gateApex, getAccess, startAccessWatch, useAccess } from "@/lib/access";
 import { SettingsView } from "./SettingsView";
 import { LiveVoice } from "./LiveVoice";
 import { SourceSheet, VaultView } from "./VaultView";
@@ -97,6 +98,8 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     void syncOta();
     const onCite = (e: Event) => setCite(String((e as CustomEvent).detail));
     window.addEventListener("apex:cite", onCite);
+    const onGoto = (e: Event) => goView(String((e as CustomEvent).detail) as View);
+    window.addEventListener("apex:goto", onGoto);
     if (!embedded && !new URLSearchParams(window.location.search).has("skip-intro")) {
       try {
         if (!localStorage.getItem("apex.onboarded")) setOnboard(true);
@@ -108,14 +111,17 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     setSysDark(mq.matches);
     const f = () => setSysDark(mq.matches);
     mq.addEventListener("change", f);
-    void refreshLive();
     void checkForUpdate();
     return () => {
       mq.removeEventListener("change", f);
       window.removeEventListener("apex:cite", onCite);
+      window.removeEventListener("apex:goto", onGoto);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    void refreshLive();
+  }, [access.catalog]);
   const resolved = mode === "system" ? (sysDark ? "dark" : "light") : mode;
 
   const say = useCallback((t: string) => {
@@ -126,7 +132,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
 
   const localModel = choice.kind === "local" ? CATALOG.find((m) => m.id === choice.id) : undefined;
   const keyOk = access.state === "active";
-  const label = choice.kind === "keyless" ? `${keylessById(choice.id).label} · ${keyOk ? "Keyless" : "Locked"}` : localModel ? `${shortModelName(localModel)} · Local` : "Choose a model";
+  const label = choice.kind === "apex" ? `${apexById(choice.id)?.label ?? "Apex API"} · ${keyOk ? "Apex API" : "Locked"}` : localModel ? `${shortModelName(localModel)} · Local` : "Choose a model";
   const memActive = mems.filter((m) => m.on).length;
   const started = chat.msgs.length > 0;
 
@@ -140,6 +146,10 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
 
   /* Android back gesture / browser back closes the top overlay before it can leave the app */
   useBackLayer(drawer, () => setDrawer(false));
+  /** Re-check for an update every time the side drawer opens. */
+  useEffect(() => {
+    if (drawer) void checkForUpdate();
+  }, [drawer]);
   useBackLayer(view !== "chat", () => setView("chat"));
   useBackLayer(keyModal, () => setKeyModal(false));
   useBackLayer(!!zoom, () => setZoom(null));
@@ -192,11 +202,11 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     },
     [dl, say],
   );
-  /** Keyless Cloud is gated: fresh registry check + model allow-list + daily quota before every cloud request. */
-  const guardKeyless = useCallback(
+  /** Apex API is gated: fresh vault check (revoked → lock + local fallback) before every cloud request. */
+  const guardApex = useCallback(
     async (c: Choice): Promise<boolean> => {
-      if (c.kind !== "keyless") return true;
-      const g = await gateKeyless(c.id);
+      if (c.kind !== "apex") return true;
+      const g = await gateApex();
       if (g.ok) return true;
       if (!getAccess().key) {
         say(g.reason);
@@ -208,15 +218,15 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   );
   /* A key that is revoked / removed / expired (or a global kill-switch) drops the chat back to local models. */
   useEffect(() => {
-    if (choice.kind !== "keyless") return;
+    if (choice.kind !== "apex") return;
     if (["revoked", "invalid", "expired", "disabled", "none"].includes(access.state)) {
-      fallbackLocal(access.state === "none" ? "Keyless Cloud is locked. Switched to your local model." : "Your access key is no longer active. Switched to your local model.");
+      fallbackLocal(access.state === "none" ? "Apex API is locked. Switched to your local model." : "Your Apex API key is no longer active. Switched to your local model.");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [access.state, choice.kind]);
 
   const pick = (c: Choice) => {
-    if (c.kind === "keyless" && access.state !== "active") {
+    if (c.kind === "apex" && access.state !== "active") {
       setKeyModal(true);
       return;
     }
@@ -236,16 +246,21 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     if (!t && atts.length === 0) return;
     if (imageMode || /^\/imagine\s+/i.test(t)) {
       const prompt = t.replace(/^\/imagine\s+/i, "");
-      const job: ImageJob = { prompt, engine: "flux", aspect: "1:1", style: "none", negative: "", seed: randomSeed() };
+      const job: ImageJob = { prompt, engine: "", aspect: "1:1", style: "none", negative: "", seed: randomSeed() };
       const url = imageUrl(job);
+      if (!url) {
+        say("Image generation is part of Apex API. Enter your sk-apex key to unlock it.");
+        setKeyModal(true);
+        return;
+      }
       chat.sendImages(t, [{ url, prompt }]);
       setImageMode(false);
       return;
     }
-    if (!(await guardKeyless(choice))) return;
+    if (!(await guardApex(choice))) return;
     if (choice.kind === "local" && localModel && !(await activate(localModel))) return;
     const added = learnFrom(t);
-    const tools = choice.kind === "keyless";
+    const tools = choice.kind === "apex";
     let rag: { block: string; tags: string[] } = { block: "", tags: [] };
     if (vaultOn && t) {
       await loadVault();
@@ -254,7 +269,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     const system = systemPromptFor(cart.selected) + memoryBlock() + rag.block + (localModel?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (tools ? toolsHint(skills) : "");
     chat.send(t || "Summarize the attached file.", { attachments: atts, cartridge: cart.selected, ctx: cart.selected.ctx, system, choice, skills, tools, memNote: added.map((m) => m.text), voiceMs, sources: rag.tags });
   };
-  const opts = () => ({ cartridge: cart.selected, ctx: cart.selected.ctx, system: systemPromptFor(cart.selected) + memoryBlock() + (localModel?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (choice.kind === "keyless" ? toolsHint(skills) : ""), choice, skills, tools: choice.kind === "keyless" });
+  const opts = () => ({ cartridge: cart.selected, ctx: cart.selected.ctx, system: systemPromptFor(cart.selected) + memoryBlock() + (localModel?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (choice.kind === "apex" ? toolsHint(skills) : ""), choice, skills, tools: choice.kind === "apex" });
 
   const suggest = (t: Suggestion) => {
     if (t === "illustrate") {
@@ -305,8 +320,9 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
 
       <motion.div className="relative flex min-w-0 flex-1 flex-col" initial={false} animate={{ paddingBottom: kb }} transition={{ type: "spring", stiffness: 520, damping: 46, mass: 0.6 }}>
         <div className="calm-glow" aria-hidden="true" />
-        <Header persistent={persistent} onMenu={() => setDrawer(true)} label={label} onPill={() => setSheet((o) => !o)} onNew={newChat}>
+        <Header persistent={persistent} onMenu={() => setDrawer(true)} label={label} onPill={() => setSheet((o) => !o)} onNew={newChat} updateBadge={update.s === "available"}>
             </Header>
+        <UpdateBanner />
 
         <main className={`relative z-[1] min-h-0 flex-1 ${view === "chat" ? "overflow-hidden" : "scroll-quiet overflow-y-auto"}`}>
           <AnimatePresence mode="wait" initial={false}>
@@ -321,8 +337,8 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
                     memCount={memActive}
                     branchInfo={chat.branchInfo}
                     onSwitch={chat.switchBranch}
-                    onEdit={(id, t) => void guardKeyless(choice).then((ok) => ok && chat.edit(id, t, opts()))}
-                    onRegenerate={(id) => void guardKeyless(choice).then((ok) => ok && chat.regenerate(id, opts()))}
+                    onEdit={(id, t) => void guardApex(choice).then((ok) => ok && chat.edit(id, t, opts()))}
+                    onRegenerate={(id) => void guardApex(choice).then((ok) => ok && chat.regenerate(id, opts()))}
                     onSend={(t) => void send(t)}
                     onLightbox={(url, prompt) => setZoom({ url, prompt })}
                   />
@@ -359,8 +375,8 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
               onSend={(t, a, ms) => void send(t, a, ms)}
               imageMode={imageMode}
               setImageMode={setImageMode}
-              statusLeft={choice.kind === "keyless" ? (keyOk ? "Keyless Cloud · key active" : "Keyless Cloud · locked") : `On-device · ${localModel ? shortModelName(localModel) : "model"}`}
-              statusRight={update.s === "available" ? { label: "Update available", onClick: () => goView("settings") } : { label: "Switch Engine", onClick: () => setSheet(true) }}
+              statusLeft={choice.kind === "apex" ? (keyOk ? "Apex Cloud Engine · key active" : "Apex Cloud Engine · locked") : `On-device · ${localModel ? shortModelName(localModel) : "model"}`}
+              statusRight={update.s === "available" ? { label: "Update available", onClick: openUpdateModal } : { label: "Switch Engine", onClick: () => setSheet(true) }}
               onOpenMcp={() => goView("mcp")}
               onLive={() => setLive(true)}
             />
@@ -370,7 +386,8 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
         <ModelSheet open={sheet} onClose={() => setSheet(false)} choice={choice} onPick={pick} dl={dl} onHub={(t) => { setHubTab(t); goView("hub"); }} loading={loadingId} access={access} onKey={() => setKeyModal(true)} />
       </motion.div>
 
-      <AccessKeyModal open={keyModal} onClose={() => setKeyModal(false)} onUnlocked={() => say("Keyless Cloud unlocked. Local models stay free.")} />
+      <UpdateModal />
+      <AccessKeyModal open={keyModal} onClose={() => setKeyModal(false)} onUnlocked={() => say("Apex API unlocked. Local models stay free.")} />
       <LiveVoice open={live} onClose={() => { setLive(false); say("Voice session saved to this chat."); }} msgs={chat.msgs} busy={chat.busy} modelLabel={label} onSend={(t, ms) => void send(t, [], ms)} onStopChat={chat.stop} />
       <SourceSheet cite={cite} onClose={() => setCite(null)} />
       <Lightbox img={zoom} onClose={() => setZoom(null)} />

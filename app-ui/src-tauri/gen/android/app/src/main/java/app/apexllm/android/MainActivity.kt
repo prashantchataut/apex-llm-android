@@ -2,6 +2,8 @@ package app.apexllm.android
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -40,6 +42,7 @@ class MainActivity : TauriActivity() {
     this.webView = webView
     webView.addJavascriptInterface(Bars(this), "ApexBars")
     webView.addJavascriptInterface(Haptics(this), "ApexHaptics")
+    webView.addJavascriptInterface(Opener(this), "ApexOpen")
     val listener = androidx.core.view.OnApplyWindowInsetsListener { v, insets ->
       Insets.capture(insets, v.resources.displayMetrics.density)
       pushInsets()
@@ -115,6 +118,27 @@ class MainActivity : TauriActivity() {
    * Native haptics for the WebView (`window.ApexHaptics`). `play` takes a navigator.vibrate-style pattern
    * ("on,off,on,…" in ms) and an amplitude 1..255; `predefined` uses the system's tuned tick/click/heavy effects.
    */
+  /**
+   * `window.ApexOpen.url(u)`: hands a GitHub release / APK URL to the system (browser + Downloads), which then opens the
+   * Android package installer. A WebView swallows `window.open`, so without this the in-app updater could not
+   * start an APK download. Only https URLs on GitHub hosts are accepted.
+   */
+  class Opener(private val activity: Activity) {
+    @JavascriptInterface
+    fun url(u: String): Boolean {
+      val uri = try { Uri.parse(u) } catch (e: Exception) { return false }
+      val host = uri.host ?: return false
+      val ok = uri.scheme == "https" && (host == "github.com" || host.endsWith(".github.com") || host.endsWith(".githubusercontent.com"))
+      if (!ok) return false
+      return try {
+        activity.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+      } catch (e: Exception) {
+        false
+      }
+    }
+  }
+
   class Haptics(ctx: Context) {
     private val vib: Vibrator? =
       if (Build.VERSION.SDK_INT >= 31) ctx.getSystemService(VibratorManager::class.java)?.defaultVibrator

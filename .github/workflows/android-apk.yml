@@ -8,7 +8,7 @@ on:
     inputs:
       tag:
         description: Release tag to publish to (created if missing)
-        default: v0.9.0
+        default: v1.0.0
   push:
     tags: ["v*"]
 
@@ -94,7 +94,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          NOTES="Live Voice mode (hands-free listen, think, speak loop), on-device Knowledge Vault with clickable [Source: file#L12] citations, floating model switcher with Eject and RAM meter, local .gguf import from device storage, Android back-gesture handling, GitHub Pages /admin 404 fallback, OTA model catalog editor in /admin. Android arm64-v8a build. Default Keyless access key for testing: APEX-PRO-2025 (rotate or revoke it in /admin)."
+          NOTES="Apex v1.0.0. Encrypted Apex API with 25+ cloud models (zero-plaintext AES-256-GCM vault), fixed in-app auto-updater (version.json + releases list, banner, modal, reinstall), hardened /admin vault (GitHub owner PAT + passphrase gate, one-time key reveal), local GGUF import, Live Voice and on-device RAG polish. Android arm64-v8a build."
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" --latest --target "${GITHUB_SHA}" --title "Apex LLM ${TAG}" --notes "$NOTES"
           fi

@@ -8,6 +8,9 @@ import "./calm.css";
 export const APK_URL = `${REPO_URL}/releases/download/v${APP_VERSION}/apex-llm-v${APP_VERSION}-arm64-v8a.apk`;
 
 const LINES: { i: CIconName; t: string; d: string }[] = [
+  { i: "cube", t: "Local GGUF, uncensored if you want", d: "Run GGUF models fully on-device, import your own .gguf files, and keep Dolphin, Hermes and abliterated builds private." },
+  { i: "lock", t: "Encrypted Apex API", d: "25+ cloud flagship, coding, reasoning and image models stay sealed behind your sk-apex key (AES-256-GCM, decrypted only on your device)." },
+  { i: "mic", t: "Live Voice and Local RAG", d: "Talk hands-free, and ask questions over your own files with clickable source citations. All of it on-device." },
   { i: "image", t: "Image Studio", d: "Describe it, and it appears. Drop it into a chat or save it." },
   { i: "tree", t: "Memory that stays yours", d: "Apex remembers your stack and tone across every model. Edit or wipe it any time." },
   { i: "plug", t: "Skills and MCP", d: "Read a page, open a repo, run a calculation, or connect any MCP server." },
@@ -37,7 +40,7 @@ export function CalmLanding() {
             <h1 className="mt-7 text-[clamp(42px,8vw,84px)] font-normal leading-[1.02] tracking-[-0.04em]">Intelligence that lives on your phone.</h1>
           </Reveal>
           <Reveal delay={0.18}>
-            <p className="mx-auto mt-6 max-w-[46ch] text-[clamp(17px,2.2vw,20px)] leading-relaxed text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">A quiet AI workspace that answers the moment you open it, and keeps working when you are offline.</p>
+            <p className="mx-auto mt-6 max-w-[46ch] text-[clamp(17px,2.2vw,20px)] leading-relaxed text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">Local GGUF and uncensored models, an encrypted Apex API with 25+ cloud models, Live Voice and on-device RAG. Quiet by design, and it keeps working offline.</p>
           </Reveal>
           <Reveal delay={0.28} className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <a href={APK_URL} className="calm-btn !h-[52px] !px-7 !text-[15px]" data-primary="true">

@@ -1,30 +1,14 @@
 "use client";
 
 import { REPO } from "./site";
-import { REGISTRY_PATH, type Registry } from "./access";
+import { OWNER_LOGIN, VAULT_PATH, type VaultFile } from "./vault";
 
 /**
- * Admin persistence with zero backend: the owner's GitHub token (kept only in this browser tab's sessionStorage)
- * reads and commits `keyless-registry.json` through the GitHub REST API. Every Publish is a real commit on `main`.
+ * Admin persistence with zero backend: the owner's GitHub token lives ONLY in memory (never localStorage /
+ * sessionStorage) and reads / commits `apex-vault.json` through the GitHub REST API. Every publish is a real commit.
+ * Authentication = a token that GitHub itself says belongs to the owner login + the vault's admin passphrase.
  */
 const API = `https://api.github.com/repos/${REPO}`;
-const TOKEN_KEY = "apex.admin.token";
-
-export const getToken = () => {
-  try {
-    return sessionStorage.getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
-};
-export const setToken = (t: string | null) => {
-  try {
-    if (t) sessionStorage.setItem(TOKEN_KEY, t);
-    else sessionStorage.removeItem(TOKEN_KEY);
-  } catch {
-    /* blocked */
-  }
-};
 
 const headers = (token: string) => ({ Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" });
 
@@ -32,14 +16,15 @@ export interface Who {
   login: string;
   canPush: boolean;
 }
-/** Confirms the token is valid and can push to the repository (that is what "admin" means here). */
-export async function verifyAdmin(token: string): Promise<Who> {
+/** Live check against api.github.com/user: the token must belong to the owner AND be able to push to the repo. */
+export async function verifyOwner(token: string): Promise<Who> {
   const [u, r] = await Promise.all([fetch("https://api.github.com/user", { headers: headers(token), cache: "no-store" }), fetch(API, { headers: headers(token), cache: "no-store" })]);
-  if (u.status === 401 || r.status === 401) throw new Error("GitHub rejected this token (401).");
-  if (!r.ok) throw new Error(`Can't see ${REPO} with this token (${r.status}).`);
-  const repo = (await r.json()) as { permissions?: { push?: boolean; admin?: boolean } };
+  if (u.status === 401 || r.status === 401) throw new Error("rejected");
+  if (!u.ok) throw new Error(`GitHub answered ${u.status}`);
   const user = (await u.json()) as { login?: string };
-  return { login: user.login ?? "unknown", canPush: !!(repo.permissions?.push || repo.permissions?.admin) };
+  if (user.login !== OWNER_LOGIN) throw new Error("not-owner");
+  const repo = r.ok ? ((await r.json()) as { permissions?: { push?: boolean; admin?: boolean } }) : {};
+  return { login: user.login, canPush: !!(repo.permissions?.push || repo.permissions?.admin) };
 }
 
 const b64decode = (b64: string) => {
@@ -53,20 +38,15 @@ const b64encode = (s: string) => {
   return btoa(bin);
 };
 
-export async function loadRegistry(token: string): Promise<{ registry: Registry; sha: string }> {
-  const r = await fetch(`${API}/contents/${REGISTRY_PATH}?ref=main&t=${Date.now()}`, { headers: headers(token), cache: "no-store" });
-  if (!r.ok) throw new Error(`Couldn't load the registry (${r.status}).`);
+export async function loadVault(token: string): Promise<{ vault: VaultFile; sha: string }> {
+  const r = await fetch(`${API}/contents/${VAULT_PATH}?ref=main&t=${Date.now()}`, { headers: headers(token), cache: "no-store" });
+  if (!r.ok) throw new Error(`Couldn't load the vault (${r.status}).`);
   const j = (await r.json()) as { content: string; sha: string };
-  return { registry: JSON.parse(b64decode(j.content)) as Registry, sha: j.sha };
+  return { vault: JSON.parse(b64decode(j.content)) as VaultFile, sha: j.sha };
 }
 
-export async function publishRegistry(token: string, registry: Registry, sha: string, message: string): Promise<{ sha: string; commitUrl: string }> {
-  const body = { message, content: b64encode(`${JSON.stringify({ ...registry, updatedAt: new Date().toISOString() }, null, 2)}\n`), sha, branch: "main" };
-  const r = await fetch(`${API}/contents/${REGISTRY_PATH}`, { method: "PUT", headers: { ...headers(token), "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (r.status === 409 || r.status === 422) throw new Error("The registry changed on GitHub since you loaded it. Reload and re-apply your change.");
-  if (!r.ok) throw new Error(`Publish failed (${r.status}). The token needs "contents: write" on ${REPO}.`);
-  const j = (await r.json()) as { content: { sha: string }; commit: { html_url: string } };
-  return { sha: j.content.sha, commitUrl: j.commit.html_url };
+export async function publishVault(token: string, vault: VaultFile, sha: string, message: string): Promise<{ sha: string; commitUrl: string }> {
+  return publishJsonFile(token, VAULT_PATH, { ...vault, updatedAt: new Date().toISOString() }, sha, message);
 }
 
 /* ───────── generic JSON files (OTA model catalog) ───────── */

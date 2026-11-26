@@ -69,7 +69,7 @@ export function PromptDemo() {
       </div>
       <div className="halo">
         <div className="halo-strip">
-          <span><i aria-hidden="true" />Keyless AI Ready</span>
+          <span><i aria-hidden="true" />Apex API Ready</span>
           <span>Switch Engine</span>
         </div>
         <div className="halo-inner">
@@ -104,7 +104,7 @@ export function PromptDemo() {
 }
 
 const WAYS: { id: string; label: string; icon: CIconName; title: string; body: string }[] = [
-  { id: "cloud", label: "Keyless cloud", icon: "bolt", title: "Open the app and talk.", body: "Cloud models stream in the moment you launch, unlocked with an access key from the Apex admin. Local models never need one." },
+  { id: "cloud", label: "Apex API", icon: "bolt", title: "Open the app and talk.", body: "Cloud models stream in the moment you launch, unlocked with your sk-apex key. Local models never need one." },
   { id: "offline", label: "Private offline", icon: "phone", title: "Your phone does the thinking.", body: "Download a model once and it runs on the device silicon, with or without a signal. Pause and resume any download." },
   { id: "open", label: "Unfiltered", icon: "unlock", title: "No refusals. Your call.", body: "Dolphin, Hermes and abliterated builds run locally, so creative work is never second-guessed by a server." },
 ];

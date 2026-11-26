@@ -86,3 +86,9 @@ No skill loader exists in this runtime; the five protocols were applied manually
 - [open-design-skill] beautifului.dev is a JS/catalogue site (see COMPONENT_EXTRACTION.md); patterns re-implemented on the existing calm tokens: segmented control, status badges, sheet modal, spring switch.
 - [rea] Diagnosed the status-bar overlap from code (native vars never consumed; one-shot injection), resolved PR #6 conflicts by diffing both sides against the merge base, verified local download -> load -> offline reply in Chromium. Found the dark-mode reply colour bug during that check.
 - [native-rust-systems] No Rust changed. Android Kotlin insets bridge rewritten; compiled by CI only.
+
+## Session 11
+No skill loader exists in this runtime (`rea`, `native-rust-systems`, `design-taste-frontend`, `hallmark-ui`, `open-design-skill` are not installed); the protocols were applied manually and are NOT claimed as executed.
+- [rea-style audit] PR #8 diffed; live endpoints probed (Pollinations /models: 1 text + 1 image model anonymous); updater failure diagnosed from code + release list (5 causes); NEB read-only (reverse-engineered scrapers, not used).
+- [native-rust-systems-style] No Rust changed. WebCrypto SHA-256 + PBKDF2 + AES-256-GCM implemented in TS, matching Node generator `scripts/gen-vault.mjs` (round-trip verified). Kotlin `Opener` bridge added.
+- [design-taste / hallmark / open-design] Calm tokens reused: locked card, grouped model popover, update pill with pulse, release modal, admin gate/key cards, one-time secret modal. beautifului.dev patterns were reused from the Session 8 extraction, not re-scraped.

@@ -8,7 +8,7 @@ import { createTokenTicker, haptic } from "@/lib/haptics";
 import { invokeNative, isNative, streamNative } from "@/lib/native";
 import { CATALOG } from "@/lib/models";
 import { pickReply } from "@/lib/demo-script";
-import { keylessById, keylessChat, servedLabel } from "@/lib/keyless";
+import { apexById, apexChat, servedLabel } from "@/lib/apex-cloud";
 import { parseToolCall, preRun, runTool, stripToolCall, type SkillId, type ToolNote } from "@/lib/skills";
 import type { GenStats } from "@/lib/engine";
 
@@ -102,7 +102,7 @@ export interface SendOpts {
   ctx?: number;
   /** Full system prompt (cartridge + memory + presets). */
   system?: string;
-  choice?: { kind: "keyless" | "local"; id: string };
+  choice?: { kind: "apex" | "local"; id: string };
   skills?: SkillId[];
   /** Allow the model to call tools via <tool_call>. */
   tools?: boolean;
@@ -227,8 +227,8 @@ export function useChat() {
           if (pr.notes.length) patch((m) => ({ tools: [...(m.tools ?? []), ...pr.notes] }));
           if (pr.context) messages[messages.length - 1] = { role: "user", content: `${pr.context}\n\n${content}` };
         }
-        let backend: Backend = opts.choice?.kind === "keyless" && !(getEngineSnapshot().router?.enabled) ? "keyless" : activeBackend();
-        if (isNative() && backend !== "external" && backend !== "keyless") {
+        let backend: Backend = opts.choice?.kind === "apex" && !(getEngineSnapshot().router?.enabled) ? "apex" : activeBackend();
+        if (isNative() && backend !== "external" && backend !== "apex") {
           const model = await ensureModel();
           backend = activeBackend();
           if (!model && backend !== "wllama") {
@@ -275,12 +275,12 @@ export function useChat() {
           return;
         }
 
-        // ───────── keyless cloud · wllama GGUF (WASM) · external router ─────────
-        if (backend === "wllama" || backend === "external" || backend === "keyless") {
+        // ───────── Apex API · wllama GGUF (WASM) · external router ─────────
+        if (backend === "wllama" || backend === "external" || backend === "apex") {
           const snap = getEngineSnapshot();
           const cat = CATALOG.find((c) => c.id === (opts.choice?.kind === "local" ? opts.choice.id : snap.loaded.a));
-          const kl = keylessById(opts.choice?.id ?? "gpt-oss");
-          const label = backend === "keyless" ? `${kl.label} · Keyless` : backend === "external" ? `${snap.router?.model ?? "router"} · ${new URL(snap.router?.baseUrl ?? "http://x").host}` : shortModelName(cat);
+          const kl = apexById(opts.choice?.id ?? "") ?? { id: "", label: "Apex API", tag: "", group: "", kind: "text" as const, api: "" };
+          const label = backend === "apex" ? `${kl.label} · Apex API` : backend === "external" ? `${snap.router?.model ?? "router"} · ${new URL(snap.router?.baseUrl ?? "http://x").host}` : shortModelName(cat);
           patch({ engine: { backend, label, cartridge: cartName } });
           const ctl = new AbortController();
           abort.current = ctl;
@@ -305,8 +305,8 @@ export function useChat() {
               onText(r);
             };
             const opt = { maxTokens: 900, temperature, topP, signal: ctl.signal };
-            if (backend === "keyless") {
-              const st = await keylessChat(kl, msgs, opt, cb);
+            if (backend === "apex") {
+              const st = await apexChat(kl, msgs, opt, cb);
               served = st.servedBy;
               return { st, raw };
             }
@@ -331,12 +331,12 @@ export function useChat() {
               text: withSources(m.text || (m.steps?.length ? m.steps.join("\n\n") : "The model returned an empty reply — tap regenerate to try again."), opts.sources),
               thinkEnd: performance.now(),
               stats: { ...res.st, ramMb: backend === "wllama" ? estimateRamMb(cat) : undefined, temperature, topP },
-              engine: backend === "keyless" ? { backend, label: `${servedLabel(served)} · Keyless`, cartridge: cartName } : m.engine,
+              engine: backend === "apex" ? { backend, label: `${servedLabel(served)} · Apex API`, cartridge: cartName } : m.engine,
             }));
           } catch (e) {
             const aborted = ctl.signal.aborted;
             const why = e instanceof Error ? e.message : "unknown error";
-            patch((m) => ({ text: m.text || (aborted ? "Stopped." : backend === "keyless" ? `Couldn't reach the keyless AI (${why}). Check your connection, or download a local model in Model Hub to chat offline.` : `The engine stopped: ${why}`), streaming: false, thinkEnd: m.thinkEnd ?? performance.now() }));
+            patch((m) => ({ text: m.text || (aborted ? "Stopped." : backend === "apex" ? `Couldn't reach Apex API (${why}). Check your connection, or download a local model in Model Hub to chat offline.` : `The engine stopped: ${why}`), streaming: false, thinkEnd: m.thinkEnd ?? performance.now() }));
           }
           return;
         }
@@ -479,7 +479,7 @@ export function useChat() {
     const uid = ids.current++;
     const aid = ids.current++;
     const u: ChatMsg = { id: uid, parentId: leaf?.id ?? null, role: "user", text: prompt };
-    const a: ChatMsg = { id: aid, parentId: uid, role: "assistant", text: note ?? "", streaming: false, images: imgs, engine: { backend: "keyless", label: "Image · Pollinations" } };
+    const a: ChatMsg = { id: aid, parentId: uid, role: "assistant", text: note ?? "", streaming: false, images: imgs, engine: { backend: "apex", label: "Image · Apex API" } };
     setNodes((ms) => [...ms, u, a]);
     setSel((s) => ({ ...s, [keyOf(u.parentId)]: uid, [keyOf(uid)]: aid }));
   }, []);

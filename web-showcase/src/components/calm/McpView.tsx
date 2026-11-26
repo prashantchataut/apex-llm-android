@@ -30,7 +30,7 @@ export function McpView() {
 
   return (
     <div className="mx-auto w-full max-w-[640px] px-5 pb-10 pt-3">
-      <ViewTitle title="Skills & MCP" sub="Skills run inside Apex. MCP servers add outside tools. Enabled tools are offered to the model in keyless chats." />
+      <ViewTitle title="Skills & MCP" sub="Skills run inside Apex. MCP servers add outside tools. Enabled tools are offered to the model in Apex API chats." />
 
       <h2 className="mb-2 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Agent skills</h2>
       <div className="calm-card py-1">

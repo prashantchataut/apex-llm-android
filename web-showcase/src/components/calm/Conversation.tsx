@@ -290,7 +290,7 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
                 )}
                 {!m.streaming && (m.text || m.images?.length) && (
                   <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[12px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">
-                    <span className="mr-1.5 max-w-[220px] truncate">{m.engine?.label}{m.stats && m.stats.tps > 0 && m.engine?.backend !== "keyless" ? ` · ${m.stats.tps.toFixed(0)} tok/s` : ""}</span>
+                    <span className="mr-1.5 max-w-[220px] truncate">{m.engine?.label}{m.stats && m.stats.tps > 0 && m.engine?.backend !== "apex" ? ` · ${m.stats.tps.toFixed(0)} tok/s` : ""}</span>
                     {m.text && (
                       <>
                         <button type="button" aria-label="Copy reply" className="ibtn !h-9 !w-9" onClick={() => { void navigator.clipboard?.writeText(m.text); setCopied(m.id); window.setTimeout(() => setCopied(null), 1400); }}>

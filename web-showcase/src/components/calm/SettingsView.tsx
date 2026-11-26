@@ -1,12 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HapticsControl } from "@/components/theme/HapticsControl";
 import type { useCartridges } from "@/lib/cartridges";
 import { CATALOG, registerModel, type CatalogModel } from "@/lib/models";
 import type { CalmMode } from "@/lib/store";
-import { REGISTRY_URL, ago, checkForUpdate, downloadApk, type UpdateState } from "@/lib/updater";
+import { REGISTRY_URL, ago, checkForUpdate, openUpdateModal, simulateUpdate, type UpdateState } from "@/lib/updater";
 import { APP_VERSION } from "@/lib/version";
 import { RELEASES_URL } from "@/lib/site";
 import { useAccess } from "@/lib/access";
@@ -17,18 +17,13 @@ const fmtMb = (b: number) => `${(b / 1e6).toFixed(1)} MB`;
 
 export function SettingsView({ mode, setMode, onReplay, cart, update, onAccessKey }: { onReplay?: () => void; onAccessKey?: () => void; mode: CalmMode; setMode: (m: CalmMode) => void; cart: ReturnType<typeof useCartridges>; update: UpdateState }) {
   const access = useAccess();
-  const [dl, setDl] = useState<{ loaded: number; total: number } | null>(null);
-  const [dlMsg, setDlMsg] = useState("");
   const [sync, setSync] = useState<string>("");
   const [syncing, setSyncing] = useState(false);
 
-  const install = async () => {
-    if (update.s !== "available" || !update.apk) return;
-    setDlMsg("");
-    const r = await downloadApk(update.apk, (loaded, total) => setDl({ loaded, total }));
-    setDl(null);
-    setDlMsg(r === "saved" ? "Downloaded — open the file to install." : "Handed to your browser's downloader — open the APK when it finishes.");
-  };
+  /** Every time Settings opens, re-check both sources (version.json + GitHub releases). */
+  useEffect(() => {
+    void checkForUpdate();
+  }, []);
 
   const syncRegistry = async () => {
     setSyncing(true);
@@ -73,11 +68,11 @@ export function SettingsView({ mode, setMode, onReplay, cart, update, onAccessKe
         </button>
       )}
 
-      <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Keyless access key</h2>
+      <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Apex API key</h2>
       <div className="calm-card p-4">
         <div className="flex items-center justify-between gap-3">
           <span className="min-w-0">
-            <span className="block text-[14.5px] font-medium">{access.state === "active" ? (access.label ?? "Access key") : "Keyless Cloud is locked"}</span>
+            <span className="block text-[14.5px] font-medium">{access.state === "active" ? (access.label ?? "Apex API key") : "Apex API is locked"}</span>
             <span className="mt-0.5 block text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{access.key ? access.message : "Local and uncensored models are free. A key unlocks cloud models."}</span>
           </span>
           <button type="button" className="calm-btn shrink-0" data-tone={access.state === "active" ? "sage" : undefined} onClick={onAccessKey}>
@@ -111,32 +106,24 @@ export function SettingsView({ mode, setMode, onReplay, cart, update, onAccessKe
           {update.s === "available" && `You're on v${APP_VERSION}. Checked ${ago(update.at)}.`}
           {update.s === "idle" && "Not checked yet."}
         </p>
-        {update.s === "available" && (
-          <div className="mt-3">
-            {update.notes && <p className="mb-3 max-h-28 overflow-y-auto whitespace-pre-wrap rounded-xl bg-[var(--surface-2)] p-3 text-[12.5px] leading-relaxed">{update.notes}</p>}
-            {dl && (
-              <div className="mb-2">
-                <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]">
-                  <div className="h-full bg-[var(--accent)]" style={{ width: `${(dl.loaded / Math.max(1, dl.total)) * 100}%` }} />
-                </div>
-                <p className="tnum mt-1 text-[12px]">{fmtMb(dl.loaded)} / {fmtMb(dl.total)}</p>
-              </div>
-            )}
-            {update.apk ? (
-              <button type="button" className="calm-btn w-full !h-12" data-primary="true" onClick={() => void install()}>
-                <CIcon name="download" size={16} /> Download &amp; install APK · {fmtMb(update.apk.size)}
-              </button>
-            ) : (
-              <a className="calm-btn w-full" href={update.page} target="_blank" rel="noreferrer">View release</a>
-            )}
-            {dlMsg && <p className="mt-2 text-[12.5px]">{dlMsg}</p>}
+        <div className="mt-3 grid gap-2">
+          {update.s === "available" && (
+            <button type="button" className="calm-btn w-full !h-12" data-primary="true" onClick={openUpdateModal}>
+              <CIcon name="download" size={16} /> View update &amp; install APK
+            </button>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="calm-btn" onClick={() => void checkForUpdate()} disabled={update.s === "checking"}>
+              <CIcon name="refresh" size={15} /> Check for Updates
+            </button>
+            <button type="button" className="calm-btn" onClick={simulateUpdate}>
+              <CIcon name="sparkle" size={15} /> Simulate Update Banner
+            </button>
+            <button type="button" className="calm-btn" onClick={openUpdateModal}>
+              <CIcon name="download" size={15} /> Download latest APK
+            </button>
+            <a className="calm-btn" href={RELEASES_URL} target="_blank" rel="noreferrer">All releases</a>
           </div>
-        )}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" className="calm-btn" onClick={() => void checkForUpdate()} disabled={update.s === "checking"}>
-            <CIcon name="refresh" size={15} /> Check now
-          </button>
-          <a className="calm-btn" href={RELEASES_URL} target="_blank" rel="noreferrer">All releases</a>
         </div>
       </div>
 

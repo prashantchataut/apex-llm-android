@@ -285,20 +285,20 @@ export function Onboarding({ theme, onTheme, onDone }: { theme: Theme; onTheme: 
 
               <div className="mt-6 rounded-[24px] bg-[var(--surface)] p-4 shadow-[var(--specular),var(--shadow-card)]">
                 <p className="text-[14px] font-medium tracking-[-0.01em]">You already have everything local.</p>
-                <p className={`mt-1 text-[13px] leading-relaxed ${dim}`}>Local and uncensored models, memory, skills, voice and Image Studio need no key. A Keyless Cloud key only adds cloud models on top.</p>
+                <p className={`mt-1 text-[13px] leading-relaxed ${dim}`}>Local and uncensored models, memory, skills, voice and Image Studio need no key. An Apex API key only adds cloud models on top.</p>
               </div>
 
               <div className="mt-3 rounded-[24px] bg-[var(--surface)] shadow-[var(--specular),var(--shadow-card)]">
                 <button type="button" aria-expanded={keyOpen} onClick={() => setKeyOpen((o) => !o)} className="flex min-h-[56px] w-full items-center gap-3 px-4 text-left">
                   <CIcon name="key" size={17} className="shrink-0 opacity-60" />
-                  <span className="flex-1 text-[13.5px] leading-snug">Have a Keyless Cloud Access Key? <span className={dim}>Enter it here (Optional)</span></span>
+                  <span className="flex-1 text-[13.5px] leading-snug">Have an Apex API Key? <span className={dim}>Enter it here (Optional)</span></span>
                   <motion.span animate={{ rotate: keyOpen ? 180 : 0 }} className="opacity-50"><CIcon name="chevron" size={15} /></motion.span>
                 </button>
                 <AnimatePresence initial={false}>
                   {keyOpen && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.28 }} className="overflow-hidden">
                       <div className="px-4 pb-4">
-                        <input className="calm-field !rounded-full !font-mono" value={keyVal} onChange={(e) => setKeyVal(e.target.value)} placeholder="Enter Keyless Access Key..." autoComplete="off" autoCapitalize="off" spellCheck={false} aria-label="Keyless access key" />
+                        <input className="calm-field !rounded-full !font-mono" value={keyVal} onChange={(e) => setKeyVal(e.target.value)} placeholder="sk-apex-…" autoComplete="off" autoCapitalize="off" spellCheck={false} aria-label="Apex API key" />
                         <div className="mt-2.5 flex min-h-8 items-center justify-between gap-2">
                           {keyBusy && keyVal.trim().length >= 4 ? (
                             <StatusBadge state="checking">Checking…</StatusBadge>
@@ -308,7 +308,7 @@ export function Onboarding({ theme, onTheme, onDone }: { theme: Theme; onTheme: 
                             <span className={`text-[12.5px] ${dim}`}>Checked live against the admin registry.</span>
                           )}
                           {verdict?.state === "active" && (
-                            <button type="button" className="calm-btn" data-primary="true" onClick={() => void verifyKey(keyVal, true).then((v) => { setVerdict(v.state === "active" ? { ...v, message: "Saved · Keyless Cloud unlocked" } : v); })}>
+                            <button type="button" className="calm-btn" data-primary="true" onClick={() => void verifyKey(keyVal, true).then((v) => { setVerdict(v.state === "active" ? { ...v, message: "Saved · Apex API unlocked" } : v); })}>
                               Unlock
                             </button>
                           )}
