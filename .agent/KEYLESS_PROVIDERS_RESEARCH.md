@@ -44,3 +44,15 @@ Cloudflare, Cerebras, NVIDIA NIM…). Those are free, not keyless.
 4. `/admin` → **Keyless Provider Mesh**: live health (ms, model count), **Sync live models**, add / disable / remove providers.
    Owner config is committed to `web-showcase/public/config/mesh.json` and fetched from raw GitHub on launch (no rebuild).
    A custom endpoint is probed before it can be added and must be `https`, keyless and CORS-enabled.
+
+## Live QA findings (Playwright, 412x915 @2.625, real network)
+
+* **OVH anonymous quota is per model per IP.** One model answered `429 API rate limit exceeded` while another answered 200 from the same IP
+  seconds later. The router therefore cools down `provider:model` (not the provider) and tries a second stand-in model on the same host.
+* **LLM7 keyless has a token allowance per IP**: `429 "Your free token allowance has been reached. Please retry in 25 seconds"`.
+* **Pollinations anonymous text** answered `403 {"error":"Missing Turnstile token"}` to a browser-style request (Origin+Referer `localhost`,
+  mobile UA) while plain `curl` with another Origin got 200. Treat it as unreliable from browsers / WebViews; it is last in the chain.
+* With all three throttled the router tried every endpoint in order and then surfaced the last error, as designed. Free anonymous tiers
+  are shared per IP: the owner's phone has its own quota, a busy shared egress IP does not.
+* Verified end to end: a mesh model (`Qwen3.6-27B` on OVH) streamed a real reply with a `<think>` block and rendered LaTeX in the app
+  (`docs/qa-session-13/05-*.png`).

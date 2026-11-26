@@ -235,11 +235,11 @@ export async function apexChat(model: ApexModel, messages: ChatTurn[], opts: Gen
     const last = i === uniq.length - 1;
     try {
       const st = await attempt(step.endpoint, step.api, messages, opts, onText, started, { headers: step.headers, retry429: last, timeoutMs: last ? 30000 : 12000 });
-      if (step.provider) markSuccess(step.provider);
+      if (step.provider) markSuccess(step.provider, step.api);
       return { ...st, servedBy: step.api };
     } catch (e) {
       if (opts.signal?.aborted || started.v) throw e;
-      if (step.provider) markFailure(step.provider);
+      if (step.provider) markFailure(step.provider, step.api);
       lastErr = e;
     }
   }

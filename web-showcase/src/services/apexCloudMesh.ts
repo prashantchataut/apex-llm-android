@@ -306,9 +306,11 @@ export function meshAsApexModels(skipApi: Set<string>): ApexModel[] {
 /* ───────── failover ───────── */
 const cooldown = new Map<string, number>();
 const COOLDOWN_MS = 25_000;
-export const markFailure = (providerId: string) => cooldown.set(providerId, Date.now() + COOLDOWN_MS);
-export const markSuccess = (providerId: string) => cooldown.delete(providerId);
-const cooling = (id: string) => (cooldown.get(id) ?? 0) > Date.now();
+// Anonymous tiers rate-limit per model (OVH: verified live, one model answered 429 while another answered 200), so cool down provider+model.
+const ck = (providerId: string, api: string) => `${providerId}:${api}`;
+export const markFailure = (providerId: string, api: string) => cooldown.set(ck(providerId, api), Date.now() + COOLDOWN_MS);
+export const markSuccess = (providerId: string, api: string) => cooldown.delete(ck(providerId, api));
+const cooling = (id: string, api: string) => (cooldown.get(ck(id, api)) ?? 0) > Date.now();
 
 export interface Candidate {
   provider: MeshProvider;
@@ -322,12 +324,14 @@ export function candidatesFor(preferred?: { provider: string; api: string }): Ca
   const pref = preferred && usable.find((p) => p.id === preferred.provider);
   if (pref && preferred) out.push({ provider: pref, api: preferred.api });
   for (const p of usable) {
-    if (p.id === pref?.id) continue;
-    const api = p.fallbackModel ?? models.find((m) => m.provider === p.id)?.api;
-    if (api) out.push({ provider: p, api });
+    const own = models.filter((m) => m.provider === p.id).map((m) => m.api);
+    const apis = [p.fallbackModel, ...own].filter((a): a is string => !!a);
+    // up to two distinct stand-in models per provider (a second model on the same host has its own anonymous quota)
+    const take = [...new Set(apis)].filter((a) => !(p.id === pref?.id && a === preferred?.api)).slice(0, 2);
+    for (const api of take) out.push({ provider: p, api });
   }
-  // a provider that just failed goes last instead of being dropped, so a total outage still gets one more try
-  return [...out.filter((c) => !cooling(c.provider.id)), ...out.filter((c) => cooling(c.provider.id))];
+  // an endpoint that just failed goes last instead of being dropped, so a total outage still gets one more try
+  return [...out.filter((c) => !cooling(c.provider.id, c.api)), ...out.filter((c) => cooling(c.provider.id, c.api))];
 }
 
 export function isMeshId(id: string): boolean {
