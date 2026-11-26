@@ -13,7 +13,7 @@ import { assetUrl } from "./paths";
  *  - `wllama`   : llama.cpp compiled to WebAssembly SIMD, running the real GGUF inside this page / WebView
  *  - `sandbox`  : scripted sample conversations. NO neural network runs. Always labelled as such.
  */
-export type Backend = "external" | "native" | "wllama" | "keyless" | "sandbox";
+export type Backend = "external" | "native" | "wllama" | "apex" | "sandbox";
 export type Slot = "a" | "b";
 
 export interface RouterConfig {

@@ -51,7 +51,7 @@ interface Props {
 
 /**
  * Hands-free voice session. State machine: Listening (mic FFT + adaptive VAD, auto end-of-speech) -> Thinking (the active
- * local GGUF or keyless model answers through the normal chat pipeline, so the transcript IS the chat thread) ->
+ * local GGUF or Apex API model answers through the normal chat pipeline, so the transcript IS the chat thread) ->
  * Speaking (sentence-streamed TTS, the orb reacts to speech boundaries) -> Listening.
  * The mic is closed while the AI speaks (no echo loop); "tap anywhere" barges in.
  */

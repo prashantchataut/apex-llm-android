@@ -1,8 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { getAccess } from "./access";
 
-/** Keyless image generation through Pollinations (Flux / Turbo). The URL itself is the result — deterministic per seed. */
+/** Apex API image generation (endpoint + engines come from the decrypted catalog). The URL itself is the result — deterministic per seed. */
 export interface ImageEngine {
   id: string;
   label: string;
@@ -11,15 +12,14 @@ export interface ImageEngine {
   /** Registry slot for a future on-device diffusion engine (not runnable yet). */
   local?: boolean;
 }
+/** Always visible, never runnable yet. */
+export const LOCAL_ENGINE_SLOT: ImageEngine = { id: "local-sdxs", label: "SDXS-512M · on-device", sub: "Local ONNX · registry slot, not shipped yet", api: "", local: true };
 
-export const IMAGE_ENGINES: ImageEngine[] = [
-  { id: "flux", label: "Flux.1 Schnell", sub: "Photorealistic & fast", api: "flux" },
-  { id: "flux-realism", label: "Flux Realism", sub: "Ultra-detailed", api: "flux-realism" },
-  { id: "flux-anime", label: "Flux Anime", sub: "Anime & illustration", api: "flux-anime" },
-  { id: "flux-3d", label: "Flux 3D Render", sub: "Soft 3D look", api: "flux-3d" },
-  { id: "turbo", label: "SDXL Turbo", sub: "Fastest drafts", api: "turbo" },
-  { id: "local-sdxs", label: "SDXS-512M · on-device", sub: "Local ONNX · registry slot, not shipped yet", api: "", local: true },
-];
+/** Image engines of the decrypted Apex API catalog. Empty while the vault is locked. */
+export function apexImageEngines(): ImageEngine[] {
+  const cat = getAccess().catalog;
+  return (cat?.models ?? []).filter((m) => m.kind === "image").map((m) => ({ id: m.id, label: m.label, sub: m.tag, api: m.api }));
+}
 
 export const ASPECTS = [
   { id: "1:1", label: "1:1", w: 768, h: 768 },
@@ -52,13 +52,17 @@ export function imageSize(aspect: string): { w: number; h: number } {
   return { w: a.w, h: a.h };
 }
 
+/** Returns "" while Apex API is locked: the endpoint only exists after the vault is decrypted in memory. */
 export function imageUrl(j: ImageJob): string {
-  const eng = IMAGE_ENGINES.find((e) => e.id === j.engine && !e.local) ?? IMAGE_ENGINES[0];
+  const cat = getAccess().catalog;
+  const engines = apexImageEngines();
+  const eng = engines.find((e) => e.id === j.engine || e.api === j.engine) ?? engines[0];
+  if (!cat || !eng) return "";
   const { w, h } = imageSize(j.aspect);
   const style = STYLES.find((s) => s.id === j.style)?.suffix ?? "";
   const p = new URLSearchParams({ width: String(w), height: String(h), seed: String(j.seed), model: eng.api, nologo: "true", enhance: "false" });
   if (j.negative.trim()) p.set("negative_prompt", j.negative.trim());
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(j.prompt.trim() + style)}?${p.toString()}`;
+  return `${cat.endpoints.image}${encodeURIComponent(j.prompt.trim() + style)}?${p.toString()}`;
 }
 
 export interface GalleryItem {

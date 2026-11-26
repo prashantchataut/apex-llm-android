@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { IMAGE_ENGINES, imageUrl, randomSeed, type ImageJob } from "./images";
+import { imageUrl, randomSeed, type ImageJob } from "./images";
 import { addMemory, getMemories } from "./memory";
 import { activeMcpTools, callMcpTool } from "./mcp";
 
@@ -164,9 +164,11 @@ export function runJs(code: string): Promise<string> {
   });
 }
 
-function makeImage(prompt: string, engine = "flux"): ToolResult {
-  const job: ImageJob = { prompt, engine: IMAGE_ENGINES.some((e) => e.id === engine && !e.local) ? engine : "flux", aspect: "1:1", style: "none", negative: "", seed: randomSeed() };
-  return { text: "The image was generated and is shown to the user.", note: { icon: "image", label: `Image · ${prompt.slice(0, 40)}`, ok: true }, images: [{ url: imageUrl(job), prompt }] };
+function makeImage(prompt: string, engine = ""): ToolResult {
+  const job: ImageJob = { prompt, engine, aspect: "1:1", style: "none", negative: "", seed: randomSeed() };
+  const url = imageUrl(job);
+  if (!url) return { text: "Image generation needs an unlocked Apex API key.", note: { icon: "image", label: "Image · Apex API locked", ok: false } };
+  return { text: "The image was generated and is shown to the user.", note: { icon: "image", label: `Image · ${prompt.slice(0, 40)}`, ok: true }, images: [{ url, prompt }] };
 }
 
 /** Context injection from what the user typed. */

@@ -19,7 +19,7 @@ export function StatusBadge({ state, children }: { state: AccessState | "checkin
   );
 }
 
-/** Enter / verify / change / remove the Keyless Cloud access key. Validates live against the owner's remote registry. */
+/** Enter / verify / change / remove the Apex API key. Verified with WebCrypto against the encrypted vault; the catalog is decrypted in memory. */
 export function AccessKeyModal({ open, onClose, onUnlocked }: { open: boolean; onClose: () => void; onUnlocked?: () => void }) {
   const access = useAccess();
   const [value, setValue] = useState("");
@@ -70,9 +70,9 @@ export function AccessKeyModal({ open, onClose, onUnlocked }: { open: boolean; o
 
   const hasKey = !!access.key && !changing;
   return (
-    <Sheet open={open} onClose={onClose} title="Keyless Access Key">
+    <Sheet open={open} onClose={onClose} title="Apex API Key">
       <div className="px-2 pb-2 pt-1">
-        <p className={`text-[13.5px] leading-relaxed ${dim}`}>Local models are always free and need no key. A key unlocks the Keyless Cloud models. It&apos;s managed by the Apex admin and can be revoked at any time.</p>
+        <p className={`text-[13.5px] leading-relaxed ${dim}`}>Local models are always free and need no key. An Apex API key (sk-apex-…) unlocks the Apex Cloud Engine. It is verified on this device with SHA-256 + AES-256-GCM, never sent anywhere, and can be revoked by the admin at any time.</p>
 
         <AnimatePresence mode="wait" initial={false}>
           {hasKey ? (
@@ -80,8 +80,8 @@ export function AccessKeyModal({ open, onClose, onUnlocked }: { open: boolean; o
               <div className="rounded-[22px] bg-[var(--surface-2)] p-4">
                 <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0">
-                    <span className="block truncate text-[15px] font-medium">{access.label ?? "Access key"}</span>
-                    <span className={`block font-mono text-[12.5px] ${dim}`}>{access.key ? `${access.key.slice(0, 4)}${"•".repeat(Math.max(4, Math.min(10, access.key.length - 6)))}${access.key.slice(-2)}` : ""}</span>
+                    <span className="block truncate text-[15px] font-medium">{access.label ?? "Apex API key"}</span>
+                    <span className={`block font-mono text-[12.5px] ${dim}`}>{access.prefix ?? (access.key ? `sk-apex-••••${access.key.slice(-4)}` : "")}</span>
                   </span>
                   <StatusBadge state={access.state}>{access.state === "active" ? "Active · Verified" : access.state === "checking" ? "Checking…" : access.state === "revoked" ? "Revoked by Admin" : access.message}</StatusBadge>
                 </div>
@@ -100,15 +100,15 @@ export function AccessKeyModal({ open, onClose, onUnlocked }: { open: boolean; o
               <label className="sr-only" htmlFor="access-key-input">Access key</label>
               <div className="relative">
                 <CIcon name="key" size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 opacity-50" />
-                <input id="access-key-input" className="calm-field !rounded-full !pl-11 !font-mono" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void unlock()} placeholder="Enter Keyless Access Key..." autoComplete="off" autoCapitalize="off" spellCheck={false} />
+                <input id="access-key-input" className="calm-field !rounded-full !pl-11 !font-mono" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void unlock()} placeholder="sk-apex-…" autoComplete="off" autoCapitalize="off" spellCheck={false} />
               </div>
               <div className="mt-3 min-h-8">
                 {busy && value.trim().length >= 4 ? (
-                  <StatusBadge state="checking">Checking registry…</StatusBadge>
+                  <StatusBadge state="checking">Verifying with WebCrypto…</StatusBadge>
                 ) : verdict && verdict.state !== "none" ? (
                   <StatusBadge state={verdict.state}>{verdict.state === "active" ? "Active · Verified" : verdict.state === "revoked" ? "Invalid / Revoked by Admin" : verdict.state === "invalid" ? "Invalid / Revoked by Admin" : verdict.message}</StatusBadge>
                 ) : (
-                  <span className={`text-[12.5px] ${dim}`}>Checked live against the admin registry.</span>
+                  <span className={`text-[12.5px] ${dim}`}>Checked against the encrypted vault on this device.</span>
                 )}
               </div>
               <div className="mt-3 flex gap-2">
@@ -118,7 +118,7 @@ export function AccessKeyModal({ open, onClose, onUnlocked }: { open: boolean; o
                   </button>
                 )}
                 <button type="button" className="calm-btn flex-1 !h-12" data-primary="true" disabled={busy || value.trim().length < 4 || verdict?.state !== "active"} onClick={() => void unlock()}>
-                  <CIcon name="unlock" size={16} /> Unlock Keyless Cloud
+                  <CIcon name="unlock" size={16} /> Unlock Apex API
                 </button>
               </div>
             </motion.div>

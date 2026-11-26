@@ -40,3 +40,7 @@ Obsidian Carbon dark mode, BeautifulUI primitives, vector icons, choreographed o
 
 ## Session 8 (v0.7.0)
 PR #6 conflicts resolved and merged; Android status-bar fix; /admin keyless access-key console + in-app gating; local-first onboarding; model selector restructure; dark-mode reply colour fix. See .agent/STATE.md for verified vs. unverified.
+
+## Session 11 — Apex API vault, hardened /admin, working auto-updater, v1.0.0
+**Done (verified):** PR #8 merged; zero-plaintext AES-256-GCM vault with 27-model sealed catalog; Keyless rebrand to Apex API; hardened /admin; rewritten auto-updater (+ banner, badge, modal, version.json); landing v1.0.0; Playwright proof in `docs/qa-session-11/`.
+**Not done / honest:** upstream only serves 1 text + 1 image model anonymously (others route to it); APK signing key is per-run; Kotlin not device-tested. See `.agent/STATE.md`.

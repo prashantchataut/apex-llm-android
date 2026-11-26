@@ -1,0 +1,200 @@
+"use client";
+
+import { REPO } from "./site";
+import { assetUrl } from "./paths";
+
+/**
+ * Apex API vault — zero-plaintext cryptography (WebCrypto).
+ *
+ * `public/config/apex-vault.json` is public. It contains NO keys and NO provider URLs, only:
+ *   - `salt`                       random hex salt
+ *   - `keys[].keyHash`             SHA-256(salt + key)  → lets the app tell a valid, active key from a wrong one
+ *   - `keys[].encryptedCatalogEnvelope`  AES-256-GCM(catalog) under PBKDF2(key, salt, 100 000 × SHA-256)
+ *   - `adminEnvelope`              the same catalog under PBKDF2(admin passphrase, salt) so the owner can mint keys
+ *
+ * The model catalog (labels, upstream ids AND the provider endpoints) is only ever decrypted in memory after the user
+ * types a valid `sk-apex-…` key. Nothing in the repo, the bundle or the DOM reveals it before that.
+ */
+
+export const VAULT_PATH = "web-showcase/public/config/apex-vault.json";
+export const VAULT_RAW = `https://raw.githubusercontent.com/${REPO}/main/${VAULT_PATH}`;
+export const KDF_ITERATIONS = 100_000;
+export const KEY_PREFIX = "sk-apex-";
+export const OWNER_LOGIN = "prashantchataut";
+
+export type KeyStatus = "active" | "revoked";
+export interface VaultKey {
+  id: string;
+  label: string;
+  /** Display only, e.g. `sk-apex-••••9f2a`. */
+  prefix: string;
+  keyHash: string;
+  encryptedCatalogEnvelope: string;
+  status: KeyStatus;
+  createdAt: string;
+  expiresAt: string | null;
+}
+export interface VaultFile {
+  schema: 2;
+  salt: string;
+  kdf: { name: "PBKDF2"; hash: "SHA-256"; iterations: number };
+  /** Global kill-switch. */
+  enabled: boolean;
+  updatedAt: string;
+  adminEnvelope: string;
+  keys: VaultKey[];
+}
+
+export interface ApexModel {
+  id: string;
+  label: string;
+  tag: string;
+  group: string;
+  kind: "text" | "image";
+  /** Upstream model id on the wire. */
+  api: string;
+  desc?: string;
+  reasoning?: boolean;
+  vision?: boolean;
+  uncensored?: boolean;
+}
+export interface ApexCatalog {
+  v: 1;
+  endpoints: { text: string; models: string; image: string; imageModels: string };
+  /** Always-on upstream used when a requested model is not served right now. */
+  fallbackApi: string;
+  models: ApexModel[];
+}
+
+/* ───────── primitives ───────── */
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+
+export const toHex = (b: Uint8Array) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+export function toB64(b: Uint8Array): string {
+  let s = "";
+  b.forEach((x) => (s += String.fromCharCode(x)));
+  return btoa(s);
+}
+export const fromB64 = (s: string): Uint8Array<ArrayBuffer> => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+export const randomHex = (bytes: number) => {
+  const b = new Uint8Array(bytes);
+  crypto.getRandomValues(b);
+  return toHex(b);
+};
+
+function subtle(): SubtleCrypto {
+  const s = globalThis.crypto?.subtle;
+  if (!s) throw new Error("WebCrypto is unavailable in this context (needs https or localhost).");
+  return s;
+}
+
+export async function sha256Hex(text: string): Promise<string> {
+  return toHex(new Uint8Array(await subtle().digest("SHA-256", enc.encode(text))));
+}
+/** SHA-256(salt + key) — the only thing the public vault stores about a key. */
+export const hashKey = (salt: string, key: string) => sha256Hex(salt + key.trim());
+
+async function deriveAes(secret: string, salt: string, iterations: number): Promise<CryptoKey> {
+  const base = await subtle().importKey("raw", enc.encode(secret), "PBKDF2", false, ["deriveKey"]);
+  return subtle().deriveKey({ name: "PBKDF2", salt: enc.encode(salt), iterations, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+
+/** AES-256-GCM envelope: base64( iv[12] ‖ ciphertext ‖ tag[16] ). */
+export async function seal(secret: string, salt: string, data: unknown, iterations = KDF_ITERATIONS): Promise<string> {
+  const key = await deriveAes(secret, salt, iterations);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await subtle().encrypt({ name: "AES-GCM", iv }, key, enc.encode(JSON.stringify(data))));
+  const out = new Uint8Array(iv.length + ct.length);
+  out.set(iv);
+  out.set(ct, iv.length);
+  return toB64(out);
+}
+export async function open<T>(secret: string, salt: string, envelope: string, iterations = KDF_ITERATIONS): Promise<T> {
+  const raw = fromB64(envelope);
+  const key = await deriveAes(secret, salt, iterations);
+  const pt = await subtle().decrypt({ name: "AES-GCM", iv: raw.slice(0, 12) }, key, raw.slice(12));
+  return JSON.parse(dec.decode(pt)) as T;
+}
+
+/* ───────── fetching ───────── */
+export async function fetchVault(): Promise<{ vault: VaultFile; source: "github" | "site" }> {
+  const t = Date.now();
+  const urls: [string, "github" | "site"][] = [
+    [`${VAULT_RAW}?t=${t}`, "github"],
+    [`${assetUrl("config/apex-vault.json")}?t=${t}`, "site"],
+  ];
+  let last: unknown = new Error("Vault unreachable");
+  for (const [u, source] of urls) {
+    try {
+      const r = await fetch(u, { cache: "no-store" });
+      if (!r.ok) throw new Error(`Vault answered ${r.status}`);
+      const vault = (await r.json()) as VaultFile;
+      if (!Array.isArray(vault?.keys) || typeof vault.salt !== "string") throw new Error("Malformed vault");
+      return { vault, source };
+    } catch (e) {
+      last = e;
+    }
+  }
+  throw last;
+}
+
+/* ───────── verification + unlock ───────── */
+export type AccessState = "none" | "checking" | "active" | "invalid" | "revoked" | "expired" | "disabled" | "offline";
+export interface Verdict {
+  state: AccessState;
+  message: string;
+  record?: VaultKey;
+  catalog?: ApexCatalog;
+}
+
+/** Hash check first (cheap, no plaintext), then PBKDF2 + AES-GCM decrypt of the catalog — all in memory. */
+export async function evaluateKey(vault: VaultFile, key: string): Promise<Verdict> {
+  const k = key.trim();
+  if (!k.startsWith(KEY_PREFIX) || k.length < KEY_PREFIX.length + 16) return { state: "invalid", message: "Invalid key · Apex API keys start with sk-apex-" };
+  if (!vault.enabled) return { state: "disabled", message: "Apex API is switched off by the admin right now." };
+  const h = await hashKey(vault.salt, k);
+  const rec = vault.keys.find((x) => x.keyHash === h);
+  if (!rec) return { state: "invalid", message: "Invalid key · not recognised." };
+  if (rec.status !== "active") return { state: "revoked", message: "Revoked by Admin.", record: rec };
+  if (rec.expiresAt && Date.parse(rec.expiresAt) < Date.now()) return { state: "expired", message: "This key has expired.", record: rec };
+  try {
+    const catalog = await open<ApexCatalog>(k, vault.salt, rec.encryptedCatalogEnvelope, vault.kdf?.iterations ?? KDF_ITERATIONS);
+    return { state: "active", message: "Active · Verified", record: rec, catalog };
+  } catch {
+    return { state: "invalid", message: "Key verified but the catalog could not be decrypted.", record: rec };
+  }
+}
+
+/* ───────── owner tools (used by /admin only) ───────── */
+export async function openAsAdmin(vault: VaultFile, passphrase: string): Promise<ApexCatalog> {
+  return open<ApexCatalog>(passphrase, vault.salt, vault.adminEnvelope, vault.kdf?.iterations ?? KDF_ITERATIONS);
+}
+
+const B62 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+export function generateSecretKey(): string {
+  const out: string[] = [];
+  const buf = new Uint8Array(96);
+  crypto.getRandomValues(buf);
+  for (const b of buf) {
+    if (b >= 248) continue; // rejection sampling (248 = 62 × 4): no modulo bias
+    out.push(B62[b % 62]);
+    if (out.length === 40) break;
+  }
+  return KEY_PREFIX + out.join("");
+}
+export const maskKey = (key: string) => `${KEY_PREFIX}••••${key.slice(-4)}`;
+
+/** Mint a record for a new secret: stores only SHA-256(salt+key) and the catalog sealed under that key. */
+export async function mintRecord(vault: VaultFile, catalog: ApexCatalog, secret: string, label: string, expiresAt: string | null, id?: string): Promise<VaultKey> {
+  return {
+    id: id ?? `key-${Date.now().toString(36)}`,
+    label: label.trim() || "Untitled key",
+    prefix: maskKey(secret),
+    keyHash: await hashKey(vault.salt, secret),
+    encryptedCatalogEnvelope: await seal(secret, vault.salt, catalog, vault.kdf?.iterations ?? KDF_ITERATIONS),
+    status: "active",
+    createdAt: new Date().toISOString(),
+    expiresAt,
+  };
+}

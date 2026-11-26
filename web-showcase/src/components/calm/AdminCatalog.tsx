@@ -8,14 +8,14 @@ import { buildOtaModel, OTA_PATH, type OtaCatalog } from "@/lib/ota";
 import { APP_VERSION } from "@/lib/version";
 import { BASE_PATH } from "@/lib/paths";
 import { REPO } from "@/lib/site";
-import type { Registry } from "@/lib/access";
+import type { VaultFile } from "@/lib/vault";
 import { CIcon } from "./icons";
 
 const dim = "text-[rgb(var(--ink-rgb)/var(--ink-3-a))]";
 const spring = { type: "spring", stiffness: 380, damping: 34 } as const;
 
 /** Owner tools below the key list: OTA model catalog (featured Trending / Uncensored GGUFs), live system configuration, one-tap export. */
-export function AdminCatalog({ token, registry }: { token: string; registry: Registry }) {
+export function AdminCatalog({ token, vault }: { token: string; vault: VaultFile }) {
   const [cat, setCat] = useState<OtaCatalog | null>(null);
   const [sha, setSha] = useState("");
   const [saved, setSaved] = useState("");
@@ -79,7 +79,7 @@ export function AdminCatalog({ token, registry }: { token: string; registry: Reg
     setBusy(false);
   };
   const exportConfig = () => {
-    const cfg = { exportedAt: new Date().toISOString(), app: { version: APP_VERSION, repo: REPO, basePath: BASE_PATH || "/" }, keylessRegistry: registry, otaCatalog: cat };
+    const cfg = { exportedAt: new Date().toISOString(), app: { version: APP_VERSION, repo: REPO, basePath: BASE_PATH || "/" }, apexVault: { schema: vault.schema, enabled: vault.enabled, keys: vault.keys.map((k) => ({ id: k.id, label: k.label, prefix: k.prefix, status: k.status, createdAt: k.createdAt, expiresAt: k.expiresAt })) }, otaCatalog: cat };
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([JSON.stringify(cfg, null, 2)], { type: "application/json" }));
     a.download = `apex-config-${new Date().toISOString().slice(0, 10)}.json`;
@@ -87,11 +87,11 @@ export function AdminCatalog({ token, registry }: { token: string; registry: Reg
     URL.revokeObjectURL(a.href);
   };
 
-  const active = registry.keys.filter((k) => k.status === "active").length;
+  const active = vault.keys.filter((k) => k.status === "active").length;
   const rows: [string, string][] = [
     ["App version", `v${APP_VERSION}`],
-    ["Keyless Cloud", registry.keylessEnabled ? "Enabled" : "Kill-switch on"],
-    ["Access keys", `${active} active · ${registry.keys.length - active} revoked`],
+    ["Apex API", vault.enabled ? "Enabled" : "Kill-switch on"],
+    ["Apex API keys", `${active} active · ${vault.keys.length - active} revoked`],
     ["Catalog", `${cat?.models.length ?? 0} OTA models · v${cat?.version ?? "?"}`],
     ["Served from", BASE_PATH || "root (app / local)"],
   ];

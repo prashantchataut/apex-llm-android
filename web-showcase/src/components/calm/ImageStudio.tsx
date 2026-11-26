@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ASPECTS, IMAGE_ENGINES, STYLES, addToGallery, downloadImage, fetchImage, imageUrl, makeThumb, randomSeed, removeFromGallery, useGallery, type ImageJob } from "@/lib/images";
+import { ASPECTS, LOCAL_ENGINE_SLOT, STYLES, addToGallery, downloadImage, fetchImage, imageUrl, makeThumb, randomSeed, removeFromGallery, useGallery, type ImageJob } from "@/lib/images";
+import { useApexModels } from "@/lib/apex-cloud";
 import { CIcon } from "./icons";
 import { ViewTitle } from "./Chrome";
 
@@ -13,7 +14,9 @@ const Seg = ({ label, on, onClick }: { label: string; on: boolean; onClick: () =
 
 export function ImageStudio({ onUseInChat, onZoom }: { onUseInChat: (url: string, prompt: string, src: string) => void; onZoom: (url: string, prompt: string) => void }) {
   const [prompt, setPrompt] = useState("");
-  const [engine, setEngine] = useState("flux");
+  const apex = useApexModels();
+  const [engineSel, setEngine] = useState("");
+  const engine = engineSel || apex.image[0]?.id || "";
   const [aspect, setAspect] = useState("1:1");
   const [style, setStyle] = useState("soft");
   const [negative, setNegative] = useState("");
@@ -26,6 +29,7 @@ export function ImageStudio({ onUseInChat, onZoom }: { onUseInChat: (url: string
     if (!prompt.trim()) return;
     const job: ImageJob = { prompt: prompt.trim(), engine, aspect, style, negative, seed: s };
     const url = imageUrl(job);
+    if (!url) return;
     const t = ++token.current;
     setRes({ url, job, state: "loading" });
     fetchImage(url, (w) => t === token.current && setRes((r) => (r ? { ...r, wait: w } : r)))
@@ -45,17 +49,20 @@ export function ImageStudio({ onUseInChat, onZoom }: { onUseInChat: (url: string
 
   return (
     <div className="mx-auto w-full max-w-[640px] px-5 pb-12 pt-3">
-      <ViewTitle title="Image Studio" sub="Keyless text-to-image. Pick an engine, describe it, and download or drop it straight into a chat." />
+      <ViewTitle title="Image Studio" sub="Apex API text-to-image. Pick an engine, describe it, and download or drop it straight into a chat." />
       <div className="flex flex-col gap-7">
         <section aria-label="Controls" className="space-y-4">
           <label className="block">
             <span className="mb-1.5 block text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Prompt</span>
             <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} placeholder="A quiet harbor at dawn, soft pastel light" className="calm-field resize-none" />
           </label>
+          {!apex.unlocked && (
+            <p className="rounded-[18px] bg-[var(--surface-2)] px-4 py-3 text-[13px] leading-relaxed text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Image engines are part of Apex API. Unlock it with your sk-apex key (Settings → Apex API key) to generate images.</p>
+          )}
           <fieldset>
             <legend className="mb-1.5 text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Engine</legend>
             <div className="space-y-1.5">
-              {IMAGE_ENGINES.map((e) => (
+              {[...apex.image.map((m) => ({ id: m.id, label: m.label, sub: m.tag, local: false })), LOCAL_ENGINE_SLOT].map((e) => (
                 <button key={e.id} type="button" disabled={e.local} aria-pressed={engine === e.id} onClick={() => setEngine(e.id)} className="flex min-h-[50px] w-full items-center gap-3 rounded-[18px] px-4 text-left transition-colors disabled:opacity-50" style={engine === e.id ? { background: "var(--halo-a)" } : { background: "var(--surface-2)" }}>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13.5px]">{e.label}</span>
@@ -95,7 +102,7 @@ export function ImageStudio({ onUseInChat, onZoom }: { onUseInChat: (url: string
               <CIcon name="dice" size={16} />
             </button>
           </div>
-          <button type="button" className="calm-btn w-full !h-12" data-primary="true" disabled={!prompt.trim() || res?.state === "loading"} onClick={() => generate()}>
+          <button type="button" className="calm-btn w-full !h-12" data-primary="true" disabled={!prompt.trim() || res?.state === "loading" || !apex.unlocked} onClick={() => generate()}>
             {res?.state === "loading" ? "Generating…" : "Generate"}
           </button>
         </section>

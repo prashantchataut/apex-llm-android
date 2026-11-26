@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "tag": "v1.0.0",
+  "apkUrl": "https://github.com/prashantchataut/apex-llm-android/releases/download/v1.0.0/apex-llm-v1.0.0-arm64-v8a.apk",
+  "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.0.0",
+  "publishedAt": "2026-11-26T12:45:20Z",
+  "changelog": [
+    "Encrypted Apex API with 25+ Cloud Models",
+    "Fixed In-App Auto-Updater",
+    "Hardened Admin Vault",
+    "Local GGUF & Live Voice Polish"
+  ]
+}

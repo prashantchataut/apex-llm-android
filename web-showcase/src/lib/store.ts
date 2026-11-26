@@ -3,17 +3,17 @@
 import { useSyncExternalStore } from "react";
 import type { ChatSnapshot } from "@/components/app/useChat";
 
-/* ───────── which engine answers: a local GGUF (default) or keyless cloud (needs an access key) ───────── */
-export type Choice = { kind: "keyless"; id: string } | { kind: "local"; id: string };
+/* ───────── which engine answers: a local GGUF (default) or Apex API cloud (needs an sk-apex key) ───────── */
+export type Choice = { kind: "apex"; id: string } | { kind: "local"; id: string };
 const CHOICE_KEY = "apex.choice.v3";
-/** Local models are the product: the default engine is the 145 MB starter. Keyless Cloud needs an access key. */
+/** Local models are the product: the default engine is the 145 MB starter. Apex API needs an sk-apex key. */
 const DEFAULT_CHOICE: Choice = { kind: "local", id: "smollm2-135m" };
 let choice: Choice = DEFAULT_CHOICE;
 const cSubs = new Set<() => void>();
 if (typeof window !== "undefined") {
   try {
     const raw = JSON.parse(localStorage.getItem(CHOICE_KEY) ?? "null") as Choice | null;
-    if (raw && (raw.kind === "keyless" || raw.kind === "local")) choice = raw;
+    if (raw && (raw.kind === "apex" || raw.kind === "local")) choice = raw;
   } catch {
     /* corrupt */
   }

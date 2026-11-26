@@ -5,10 +5,10 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CATALOG } from "@/lib/models";
 import { estimateRamMb, shortModelName, unloadWllama, useEngine } from "@/lib/engine";
 import { useBackLayer } from "@/lib/backstack";
-import { KEYLESS_MODELS, isServed, useKeylessLive } from "@/lib/keyless";
-import { modelUnlocked, type Access } from "@/lib/access";
+import { isServed, servedLabel, useApexModels } from "@/lib/apex-cloud";
+import type { Access } from "@/lib/access";
 import { downloadImage } from "@/lib/images";
-import { ago, type UpdateState } from "@/lib/updater";
+import { ago, openUpdateModal, type UpdateState } from "@/lib/updater";
 import { APP_VERSION } from "@/lib/version";
 import type { Choice, Convo } from "@/lib/store";
 import { CIcon, type CIconName } from "./icons";
@@ -16,12 +16,13 @@ import type { DlItem } from "@/lib/downloader";
 
 export type View = "chat" | "hub" | "studio" | "memory" | "vault" | "mcp" | "lan" | "settings";
 
-export function Header({ persistent, onMenu, label, onPill, onNew, children }: { persistent: boolean; onMenu: () => void; label: string; onPill: () => void; onNew: () => void; children?: ReactNode }) {
+export function Header({ persistent, onMenu, label, onPill, onNew, children, updateBadge }: { updateBadge?: boolean; persistent: boolean; onMenu: () => void; label: string; onPill: () => void; onNew: () => void; children?: ReactNode }) {
   return (
     <header className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 pb-2 pt-safe">
       <div className="flex">
-        <button type="button" onClick={onMenu} aria-label="Open sidebar" className={`ibtn !h-11 !w-11 ${persistent ? "lg:hidden" : ""}`}>
+        <button type="button" onClick={onMenu} aria-label={updateBadge ? "Open sidebar (update available)" : "Open sidebar"} className={`ibtn relative !h-11 !w-11 ${persistent ? "lg:hidden" : ""}`}>
           <CIcon name="sidebar" size={21} />
+          {updateBadge && <span className="upd-dot" data-testid="update-badge" aria-hidden="true" />}
         </button>
       </div>
       <motion.button
@@ -78,13 +79,13 @@ type PopTab = "local" | "uncensored" | "cloud";
 
 /** BeautifulUI-style floating popover under the header pill: 1-tap switching, inline Eject, live RAM meter. */
 export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, access, onKey }: { open: boolean; onClose: () => void; choice: Choice; onPick: (c: Choice) => void; dl: Record<string, DlItem>; onHub: (tab: "trending" | "uncensored" | "search") => void; loading: string | null; access: Access; onKey: () => void }) {
-  const live = useKeylessLive();
+  const apex = useApexModels();
   const eng = useEngine();
   const localChoice = choice.kind === "local" ? CATALOG.find((m) => m.id === choice.id) : undefined;
   const [tab, setTab] = useState<PopTab>("local");
   useBackLayer(open, onClose);
   useEffect(() => {
-    if (open) setTab(choice.kind === "keyless" ? "cloud" : localChoice?.uncensored ? "uncensored" : "local");
+    if (open) setTab(choice.kind === "apex" ? "cloud" : localChoice?.uncensored ? "uncensored" : "local");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
   useEffect(() => {
@@ -136,7 +137,7 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, 
             </div>
 
             <div className="seg mt-2 w-full" style={{ gridAutoColumns: "1fr" }} role="tablist" aria-label="Model source">
-              {([["local", "Local"], ["uncensored", "Uncensored"], ["cloud", "Cloud"]] as const).map(([id, l]) => (
+              {([["local", "Local"], ["uncensored", "Uncensored"], ["cloud", "Apex API"]] as const).map(([id, l]) => (
                 <button key={id} type="button" role="tab" aria-selected={tab === id} aria-pressed={tab === id} onClick={() => setTab(id)}>
                   {l}
                 </button>
@@ -165,27 +166,46 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, 
                   </Row>
                 </>
               )}
-              {tab === "cloud" && (
+              {tab === "cloud" && !apex.unlocked && (
+                <button type="button" data-testid="apex-locked-card" onClick={() => { onClose(); onKey(); }} className="group relative mt-1 flex w-full flex-col items-start gap-2 overflow-hidden rounded-[22px] bg-[var(--surface-2)] p-4 text-left transition-transform active:scale-[0.985]">
+                  <span className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full opacity-60 blur-2xl" style={{ background: "var(--halo-a)" }} aria-hidden="true" />
+                  <span className="relative grid h-10 w-10 place-items-center rounded-full" style={{ background: "var(--halo-a)", color: "var(--halo-ink)" }}>
+                    <CIcon name="lock" size={18} />
+                  </span>
+                  <span className="relative text-[15px] font-medium leading-snug tracking-[-0.01em]">Connect Apex API Key</span>
+                  <span className="relative text-[12.5px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Unlock 25+ Cloud Flagship Models</span>
+                  <span className="relative mt-1 inline-flex items-center gap-1.5 text-[12.5px] font-medium" style={{ color: "var(--halo-ink)" }}>
+                    <CIcon name="key" size={13} /> Enter sk-apex key
+                  </span>
+                </button>
+              )}
+              {tab === "cloud" && apex.unlocked && (
                 <>
                   <div className="flex items-center justify-between px-3 pb-1 pt-1.5">
-                    <p className="text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Keyless Cloud</p>
-                    <button type="button" onClick={() => { onClose(); onKey(); }} className="calm-chip" style={access.state === "active" ? { background: "var(--halo-a)", color: "var(--halo-ink)" } : undefined}>
-                      <CIcon name={access.state === "active" ? "key" : "lock"} size={12} /> {access.state === "active" ? "Key active" : "Enter key"}
+                    <p className="text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Apex API · {apex.models.length} models</p>
+                    <button type="button" onClick={() => { onClose(); onKey(); }} className="calm-chip" style={{ background: "var(--halo-a)", color: "var(--halo-ink)" }}>
+                      <CIcon name="key" size={12} /> Key active
                     </button>
                   </div>
-                  {KEYLESS_MODELS.map((m) => {
-                    const unlocked = modelUnlocked(m.id, access);
-                    const served = isServed(m, live);
-                    return (
-                      <Row key={m.id} active={unlocked && choice.kind === "keyless" && choice.id === m.id} onClick={() => { if (unlocked) { onPick({ kind: "keyless", id: m.id }); onClose(); } else { onClose(); onKey(); } }}>
-                        <span className="min-w-0">
-                          <span className="block truncate text-[14px]">{m.label}</span>
-                          <span className={sub}>{unlocked ? (served ? "Cloud · unlocked with your key" : "Busy on the free tier, uses GPT-OSS 20B") : "Locked · Requires Access Key"}</span>
-                        </span>
-                        {!unlocked && <CIcon name="lock" size={15} className="ml-auto shrink-0 opacity-45" />}
-                      </Row>
-                    );
-                  })}
+                  {[...new Set(apex.models.map((m) => m.group))].map((g) => (
+                    <div key={g}>
+                      <p className="px-3 pb-0.5 pt-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{g}</p>
+                      {apex.models.filter((m) => m.group === g).map((m) => {
+                        const served = isServed(m, apex.live);
+                        const fb = access.catalog ? servedLabel(access.catalog.fallbackApi) : "the always-on model";
+                        const isImg = m.kind === "image";
+                        return (
+                          <Row key={m.id} active={!isImg && choice.kind === "apex" && choice.id === m.id} onClick={() => { if (isImg) { onClose(); window.dispatchEvent(new CustomEvent("apex:goto", { detail: "studio" })); return; } onPick({ kind: "apex", id: m.id }); onClose(); }}>
+                            <span className="min-w-0">
+                              <span className="block truncate text-[14px]">{m.label}</span>
+                              <span className={sub}>{m.tag} · {served ? "Live" : isImg ? "Image Studio · routes to the fast engine" : `Routes to ${fb} right now`}</span>
+                            </span>
+                            {isImg && <CIcon name="image" size={15} className="ml-auto shrink-0 opacity-45" />}
+                          </Row>
+                        );
+                      })}
+                    </div>
+                  ))}
                 </>
               )}
             </div>
@@ -253,11 +273,11 @@ export function Drawer({ open, persistent, onClose, convos, activeId, onOpenConv
 
   const pill =
     update.s === "available" ? (
-      <button type="button" onClick={() => onNav("settings")} className="flex w-full items-center gap-2 rounded-2xl bg-[var(--halo-a)] px-3.5 py-2.5 text-left text-[12.5px] text-[var(--halo-ink)]">
-        <CIcon name="sparkle" size={15} /> <span className="min-w-0 flex-1">Update available ({update.latest})</span>
+      <button type="button" data-testid="drawer-update" onClick={() => { onClose(); openUpdateModal(); }} className="relative flex w-full items-center gap-2 rounded-2xl bg-[var(--halo-a)] px-3.5 py-2.5 text-left text-[12.5px] font-medium text-[var(--halo-ink)]">
+        <span className="relative grid h-5 w-5 place-items-center"><span className="upd-ping absolute inset-0 rounded-full" aria-hidden="true" /><CIcon name="sparkle" size={15} /></span> <span className="min-w-0 flex-1">Update {update.latest} available · Tap to install</span>
       </button>
     ) : (
-      <button type="button" onClick={() => onNav("settings")} className="flex w-full items-center gap-2 rounded-2xl bg-[var(--surface-2)] px-3.5 py-2.5 text-left text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">
+      <button type="button" onClick={() => { onClose(); openUpdateModal(); }} className="flex w-full items-center gap-2 rounded-2xl bg-[var(--surface-2)] px-3.5 py-2.5 text-left text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">
         <CIcon name={update.s === "error" ? "alert" : "check"} size={15} />
         <span className="min-w-0 flex-1">
           v{APP_VERSION} · {update.s === "checking" ? "Checking…" : update.s === "uptodate" ? `Up to date, checked ${ago(update.at)}` : update.s === "error" ? "Couldn't check for updates" : "Up to date"}
