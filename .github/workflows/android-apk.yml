@@ -87,7 +87,7 @@ jobs:
           export NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
           export ANDROID_NDK_HOME="$NDK_HOME"
           cargo tauri android build --apk --target aarch64 --features android
-      - name: Align, sign (v1+v2+v3) and verify
+      - name: Align, sign (v2+v3, v1 when apksigner emits it) and verify
         id: pack
         env:
           APEX_KEYSTORE_B64: ${{ secrets.APEX_KEYSTORE_B64 }}

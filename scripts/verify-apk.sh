@@ -13,10 +13,11 @@ ok() { echo "  ok  $*"; }
 echo "== apksigner verify (min SDK 26)"
 SIG="$(apksigner verify --verbose --print-certs --min-sdk-version 26 "$APK")" || fail "apksigner verify rejected the APK"
 echo "$SIG" | head -14
-echo "$SIG" | grep -q "v1 scheme (JAR signing): true" || fail "v1 signature missing"
 echo "$SIG" | grep -q "v2 scheme (APK Signature Scheme v2): true" || fail "v2 signature missing"
 echo "$SIG" | grep -q "v3 scheme (APK Signature Scheme v3): true" || fail "v3 signature missing"
-ok "v1 + v2 + v3 signatures verified"
+ok "v2 + v3 signatures verified (v1 is not evaluated for minSdk >= 24)"
+# v1 (JAR) is only needed below API 24; report it, never fail on it (verify with --min-sdk-version 26 skips it by design)
+if apksigner verify --verbose "$APK" 2>/dev/null | grep -q "v1 scheme (JAR signing): true"; then ok "v1 (JAR) signature also present"; else echo "  info v1 (JAR) signature absent: fine for minSdk 26"; fi
 
 echo "== zipalign"
 zipalign -c -P 16 4 "$APK" || fail "zip alignment check failed (zipalign -c -P 16 4)"
