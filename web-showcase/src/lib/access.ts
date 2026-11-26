@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { REPO } from "./site";
+import { assetUrl } from "./paths";
 
 /**
  * Keyless Cloud access control.
@@ -19,8 +20,7 @@ import { REPO } from "./site";
 
 export const REGISTRY_PATH = "web-showcase/public/config/keyless-registry.json";
 export const REGISTRY_RAW = `https://raw.githubusercontent.com/${REPO}/main/${REGISTRY_PATH}`;
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const REGISTRY_LOCAL = `${BASE}/config/keyless-registry.json`;
+const REGISTRY_LOCAL = assetUrl("config/keyless-registry.json");
 /** Default key documented in the PR and /admin so the owner can test immediately; revoke or rotate it any time. */
 export const DEFAULT_KEY = "APEX-PRO-2025";
 

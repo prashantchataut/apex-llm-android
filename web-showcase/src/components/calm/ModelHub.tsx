@@ -1,8 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { BLURBS, CATALOG, unregisterModel, type CatalogModel } from "@/lib/models";
+import { importLocalModel } from "@/lib/downloader";
 import { estimateRamMb } from "@/lib/engine";
 import { activateModel, cancelDownload, deleteModel, dlOf, pauseDownload, resumeDownload, startDownload, storageEstimate, type DlItem } from "@/lib/downloader";
 import { isNative } from "@/lib/native";
@@ -195,6 +196,20 @@ export function ModelHub({ dl, choice, onUse, loadingId, initialTab = "trending"
   const [tab, setTab] = useState<Tab>(initialTab);
   const [rev, setRev] = useState(0);
   const [store, setStore] = useState<{ used: number; quota: number } | null>(null);
+  const importRef = useRef<HTMLInputElement>(null);
+  const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const doImport = async (f: File | undefined) => {
+    if (!f) return;
+    setImportMsg({ ok: true, text: `Importing ${f.name}…` });
+    try {
+      const m = await importLocalModel(f);
+      setRev((r) => r + 1);
+      setImportMsg({ ok: true, text: `${f.name} is on this device. Tap Use to load it.` });
+      void m;
+    } catch (e) {
+      setImportMsg({ ok: false, text: e instanceof Error ? e.message : "Import failed" });
+    }
+  };
   useEffect(() => {
     void storageEstimate().then(setStore);
   }, [dl]);
@@ -230,6 +245,16 @@ export function ModelHub({ dl, choice, onUse, loadingId, initialTab = "trending"
             {t.label}
           </button>
         ))}
+      </div>
+
+      <div className="mb-4 flex items-center gap-3 rounded-[22px] bg-[var(--surface)] p-3 pl-4 shadow-[var(--specular),var(--shadow-card)]">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--surface-2)]"><CIcon name="import" size={17} /></span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-medium">Import local .gguf</p>
+          <p className="truncate text-[12px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]" aria-live="polite" style={importMsg && !importMsg.ok ? { color: "var(--bad)" } : undefined}>{importMsg?.text ?? "Pick a model from Downloads or any folder on this device"}</p>
+        </div>
+        <input ref={importRef} type="file" accept=".gguf,application/octet-stream,*/*" hidden data-testid="gguf-input" onChange={(e) => { void doImport(e.target.files?.[0]); e.target.value = ""; }} />
+        <button type="button" className="calm-btn" data-primary="true" onClick={() => importRef.current?.click()}>Choose file</button>
       </div>
 
       {tab === "uncensored" && (

@@ -10,7 +10,8 @@
  *  NOT implemented: Android `SpeechRecognizer` through a Tauri command (STUB — no such command exists in the Rust core).
  */
 
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+import { absoluteAssetUrl } from "./paths";
+
 const ASR_REPO = "Xenova/whisper-tiny.en";
 export const ASR_LABEL = "Whisper tiny.en · int8";
 
@@ -111,7 +112,7 @@ export function onAsrStatus(f: (s: AsrStatus) => void): () => void {
 export function loadAsr(): Promise<AsrPipeline> {
   if (asr) return asr;
   asr = (async () => {
-    const root = `${location.origin}${BASE}/vendor/transformers/`;
+    const root = absoluteAssetUrl("vendor/transformers/");
     const mod = (await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ `${root}transformers.web.min.js`)) as TransformersModule;
     mod.env.allowLocalModels = false;
     mod.env.useBrowserCache = true;

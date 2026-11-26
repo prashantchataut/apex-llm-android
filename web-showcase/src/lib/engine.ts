@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import type { Wllama } from "@wllama/wllama";
 import { CATALOG, type CatalogModel } from "./models";
 import { isNative } from "./native";
+import { assetUrl } from "./paths";
 
 /**
  * Execution backends, in the order the UI trusts them:
@@ -65,7 +66,6 @@ export interface GenOpts {
 }
 
 const ROUTER_KEY = "apex.router.v1";
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 export const MB = 1_000_000;
 
 export function modelUrl(m: CatalogModel): string {
@@ -121,6 +121,7 @@ export function saveRouter(cfg: RouterConfig | null) {
 /** Active backend for a chat turn (see {@link Backend}). */
 export function activeBackend(s: EngineSnapshot = snap): Backend {
   if (s.router?.enabled && s.router.baseUrl && s.router.model) return "external";
+  if (s.loaded.a && CATALOG.find((m) => m.id === s.loaded.a)?.imported) return "wllama";
   if (isNative() && s.nativeModel) return "native";
   if (s.loaded.a) return "wllama";
   return "sandbox";
@@ -140,7 +141,7 @@ async function instance(slot: Slot): Promise<Wllama> {
   const have = pool.get(slot);
   if (have) return have;
   const { Wllama } = await import("@wllama/wllama");
-  const w = new Wllama({ default: `${BASE}/wllama/wllama.wasm` }, { suppressNativeLog: true });
+  const w = new Wllama({ default: assetUrl("wllama/wllama.wasm") }, { suppressNativeLog: true });
   pool.set(slot, w);
   return w;
 }

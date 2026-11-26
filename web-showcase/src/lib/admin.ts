@@ -68,3 +68,19 @@ export async function publishRegistry(token: string, registry: Registry, sha: st
   const j = (await r.json()) as { content: { sha: string }; commit: { html_url: string } };
   return { sha: j.content.sha, commitUrl: j.commit.html_url };
 }
+
+/* ───────── generic JSON files (OTA model catalog) ───────── */
+export async function loadJsonFile<T>(token: string, path: string): Promise<{ data: T; sha: string }> {
+  const r = await fetch(`${API}/contents/${path}?ref=main&t=${Date.now()}`, { headers: headers(token), cache: "no-store" });
+  if (!r.ok) throw new Error(`Couldn't load ${path} (${r.status}).`);
+  const j = (await r.json()) as { content: string; sha: string };
+  return { data: JSON.parse(b64decode(j.content)) as T, sha: j.sha };
+}
+export async function publishJsonFile(token: string, path: string, data: unknown, sha: string, message: string): Promise<{ sha: string; commitUrl: string }> {
+  const body = { message, content: b64encode(`${JSON.stringify(data, null, 2)}\n`), sha, branch: "main" };
+  const r = await fetch(`${API}/contents/${path}`, { method: "PUT", headers: { ...headers(token), "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (r.status === 409 || r.status === 422) throw new Error("That file changed on GitHub since you loaded it. Reload and re-apply your change.");
+  if (!r.ok) throw new Error(`Publish failed (${r.status}). The token needs "contents: write" on ${REPO}.`);
+  const j = (await r.json()) as { content: { sha: string }; commit: { html_url: string } };
+  return { sha: j.content.sha, commitUrl: j.commit.html_url };
+}

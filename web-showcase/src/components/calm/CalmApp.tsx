@@ -15,7 +15,7 @@ import { learnFrom, memoryBlock, useMemories } from "@/lib/memory";
 import { useMcp } from "@/lib/mcp";
 import { CATALOG, UNCENSORED_PROMPT, type CatalogModel } from "@/lib/models";
 import { isNative } from "@/lib/native";
-import { toolsHint, useSkills } from "@/lib/skills";
+import { getGithubToken, toolsHint, useSkills } from "@/lib/skills";
 import { deleteConvo, getConvo, pinConvo, readMode, renameConvo, saveConvo, setChoice, useChoice, useConvos, writeMode, type Choice, type CalmMode } from "@/lib/store";
 import { checkForUpdate, useUpdater } from "@/lib/updater";
 import { APP_VERSION } from "@/lib/version";
@@ -33,6 +33,11 @@ import { Onboarding } from "./Onboarding";
 import { AccessKeyModal } from "./AccessKeyModal";
 import { gateKeyless, getAccess, startAccessWatch, useAccess } from "@/lib/access";
 import { SettingsView } from "./SettingsView";
+import { LiveVoice } from "./LiveVoice";
+import { SourceSheet, VaultView } from "./VaultView";
+import { buildRagContext, hasVault, loadVault, search as vaultSearch, useVault } from "@/lib/rag";
+import { syncOta } from "@/lib/ota";
+import { useBackLayer } from "@/lib/backstack";
 
 const newId = () => Math.random().toString(36).slice(2, 10);
 
@@ -54,6 +59,9 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   const [onboard, setOnboard] = useState(false);
   const [hubTab, setHubTab] = useState<"trending" | "uncensored" | "search">("trending");
   const [keyModal, setKeyModal] = useState(false);
+  const [live, setLive] = useState(false);
+  const [cite, setCite] = useState<string | null>(null);
+  const [vaultOn, setVaultOn] = useState(true);
 
   const chat = useChat();
   const cart = useCartridges();
@@ -66,6 +74,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   const update = useUpdater();
   const kb = useKeyboardInset();
   const access = useAccess();
+  const vault = useVault();
   const composer = useRef<ComposerHandle>(null);
   const toastTimer = useRef<number | null>(null);
 
@@ -80,6 +89,14 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     }
     setMode(!embedded && !stored ? "dark" : readMode());
     startAccessWatch();
+    try {
+      setVaultOn(localStorage.getItem("apex.vault.on") !== "0");
+    } catch {
+      /* private mode */
+    }
+    void syncOta();
+    const onCite = (e: Event) => setCite(String((e as CustomEvent).detail));
+    window.addEventListener("apex:cite", onCite);
     if (!embedded && !new URLSearchParams(window.location.search).has("skip-intro")) {
       try {
         if (!localStorage.getItem("apex.onboarded")) setOnboard(true);
@@ -93,7 +110,10 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     mq.addEventListener("change", f);
     void refreshLive();
     void checkForUpdate();
-    return () => mq.removeEventListener("change", f);
+    return () => {
+      mq.removeEventListener("change", f);
+      window.removeEventListener("apex:cite", onCite);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const resolved = mode === "system" ? (sysDark ? "dark" : "light") : mode;
@@ -118,6 +138,12 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     saveConvo(convoId, snapshot(), (first?.text ?? "New chat").replace(/\s+/g, " ").slice(0, 48));
   }, [msgs, busy, convoId, snapshot]);
 
+  /* Android back gesture / browser back closes the top overlay before it can leave the app */
+  useBackLayer(drawer, () => setDrawer(false));
+  useBackLayer(view !== "chat", () => setView("chat"));
+  useBackLayer(keyModal, () => setKeyModal(false));
+  useBackLayer(!!zoom, () => setZoom(null));
+
   const goView = (v: View) => {
     setView(v);
     setDrawer(false);
@@ -141,7 +167,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
 
   const activate = useCallback(
     async (m: CatalogModel): Promise<boolean> => {
-      if (isNative() || getEngineSnapshot().loaded.a === m.id) return true;
+      if ((isNative() && !m.imported) || getEngineSnapshot().loaded.a === m.id) return true;
       setLoadingId(m.id);
       try {
         await activateModel(m.id);
@@ -220,8 +246,13 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     if (choice.kind === "local" && localModel && !(await activate(localModel))) return;
     const added = learnFrom(t);
     const tools = choice.kind === "keyless";
-    const system = systemPromptFor(cart.selected) + memoryBlock() + (localModel?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (tools ? toolsHint(skills) : "");
-    chat.send(t || "Summarize the attached file.", { attachments: atts, cartridge: cart.selected, ctx: cart.selected.ctx, system, choice, skills, tools, memNote: added.map((m) => m.text), voiceMs });
+    let rag: { block: string; tags: string[] } = { block: "", tags: [] };
+    if (vaultOn && t) {
+      await loadVault();
+      if (hasVault()) rag = buildRagContext(vaultSearch(t, 4));
+    }
+    const system = systemPromptFor(cart.selected) + memoryBlock() + rag.block + (localModel?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (tools ? toolsHint(skills) : "");
+    chat.send(t || "Summarize the attached file.", { attachments: atts, cartridge: cart.selected, ctx: cart.selected.ctx, system, choice, skills, tools, memNote: added.map((m) => m.text), voiceMs, sources: rag.tags });
   };
   const opts = () => ({ cartridge: cart.selected, ctx: cart.selected.ctx, system: systemPromptFor(cart.selected) + memoryBlock() + (localModel?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (choice.kind === "keyless" ? toolsHint(skills) : ""), choice, skills, tools: choice.kind === "keyless" });
 
@@ -269,12 +300,13 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
         view={view}
         onNav={goView}
         update={update}
-        hints={{ hub: installed ? `${installed} on device` : undefined, memory: memActive ? String(memActive) : undefined, mcp: toolCount ? `${toolCount} tools` : undefined, lan: ":11434", settings: `v${APP_VERSION}` }}
+        hints={{ hub: installed ? `${installed} on device` : undefined, vault: vault.docs.length ? `${vault.docs.length} docs` : undefined, memory: memActive ? String(memActive) : undefined, mcp: toolCount ? `${toolCount} tools` : undefined, lan: ":11434", settings: `v${APP_VERSION}` }}
       />
 
       <motion.div className="relative flex min-w-0 flex-1 flex-col" initial={false} animate={{ paddingBottom: kb }} transition={{ type: "spring", stiffness: 520, damping: 46, mass: 0.6 }}>
         <div className="calm-glow" aria-hidden="true" />
-        <Header persistent={persistent} onMenu={() => setDrawer(true)} label={label} onPill={() => setSheet(true)} onNew={newChat} />
+        <Header persistent={persistent} onMenu={() => setDrawer(true)} label={label} onPill={() => setSheet((o) => !o)} onNew={newChat}>
+            </Header>
 
         <main className={`relative z-[1] min-h-0 flex-1 ${view === "chat" ? "overflow-hidden" : "scroll-quiet overflow-y-auto"}`}>
           <AnimatePresence mode="wait" initial={false}>
@@ -300,6 +332,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
               {view === "hub" && <ModelHub key={hubTab} initialTab={hubTab} dl={dl} choice={choice} onUse={useLocal} loadingId={loadingId} />}
               {view === "studio" && <ImageStudio onUseInChat={useImageInChat} onZoom={(url, prompt) => setZoom({ url, prompt })} />}
               {view === "memory" && <MemoryView />}
+              {view === "vault" && <VaultView ghToken={getGithubToken()} enabled={vaultOn} setEnabled={(v) => { setVaultOn(v); try { localStorage.setItem("apex.vault.on", v ? "1" : "0"); } catch { /* ignore */ } }} />}
               {view === "mcp" && <McpView />}
               {view === "lan" && (
                 <div className="mx-auto w-full max-w-[720px] px-5 pb-10 pt-3">
@@ -329,13 +362,17 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
               statusLeft={choice.kind === "keyless" ? (keyOk ? "Keyless Cloud · key active" : "Keyless Cloud · locked") : `On-device · ${localModel ? shortModelName(localModel) : "model"}`}
               statusRight={update.s === "available" ? { label: "Update available", onClick: () => goView("settings") } : { label: "Switch Engine", onClick: () => setSheet(true) }}
               onOpenMcp={() => goView("mcp")}
+              onLive={() => setLive(true)}
             />
           </div>
         )}
+
+        <ModelSheet open={sheet} onClose={() => setSheet(false)} choice={choice} onPick={pick} dl={dl} onHub={(t) => { setHubTab(t); goView("hub"); }} loading={loadingId} access={access} onKey={() => setKeyModal(true)} />
       </motion.div>
 
-      <ModelSheet open={sheet} onClose={() => setSheet(false)} choice={choice} onPick={pick} dl={dl} onHub={(t) => { setHubTab(t); goView("hub"); }} loading={loadingId} access={access} onKey={() => setKeyModal(true)} />
       <AccessKeyModal open={keyModal} onClose={() => setKeyModal(false)} onUnlocked={() => say("Keyless Cloud unlocked. Local models stay free.")} />
+      <LiveVoice open={live} onClose={() => { setLive(false); say("Voice session saved to this chat."); }} msgs={chat.msgs} busy={chat.busy} modelLabel={label} onSend={(t, ms) => void send(t, [], ms)} onStopChat={chat.stop} />
+      <SourceSheet cite={cite} onClose={() => setCite(null)} />
       <Lightbox img={zoom} onClose={() => setZoom(null)} />
       <Toast text={toast} />
       {onboard && (

@@ -601,6 +601,7 @@ html.is-android { --safe-top-default: 38px; --safe-bottom-default: 14px; }
 .pt-safe-lg { padding-top: calc(max(env(safe-area-inset-top, 0px), var(--safe-top, var(--safe-top-default, 0px))) + 16px); }
 .pb-safe { padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), var(--safe-bottom, var(--safe-bottom-default, 0px))) + 8px); }
 .pb-safe-lg { padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), var(--safe-bottom, var(--safe-bottom-default, 0px))) + 16px); }
+.top-pop { top: calc(max(env(safe-area-inset-top, 0px), var(--safe-top, var(--safe-top-default, 0px))) + 58px); }
 .top-safe { top: calc(max(env(safe-area-inset-top, 0px), var(--safe-top, var(--safe-top-default, 0px))) + 10px); }
 /* the embedded landing demo is a framed device, not the real screen: no system bars to clear */
 .calm[data-embedded="true"] .pt-safe, .calm[data-embedded="true"] .pt-safe-lg { padding-top: 12px; }
@@ -614,3 +615,19 @@ html.is-android { --safe-top-default: 38px; --safe-bottom-default: 14px; }
 .calm .text-ink { color: rgb(var(--ink-rgb)); }
 .calm .text-ink-2 { color: rgb(var(--ink-rgb) / var(--ink-2-a)); }
 .calm .text-ink-3 { color: rgb(var(--ink-rgb) / var(--ink-3-a)); }
+
+/* ───── Session 10: citations, floating popover, live voice, vault ───── */
+.calm .cite-chip, .cite-chip { display: inline-flex; align-items: center; gap: 4px; margin: 0 2px; padding: 1px 9px; min-height: 22px; border-radius: 999px; font: 450 11.5px/1.5 var(--font-mono, ui-monospace, monospace); letter-spacing: 0; vertical-align: 1px; background: var(--halo-a); color: var(--halo-ink); cursor: pointer; transition: transform .18s cubic-bezier(.23,1,.32,1), filter .18s; max-width: 100%; }
+.calm .cite-chip:active { transform: scale(.96); }
+.calm .cite-chip::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .7; }
+.pop-in { transform-origin: top center; }
+.meter { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.meter > i { display: block; height: 100%; border-radius: inherit; background: var(--halo-ink); transition: width .5s cubic-bezier(.23,1,.32,1); }
+.live-orb { --lvl: 0; width: 168px; height: 168px; border-radius: 50%; position: relative; transform: scale(calc(1 + var(--lvl) * .22)); transition: transform .08s linear; background: radial-gradient(circle at 34% 28%, color-mix(in oklab, var(--orb, #7aa2ff) 55%, white) 0%, var(--orb, #7aa2ff) 38%, color-mix(in oklab, var(--orb, #7aa2ff) 40%, black) 100%); box-shadow: 0 0 calc(40px + var(--lvl) * 90px) calc(var(--lvl) * 18px) color-mix(in oklab, var(--orb, #7aa2ff) 38%, transparent), inset 0 2px 0 rgba(255,255,255,.28); }
+.live-orb[data-state="thinking"] { animation: orb-think 1.6s ease-in-out infinite; }
+@keyframes orb-think { 0%,100% { filter: saturate(.8) brightness(.9); } 50% { filter: saturate(1.2) brightness(1.12); } }
+@media (prefers-reduced-motion: reduce) { .live-orb[data-state="thinking"] { animation: none; } .live-orb { transition: none; } }
+.live-bar { width: 5px; border-radius: 3px; background: currentColor; transition: height .09s linear; }
+.seg { display: inline-grid; grid-auto-flow: column; padding: 3px; border-radius: 999px; background: var(--surface-2); gap: 2px; }
+.seg button { min-height: 32px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; transition: background .18s, color .18s; }
+.seg button[aria-pressed="true"] { background: var(--surface); box-shadow: var(--specular), var(--shadow-card); }

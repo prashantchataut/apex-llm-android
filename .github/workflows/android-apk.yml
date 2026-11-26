@@ -8,7 +8,7 @@ on:
     inputs:
       tag:
         description: Release tag to publish to (created if missing)
-        default: v0.7.0
+        default: v0.9.0
   push:
     tags: ["v*"]
 
@@ -90,11 +90,18 @@ jobs:
           path: |
             apex-llm-*.apk
             apex-llm-*.sha256
-      - name: Publish GitHub Release asset
+      - name: Publish GitHub Release asset (with retries: uploads.github.com occasionally answers 502)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          NOTES="Live Voice mode (hands-free listen, think, speak loop), on-device Knowledge Vault with clickable [Source: file#L12] citations, floating model switcher with Eject and RAM meter, local .gguf import from device storage, Android back-gesture handling, GitHub Pages /admin 404 fallback, OTA model catalog editor in /admin. Android arm64-v8a build. Default Keyless access key for testing: APEX-PRO-2025 (rotate or revoke it in /admin)."
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --latest --target "${GITHUB_SHA}" --title "Apex LLM ${TAG}" --notes "Local-first onboarding with a 1-tap starter model, Android status-bar safe-area fix, Keyless Cloud access keys managed from /admin, plus the Obsidian dark mode from PR #6. Android arm64-v8a build. Default Keyless access key for testing: APEX-PRO-2025 (rotate or revoke it in /admin)."
+            gh release create "$TAG" --latest --target "${GITHUB_SHA}" --title "Apex LLM ${TAG}" --notes "$NOTES"
           fi
-          gh release upload "$TAG" apex-llm-*.apk apex-llm-*.sha256 --clobber
+          for attempt in 1 2 3 4 5; do
+            if gh release upload "$TAG" apex-llm-*.apk apex-llm-*.sha256 --clobber; then
+              echo "uploaded on attempt $attempt"; exit 0
+            fi
+            echo "upload attempt $attempt failed, retrying in $((attempt * 20))s"; sleep $((attempt * 20))
+          done
+          echo "all upload attempts failed"; exit 1

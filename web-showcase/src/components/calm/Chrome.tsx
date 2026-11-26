@@ -3,7 +3,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CATALOG } from "@/lib/models";
-import { shortModelName } from "@/lib/engine";
+import { estimateRamMb, shortModelName, unloadWllama, useEngine } from "@/lib/engine";
+import { useBackLayer } from "@/lib/backstack";
 import { KEYLESS_MODELS, isServed, useKeylessLive } from "@/lib/keyless";
 import { modelUnlocked, type Access } from "@/lib/access";
 import { downloadImage } from "@/lib/images";
@@ -13,9 +14,9 @@ import type { Choice, Convo } from "@/lib/store";
 import { CIcon, type CIconName } from "./icons";
 import type { DlItem } from "@/lib/downloader";
 
-export type View = "chat" | "hub" | "studio" | "memory" | "mcp" | "lan" | "settings";
+export type View = "chat" | "hub" | "studio" | "memory" | "vault" | "mcp" | "lan" | "settings";
 
-export function Header({ persistent, onMenu, label, onPill, onNew }: { persistent: boolean; onMenu: () => void; label: string; onPill: () => void; onNew: () => void }) {
+export function Header({ persistent, onMenu, label, onPill, onNew, children }: { persistent: boolean; onMenu: () => void; label: string; onPill: () => void; onNew: () => void; children?: ReactNode }) {
   return (
     <header className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 pb-2 pt-safe">
       <div className="flex">
@@ -41,6 +42,7 @@ export function Header({ persistent, onMenu, label, onPill, onNew }: { persisten
           <CIcon name="pencil" size={20} />
         </button>
       </div>
+      {children}
     </header>
   );
 }
@@ -72,72 +74,125 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   );
 }
 
+type PopTab = "local" | "uncensored" | "cloud";
+
+/** BeautifulUI-style floating popover under the header pill: 1-tap switching, inline Eject, live RAM meter. */
 export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, access, onKey }: { open: boolean; onClose: () => void; choice: Choice; onPick: (c: Choice) => void; dl: Record<string, DlItem>; onHub: (tab: "trending" | "uncensored" | "search") => void; loading: string | null; access: Access; onKey: () => void }) {
   const live = useKeylessLive();
+  const eng = useEngine();
+  const localChoice = choice.kind === "local" ? CATALOG.find((m) => m.id === choice.id) : undefined;
+  const [tab, setTab] = useState<PopTab>("local");
+  useBackLayer(open, onClose);
+  useEffect(() => {
+    if (open) setTab(choice.kind === "keyless" ? "cloud" : localChoice?.uncensored ? "uncensored" : "local");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const f = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", f);
+    return () => window.removeEventListener("keydown", f);
+  }, [open, onClose]);
+
   const installed = CATALOG.filter((m) => dl[m.id]?.status === "done");
+  const list = installed.filter((m) => (tab === "uncensored" ? !!m.uncensored : !m.uncensored));
+  const loadedModel = CATALOG.find((m) => m.id === eng.loaded.a);
+  const usedMb = loadedModel ? estimateRamMb(loadedModel) : 0;
+  const devGb = typeof navigator !== "undefined" ? (navigator as Navigator & { deviceMemory?: number }).deviceMemory : undefined;
+  const capMb = (devGb ?? 8) * 1000 * 0.6;
+  const pct = Math.min(100, Math.round((usedMb / capMb) * 100));
   const sub = "block truncate text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]";
-  const head = "px-3 pb-1 pt-4 text-[13px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]";
   const Row = ({ active, children, onClick, disabled }: { active: boolean; children: ReactNode; onClick: () => void; disabled?: boolean }) => (
-    <button type="button" onClick={onClick} disabled={disabled} aria-pressed={active} className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl px-3 text-left transition-colors hover:bg-[var(--surface-2)] disabled:opacity-50" style={active ? { background: "var(--halo-a)" } : undefined}>
+    <button type="button" onClick={onClick} disabled={disabled} aria-pressed={active} className="flex min-h-[50px] w-full items-center gap-3 rounded-2xl px-3 text-left transition-colors hover:bg-[var(--surface-2)] disabled:opacity-50" style={active ? { background: "var(--halo-a)" } : undefined}>
       {children}
-      {active && <CIcon name="check" size={17} className="ml-auto shrink-0 text-[var(--halo-ink)]" />}
+      {active && <CIcon name="check" size={16} className="ml-auto shrink-0 text-[var(--halo-ink)]" />}
     </button>
   );
-  const go = (tab: "trending" | "uncensored" | "search") => {
+  const go = (t: "trending" | "uncensored" | "search") => {
     onClose();
-    onHub(tab);
+    onHub(t);
   };
-  const nTrend = CATALOG.filter((m) => !m.uncensored && m.group !== "custom").length;
-  const nUnc = CATALOG.filter((m) => m.uncensored).length;
+
   return (
-    <Sheet open={open} onClose={onClose} title="Choose a model">
-      <p className="px-3 pb-1 pt-2 text-[13px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">On this device · free, private, offline</p>
-      {installed.length === 0 && <p className="px-3 pb-2 text-[13px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">No local models mounted yet. Download one below, it takes about a minute.</p>}
-      {installed.map((m) => (
-        <Row key={m.id} disabled={loading === m.id} active={choice.kind === "local" && choice.id === m.id} onClick={() => { onPick({ kind: "local", id: m.id }); onClose(); }}>
-          <span className="min-w-0">
-            <span className="block truncate text-[14px]">{shortModelName(m)}{m.uncensored ? " · Uncensored" : ""}</span>
-            <span className={sub}>{loading === m.id ? "Loading into memory…" : `${(m.sizeGB * 1000).toFixed(0)} MB · Runs offline`}</span>
-          </span>
-        </Row>
-      ))}
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div className="fixed inset-0 z-30 bg-black/15 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} aria-hidden="true" />
+          <motion.div role="dialog" aria-label="Choose a model" data-testid="model-popover" initial={{ opacity: 0, y: -8, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ type: "spring", stiffness: 460, damping: 34 }} className="calm-card pop-in absolute left-1/2 top-pop z-40 max-h-[min(70dvh,560px)] w-[min(380px,calc(100vw-24px))] -translate-x-1/2 overflow-y-auto p-2">
+            <div className="rounded-2xl bg-[var(--surface-2)] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[12px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Memory in use</p>
+                  <p className="tnum truncate text-[14px] font-medium">{loadedModel ? `${shortModelName(loadedModel)} · ${usedMb >= 1000 ? `${(usedMb / 1000).toFixed(1)} GB` : `${usedMb} MB`}` : "No model loaded"}</p>
+                </div>
+                <button type="button" onClick={() => void unloadWllama("a")} disabled={!loadedModel} aria-label="Eject the loaded model from memory" className="calm-btn !min-h-9 !px-3.5 disabled:opacity-40">
+                  <CIcon name="eject" size={15} /> Eject
+                </button>
+              </div>
+              <div className="meter mt-2.5" role="progressbar" aria-label="Estimated model memory" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+                <i style={{ width: `${loadedModel ? Math.max(4, pct) : 0}%` }} />
+              </div>
+              <p className="mt-1.5 text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{devGb ? `of about ${(capMb / 1000).toFixed(1)} GB usable on this ${devGb} GB device` : "Estimated against 4.8 GB of usable memory"}</p>
+            </div>
 
-      <p className={head}>Download local models</p>
-      {([
-        ["trending", "cube", "Trending phone models", `${nTrend} models · from 145 MB`],
-        ["uncensored", "unlock", "Uncensored & abliterated", `${nUnc} models · no refusals`],
-        ["search", "search", "Search Hugging Face", "Any public GGUF"],
-      ] as const).map(([tab, icon, t, d]) => (
-        <Row key={tab} active={false} onClick={() => go(tab)}>
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--surface-2)]"><CIcon name={icon} size={16} /></span>
-          <span className="min-w-0">
-            <span className="block truncate text-[14px]">{t}</span>
-            <span className={sub}>{d}</span>
-          </span>
-          <CIcon name="chevron" size={14} className="ml-auto -rotate-90 opacity-40" />
-        </Row>
-      ))}
+            <div className="seg mt-2 w-full" style={{ gridAutoColumns: "1fr" }} role="tablist" aria-label="Model source">
+              {([["local", "Local"], ["uncensored", "Uncensored"], ["cloud", "Cloud"]] as const).map(([id, l]) => (
+                <button key={id} type="button" role="tab" aria-selected={tab === id} aria-pressed={tab === id} onClick={() => setTab(id)}>
+                  {l}
+                </button>
+              ))}
+            </div>
 
-      <div className="flex items-center justify-between px-3 pb-1 pt-4">
-        <p className="text-[13px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Keyless Cloud</p>
-        <button type="button" onClick={() => { onClose(); onKey(); }} className="calm-chip" style={access.state === "active" ? { background: "var(--halo-a)", color: "var(--halo-ink)" } : undefined}>
-          <CIcon name={access.state === "active" ? "key" : "lock"} size={12} /> {access.state === "active" ? "Key active" : "Enter key"}
-        </button>
-      </div>
-      {KEYLESS_MODELS.map((m) => {
-        const unlocked = modelUnlocked(m.id, access);
-        const served = isServed(m, live);
-        return (
-          <Row key={m.id} active={unlocked && choice.kind === "keyless" && choice.id === m.id} onClick={() => { if (unlocked) { onPick({ kind: "keyless", id: m.id }); onClose(); } else { onClose(); onKey(); } }}>
-            <span className="min-w-0">
-              <span className="block truncate text-[14px]">{m.label}</span>
-              <span className={sub}>{unlocked ? (served ? "Cloud · unlocked with your key" : "Busy on the free tier, uses GPT-OSS 20B") : "Locked · Requires Access Key"}</span>
-            </span>
-            {!unlocked && <CIcon name="lock" size={15} className="ml-auto shrink-0 opacity-45" />}
-          </Row>
-        );
-      })}
-    </Sheet>
+            <div className="mt-1.5">
+              {tab !== "cloud" && (
+                <>
+                  {list.length === 0 && <p className="px-3 py-3 text-[13px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{tab === "uncensored" ? "No uncensored models installed yet." : "No local models mounted yet."}</p>}
+                  {list.map((m) => (
+                    <Row key={m.id} disabled={loading === m.id} active={choice.kind === "local" && choice.id === m.id} onClick={() => { onPick({ kind: "local", id: m.id }); onClose(); }}>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[14px]">{shortModelName(m)}</span>
+                        <span className={sub}>{loading === m.id ? "Loading into memory…" : eng.loaded.a === m.id ? `${(m.sizeGB * 1000).toFixed(0)} MB · In memory` : `${(m.sizeGB * 1000).toFixed(0)} MB · On device`}</span>
+                      </span>
+                    </Row>
+                  ))}
+                  <Row active={false} onClick={() => go(tab === "uncensored" ? "uncensored" : "trending")}>
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--surface-2)]"><CIcon name={tab === "uncensored" ? "unlock" : "download"} size={16} /></span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[14px]">{tab === "uncensored" ? "Get uncensored models" : "Get more models"}</span>
+                      <span className={sub}>{tab === "uncensored" ? `${CATALOG.filter((m) => m.uncensored).length} abliterated GGUFs` : "Trending, search or import a .gguf file"}</span>
+                    </span>
+                    <CIcon name="chevron" size={14} className="ml-auto -rotate-90 opacity-40" />
+                  </Row>
+                </>
+              )}
+              {tab === "cloud" && (
+                <>
+                  <div className="flex items-center justify-between px-3 pb-1 pt-1.5">
+                    <p className="text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Keyless Cloud</p>
+                    <button type="button" onClick={() => { onClose(); onKey(); }} className="calm-chip" style={access.state === "active" ? { background: "var(--halo-a)", color: "var(--halo-ink)" } : undefined}>
+                      <CIcon name={access.state === "active" ? "key" : "lock"} size={12} /> {access.state === "active" ? "Key active" : "Enter key"}
+                    </button>
+                  </div>
+                  {KEYLESS_MODELS.map((m) => {
+                    const unlocked = modelUnlocked(m.id, access);
+                    const served = isServed(m, live);
+                    return (
+                      <Row key={m.id} active={unlocked && choice.kind === "keyless" && choice.id === m.id} onClick={() => { if (unlocked) { onPick({ kind: "keyless", id: m.id }); onClose(); } else { onClose(); onKey(); } }}>
+                        <span className="min-w-0">
+                          <span className="block truncate text-[14px]">{m.label}</span>
+                          <span className={sub}>{unlocked ? (served ? "Cloud · unlocked with your key" : "Busy on the free tier, uses GPT-OSS 20B") : "Locked · Requires Access Key"}</span>
+                        </span>
+                        {!unlocked && <CIcon name="lock" size={15} className="ml-auto shrink-0 opacity-45" />}
+                      </Row>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -145,6 +200,7 @@ const NAV: { id: View; icon: CIconName; label: string }[] = [
   { id: "hub", icon: "cube", label: "Models" },
   { id: "studio", icon: "image", label: "Image Studio" },
   { id: "memory", icon: "tree", label: "Memory" },
+  { id: "vault", icon: "db", label: "Knowledge Vault" },
   { id: "mcp", icon: "plug", label: "Skills & MCP" },
   { id: "lan", icon: "server", label: "Local server" },
   { id: "settings", icon: "gear", label: "Settings" },

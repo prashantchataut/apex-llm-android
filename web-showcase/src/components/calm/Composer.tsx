@@ -26,13 +26,14 @@ interface Props {
   statusLeft: string;
   statusRight: { label: string; onClick: () => void };
   onOpenMcp: () => void;
+  onLive: () => void;
 }
 
 /**
  * Unified Halo Composer. Home state: a two-line card with every action tucked inside its bottom-left and a status strip on top.
  * After the first message it compacts into a single input pill (+ / mic / send) so the conversation gets the height.
  */
-export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, imageMode, setImageMode, statusLeft, statusRight, onOpenMcp }: Props) {
+export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, imageMode, setImageMode, statusLeft, statusRight, onOpenMcp, onLive }: Props) {
   const [atts, setAtts] = useState<Attachment[]>([]);
   const [menu, setMenu] = useState<null | "skills" | "plus">(null);
   const skills = useSkills();
@@ -174,6 +175,7 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
         { l: "Attach file", i: "clip" as const, f: () => fileRef.current?.click() },
         { l: "Photo", i: "image" as const, f: () => photoRef.current?.click() },
         { l: imageMode ? "Image mode · on" : "Image mode", i: "image" as const, f: () => { setImageMode(!imageMode); setMenu(null); } },
+        { l: "Live voice", i: "wave" as const, f: () => { setMenu(null); onLive(); } },
         { l: "Skills & MCP", i: "plug" as const, f: () => setMenu("skills") },
       ].map((x) => (
         <button key={x.l} type="button" role="menuitem" onClick={x.f} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-[13.5px] hover:bg-[var(--surface-2)]">
@@ -202,6 +204,9 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
               <button type="button" className="ibtn" aria-label={voice.recording ? "Stop recording" : "Voice input"} data-on={voice.recording} onClick={toggleMic}>
                 <CIcon name="mic" size={19} />
               </button>
+              <button type="button" className="ibtn" aria-label="Start live voice session" title="Live voice" data-testid="live-btn" onClick={onLive}>
+                <CIcon name="wave" size={19} />
+              </button>
               {sendBtn}
             </div>
           </motion.div>
@@ -228,6 +233,9 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
                 </button>
                 <button type="button" className="ibtn" aria-label={voice.recording ? "Stop recording" : "Voice input"} data-on={voice.recording} onClick={toggleMic}>
                   <CIcon name="mic" size={19} />
+                </button>
+                <button type="button" className="ibtn" aria-label="Start live voice session" title="Live voice" data-testid="live-btn" onClick={onLive}>
+                  <CIcon name="wave" size={19} />
                 </button>
                 <span className="flex-1" />
                 {sendBtn}

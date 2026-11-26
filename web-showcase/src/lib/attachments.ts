@@ -36,7 +36,7 @@ export function chunkText(text: string, size = 1200): string[] {
 const id = () => Math.random().toString(36).slice(2, 9);
 
 /** Best-effort text extraction for simple PDFs (Flate streams + Tj/TJ operators). Scanned/encrypted PDFs yield "". */
-async function pdfText(buf: ArrayBuffer): Promise<string> {
+export async function pdfText(buf: ArrayBuffer): Promise<string> {
   const bytes = new Uint8Array(buf);
   const latin = new TextDecoder("latin1").decode(bytes);
   const parts: string[] = [];

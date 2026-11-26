@@ -79,6 +79,12 @@ interface LocalModel {
   loaded: boolean;
 }
 
+/** Guarantee that retrieved Knowledge Vault sources are visible (as clickable citations) even if a small model skipped them. */
+function withSources(text: string, sources?: string[]): string {
+  if (!sources?.length || /\[Source:/i.test(text)) return text;
+  return `${text}\n\n${sources.join(" ")}`;
+}
+
 export const MODEL_KEY = "apex.model.v1";
 
 /** Pretty label for a GGUF filename: `SmolLM2-135M-Instruct-Q3_K_M.gguf` → `SmolLM2-135M-Instruct · Q3_K_M`. */
@@ -102,6 +108,8 @@ export interface SendOpts {
   tools?: boolean;
   memNote?: string[];
   voiceMs?: number;
+  /** Knowledge Vault citation tags retrieved for this turn; appended to the reply when the model forgot to cite. */
+  sources?: string[];
 }
 
 export interface BranchInfo {
@@ -320,7 +328,7 @@ export function useChat() {
             haptic("reasoningDone");
             patch((m) => ({
               streaming: false,
-              text: m.text || (m.steps?.length ? m.steps.join("\n\n") : "The model returned an empty reply — tap regenerate to try again."),
+              text: withSources(m.text || (m.steps?.length ? m.steps.join("\n\n") : "The model returned an empty reply — tap regenerate to try again."), opts.sources),
               thinkEnd: performance.now(),
               stats: { ...res.st, ramMb: backend === "wllama" ? estimateRamMb(cat) : undefined, temperature, topP },
               engine: backend === "keyless" ? { backend, label: `${servedLabel(served)} · Keyless`, cartridge: cartName } : m.engine,

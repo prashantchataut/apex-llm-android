@@ -23,11 +23,22 @@ export function Math({ src, display = false }: { src: string; display?: boolean 
 
 /** **bold** + `code` micro-markdown inside plain text. */
 function Inline({ text }: { text: string }) {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[Source:[^\]\n]+\])/g);
   return (
     <>
       {parts.map((p, i) =>
-        p.startsWith("**") && p.endsWith("**") && p.length > 4 ? (
+        /^\[Source:/i.test(p) ? (
+          <button
+            key={i}
+            type="button"
+            data-cite={p}
+            onClick={() => window.dispatchEvent(new CustomEvent("apex:cite", { detail: p }))}
+            className="cite-chip"
+            title="Open the source excerpt"
+          >
+            {p.replace(/^\[Source:\s*/i, "").replace(/\]$/, "")}
+          </button>
+        ) : p.startsWith("**") && p.endsWith("**") && p.length > 4 ? (
           <strong key={i} className="font-medium text-white">
             {p.slice(2, -2)}
           </strong>
