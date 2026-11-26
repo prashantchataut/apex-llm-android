@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit",
     "predev": "node scripts/vendor-assets.mjs",
     "prebuild": "node scripts/vendor-assets.mjs",
-    "prebuild:app": "node scripts/vendor-assets.mjs"
+    "prebuild:app": "node scripts/vendor-assets.mjs",
+    "postbuild": "node scripts/postbuild.mjs",
+    "postbuild:app": "node scripts/postbuild.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.2",
