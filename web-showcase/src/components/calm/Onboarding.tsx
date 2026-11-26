@@ -298,7 +298,7 @@ export function Onboarding({ theme, onTheme, onDone }: { theme: Theme; onTheme: 
                   {keyOpen && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.28 }} className="overflow-hidden">
                       <div className="px-4 pb-4">
-                        <input className="calm-field !rounded-full !font-mono" value={keyVal} onChange={(e) => setKeyVal(e.target.value)} placeholder="sk-apex-…" autoComplete="off" autoCapitalize="off" spellCheck={false} aria-label="Apex API key" />
+                        <input className="calm-field !rounded-full !font-mono" value={keyVal} onChange={(e) => setKeyVal(e.target.value)} placeholder="Paste your Apex API key" autoComplete="off" autoCapitalize="off" spellCheck={false} aria-label="Apex API key" />
                         <div className="mt-2.5 flex min-h-8 items-center justify-between gap-2">
                           {keyBusy && keyVal.trim().length >= 4 ? (
                             <StatusBadge state="checking">Checking…</StatusBadge>

@@ -1,3 +1,24 @@
+# STATE — last updated: end of Session 12 (branch feat/session-12-editable-admin-keys-and-v110, PR #10)
+
+## [SESSION 12 — WHAT ACTUALLY HAPPENED]
+- **PR #9 was already merged** into `main` when the session started (merge commit ce63068). Nothing to merge.
+- **Zero-secret audit**: `git grep` over every commit for `ghp_` / `github_pat_` / `gho_` and a tree scan: no token anywhere. After the build, `out/` was scanned for PAT-shaped strings, the master key, the admin passphrase and provider URLs: none. The `/admin` PAT lives in React state only (`type=password`, `autocomplete=off`), is wiped on `pagehide` AND `beforeunload`, idle 15 min and tab-hidden 5 min; localStorage holds only the brute-force back-off counter. Playwright asserts the PAT is absent from localStorage / sessionStorage / URL and from every commit body. The Zero-Trust badge is shown on the gate and inside the console.
+- **Vault schema 3 (dual envelope)**. Per key: `keyHash = SHA-256(salt+key)`, Envelope A `encryptedCatalogEnvelope = AES-256-GCM(catalog filtered by allowedModels)` under PBKDF2(key), Envelope B `adminEncryptedKeyString = AES-256-GCM({key, allowed})` under PBKDF2(admin passphrase). `adminEnvelope` (whole catalog) is unchanged. PBKDF2 is now 200 000 iterations. The public file still contains no readable key.
+- **Any key string**: the `sk-apex-` prefix is no longer required (min 8 chars). A strength meter warns about guessable keys but never blocks (`APEX-PRO-2025` or `PRASHANT-VIP-999` are accepted).
+- **/admin key cards**: Reveal/Mask, Copy, inline Edit (key string, label, expiry, allowed model groups) with "Save & Publish to Live App", Rotate Random, Revoke / Activate (revoke blanks Envelope A but keeps Envelope B so the key can be re-activated), Delete, New key (custom or generated), Change Admin Passphrase (re-seals `adminEnvelope` and every Envelope B, commits). Commit messages carry only label + masked suffix, never the key.
+- **Single source of truth**: no hardcoded fallback key in any `.ts/.tsx` (verified by grep); old key stops working the moment the commit lands, the new one works immediately (Playwright proves both through the app).
+- **Physical routes**: Next's `trailingSlash` export already emitted `out/admin/index.html` and `out/app/index.html`; `scripts/postbuild.mjs` now copies the home document there if one is ever missing and FAILS the build if either is absent. The repo is Next.js, not Vite, so this lives in `postbuild.mjs`. `404.html` stays a SPA-redirect page (keeps the route) instead of a copy of index.html.
+- **Bug found by QA and fixed**: a revealed 48-char key stretched the grid track and pushed the card off-screen on 390px phones (`grid-cols-[minmax(0,1fr)]` + wrapping key text).
+- **Version 1.1.0** everywhere (`version.ts`, `tauri.conf.json`, workflow default + notes, `public/version.json`).
+
+## Honest gaps / decisions
+- **The old master key and admin passphrase could not be recovered** (only their hashes/ciphertext were ever committed), so the vault was regenerated: new strong master key + new admin passphrase (delivered in chat, not stored in the repo). Every previously issued key and the old passphrase stopped working. The 27-model catalog could not be decrypted either; it was **rebuilt by hand** from the Session 11 QA screenshots (16 names read from images, 11 reconstructed in the same groups). Upstream routing is unchanged (Pollinations anonymous tier).
+- **`APEX-PRO-2025` is NOT pre-configured.** Its hash and plaintext have been public since Session 8 (STATE.md), so shipping it would leave the vault open to anyone. The primary key is a random `sk-apex-` key; editing it to `APEX-PRO-2025` or anything else takes one inline edit (the UI will flag it as Weak).
+- Weak custom keys are crackable offline from the public vault file; the same goes for a weak admin passphrase.
+- QA ran against a **mocked GitHub API** (`/user`, contents GET/PUT, raw vault) so QA never wrote to `main`; the real commit path is the same code but was not exercised against GitHub in QA. Updater QA mocked the remote `version.json` to advertise v1.1.1 (running build is 1.1.0).
+- APK is signed with a per-run throwaway key (unchanged): uninstall v1.0.0 before installing v1.1.0. Kotlin/Tauri compile only happens in CI; not device-tested.
+- The GitHub PAT pasted into chat should be revoked/rotated after this session.
+
 # STATE — last updated: end of Session 11 (branch feat/session-11-apex-api-security-updater-v100, PR #9)
 
 ## [SESSION 11 — WHAT ACTUALLY HAPPENED]

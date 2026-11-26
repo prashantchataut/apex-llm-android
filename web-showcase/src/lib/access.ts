@@ -126,7 +126,7 @@ export interface Gate {
 }
 /** Run right before every Apex API request: fresh vault check (revoked → lock + local fallback). */
 export async function gateApex(): Promise<Gate> {
-  if (!access.key) return { ok: false, reason: "Apex API is locked. Enter your sk-apex key to unlock it." };
+  if (!access.key) return { ok: false, reason: "Apex API is locked. Enter your Apex API key to unlock it." };
   const a = await revalidate();
   if (a.state !== "active" || !a.catalog) return { ok: false, reason: a.state === "revoked" ? "Your Apex API key was revoked by the admin. Switched to your local model." : a.message || "Apex API is locked." };
   return { ok: true, reason: "" };

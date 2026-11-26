@@ -169,7 +169,7 @@ async function attempt(endpoint: string, api: string, messages: ChatTurn[], opts
 /** Stream a completion with automatic fallback across models. Reasoning is surfaced as a `<think>` block. */
 export async function apexChat(model: ApexModel, messages: ChatTurn[], opts: GenOpts, onText: (raw: string) => void): Promise<ApexStats> {
   const cat = getAccess().catalog;
-  if (!cat) throw new Error("Apex API is locked. Enter your sk-apex key to unlock it.");
+  if (!cat) throw new Error("Apex API is locked. Enter your Apex API key to unlock it.");
   let lastErr: unknown = new Error("No Apex API model answered");
   for (const api of [...new Set([model.api, cat.fallbackApi])]) {
     const started = { v: false };

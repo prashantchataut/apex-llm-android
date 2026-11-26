@@ -44,3 +44,11 @@ PR #6 conflicts resolved and merged; Android status-bar fix; /admin keyless acce
 ## Session 11 — Apex API vault, hardened /admin, working auto-updater, v1.0.0
 **Done (verified):** PR #8 merged; zero-plaintext AES-256-GCM vault with 27-model sealed catalog; Keyless rebrand to Apex API; hardened /admin; rewritten auto-updater (+ banner, badge, modal, version.json); landing v1.0.0; Playwright proof in `docs/qa-session-11/`.
 **Not done / honest:** upstream only serves 1 text + 1 image model anonymously (others route to it); APK signing key is per-run; Kotlin not device-tested. See `.agent/STATE.md`.
+
+## Session 12 — editable admin keys, zero-secret audit, v1.1.0
+- [x] PR #9 confirmed merged; full-history + build-output secret scan clean
+- [x] Vault schema 3 dual envelope (Envelope A for users, Envelope B for /admin only), 200k PBKDF2
+- [x] /admin inline key editor: reveal, copy, edit, rotate, revoke/activate, delete, model allow-lists, change passphrase
+- [x] Any custom key string (strength meter is advice only); no hardcoded fallback keys
+- [x] postbuild asserts out/admin/index.html + out/app/index.html
+- [x] v1.1.0 version bump; Playwright E2E (mobile 390x844@2x, desktop 1440x900@2x) in docs/qa-session-12

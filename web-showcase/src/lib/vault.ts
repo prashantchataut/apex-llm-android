@@ -9,7 +9,7 @@ import { assetUrl } from "./paths";
  * `public/config/apex-vault.json` is public. It contains NO keys and NO provider URLs, only:
  *   - `salt`                       random hex salt
  *   - `keys[].keyHash`             SHA-256(salt + key)  → lets the app tell a valid, active key from a wrong one
- *   - `keys[].encryptedCatalogEnvelope`  AES-256-GCM(catalog) under PBKDF2(key, salt, 100 000 × SHA-256)
+ *   - `keys[].encryptedCatalogEnvelope`  Envelope A: AES-256-GCM(catalog) under PBKDF2(key, salt, 200 000 × SHA-256)
  *   - `adminEnvelope`              the same catalog under PBKDF2(admin passphrase, salt) so the owner can mint keys
  *
  * The model catalog (labels, upstream ids AND the provider endpoints) is only ever decrypted in memory after the user
@@ -18,7 +18,9 @@ import { assetUrl } from "./paths";
 
 export const VAULT_PATH = "web-showcase/public/config/apex-vault.json";
 export const VAULT_RAW = `https://raw.githubusercontent.com/${REPO}/main/${VAULT_PATH}`;
-export const KDF_ITERATIONS = 100_000;
+export const KDF_ITERATIONS = 200_000;
+/** Keys are owner-chosen strings (any prefix). Anything shorter than this is refused client-side. */
+export const MIN_KEY_LEN = 8;
 export const KEY_PREFIX = "sk-apex-";
 export const OWNER_LOGIN = "prashantchataut";
 
@@ -29,13 +31,18 @@ export interface VaultKey {
   /** Display only, e.g. `sk-apex-••••9f2a`. */
   prefix: string;
   keyHash: string;
+  /** Envelope A (app users). Empty when revoked. */
   encryptedCatalogEnvelope: string;
+  /** Envelope B (admin console only): base64 AES-256-GCM of `KeySecret` under the admin passphrase. */
+  adminEncryptedKeyString: string;
+  /** Model ids this key may use; `["*"]` = everything. Enforced cryptographically: only that subset is sealed in Envelope A. */
+  allowedModels: string[];
   status: KeyStatus;
   createdAt: string;
   expiresAt: string | null;
 }
 export interface VaultFile {
-  schema: 2;
+  schema: 3;
   salt: string;
   kdf: { name: "PBKDF2"; hash: "SHA-256"; iterations: number };
   /** Global kill-switch. */
@@ -151,7 +158,7 @@ export interface Verdict {
 /** Hash check first (cheap, no plaintext), then PBKDF2 + AES-GCM decrypt of the catalog — all in memory. */
 export async function evaluateKey(vault: VaultFile, key: string): Promise<Verdict> {
   const k = key.trim();
-  if (!k.startsWith(KEY_PREFIX) || k.length < KEY_PREFIX.length + 16) return { state: "invalid", message: "Invalid key · Apex API keys start with sk-apex-" };
+  if (k.length < MIN_KEY_LEN) return { state: "invalid", message: "Invalid key · too short." };
   if (!vault.enabled) return { state: "disabled", message: "Apex API is switched off by the admin right now." };
   const h = await hashKey(vault.salt, k);
   const rec = vault.keys.find((x) => x.keyHash === h);
@@ -183,18 +190,96 @@ export function generateSecretKey(): string {
   }
   return KEY_PREFIX + out.join("");
 }
-export const maskKey = (key: string) => `${KEY_PREFIX}••••${key.slice(-4)}`;
+export function maskKey(key: string): string {
+  const n = key.length >= 20 ? 4 : 2;
+  return `${key.startsWith(KEY_PREFIX) ? KEY_PREFIX : ""}••••${key.slice(-n)}`;
+}
 
-/** Mint a record for a new secret: stores only SHA-256(salt+key) and the catalog sealed under that key. */
-export async function mintRecord(vault: VaultFile, catalog: ApexCatalog, secret: string, label: string, expiresAt: string | null, id?: string): Promise<VaultKey> {
+/* ───────── key strength (advice only: the owner may still choose any string ≥ 8 chars) ───────── */
+export interface Strength {
+  bits: number;
+  label: "Weak" | "Fair" | "Good" | "Strong";
+  warn: boolean;
+  note: string;
+}
+export function keyStrength(key: string): Strength {
+  const k = key.trim();
+  const pool = (/[a-z]/.test(k) ? 26 : 0) + (/[A-Z]/.test(k) ? 26 : 0) + (/[0-9]/.test(k) ? 10 : 0) + (/[^A-Za-z0-9]/.test(k) ? 20 : 0);
+  let bits = pool ? Math.log2(pool) * k.length : 0;
+  const guessable = /apex|pro|vip|admin|master|pass|key|2024|2025|2026|1234|qwerty|prashant/i.test(k);
+  if (guessable) bits = Math.min(bits, 45);
+  const label = bits < 60 ? "Weak" : bits < 80 ? "Fair" : bits < 100 ? "Good" : "Strong";
+  const note = bits < 80
+    ? "The vault file is public, so anyone can try guesses against it offline. A guessable key can be cracked and would unlock the catalog. Use 20+ random characters if the key is more than a personal convenience."
+    : "Strong enough to resist offline guessing against the public vault.";
+  return { bits: Math.round(bits), label, warn: bits < 80, note };
+}
+
+/* ───────── Envelope B ───────── */
+export interface KeySecret {
+  key: string;
+  allowed: string[];
+}
+export const ALL_MODELS = ["*"];
+
+export function filterCatalog(catalog: ApexCatalog, allowed: string[]): ApexCatalog {
+  if (!allowed.length || allowed.includes("*")) return catalog;
+  return { ...catalog, models: catalog.models.filter((m) => allowed.includes(m.id)) };
+}
+
+export async function sealKeySecret(passphrase: string, vault: Pick<VaultFile, "salt" | "kdf">, secret: KeySecret): Promise<string> {
+  return seal(passphrase, vault.salt, secret, vault.kdf?.iterations ?? KDF_ITERATIONS);
+}
+/** Decrypts every key's Envelope B. Keys without one (or that fail to open) are simply absent from the map. */
+export async function openKeySecrets(vault: VaultFile, passphrase: string): Promise<Record<string, KeySecret>> {
+  const out: Record<string, KeySecret> = {};
+  for (const k of vault.keys) {
+    if (!k.adminEncryptedKeyString) continue;
+    try {
+      out[k.id] = await open<KeySecret>(passphrase, vault.salt, k.adminEncryptedKeyString, vault.kdf?.iterations ?? KDF_ITERATIONS);
+    } catch {
+      /* wrong passphrase would already have failed on adminEnvelope */
+    }
+  }
+  return out;
+}
+
+export interface MintOpts {
+  id?: string;
+  allowed?: string[];
+  status?: KeyStatus;
+  createdAt?: string;
+}
+/**
+ * Build a record for a key string:
+ *   Envelope A = AES-GCM(filtered catalog) under PBKDF2(key)   + keyHash = SHA-256(salt+key)
+ *   Envelope B = AES-GCM({key, allowed}) under PBKDF2(admin passphrase)
+ * A revoked record keeps its hash (so apps say "Revoked") and Envelope B (so it can be re-activated) but has no Envelope A.
+ */
+export async function mintRecord(vault: VaultFile, catalog: ApexCatalog, secret: string, label: string, expiresAt: string | null, passphrase: string, opts: MintOpts = {}): Promise<VaultKey> {
+  const key = secret.trim();
+  const allowed = opts.allowed?.length ? opts.allowed : ALL_MODELS;
+  const status = opts.status ?? "active";
   return {
-    id: id ?? `key-${Date.now().toString(36)}`,
+    id: opts.id ?? `key-${Date.now().toString(36)}`,
     label: label.trim() || "Untitled key",
-    prefix: maskKey(secret),
-    keyHash: await hashKey(vault.salt, secret),
-    encryptedCatalogEnvelope: await seal(secret, vault.salt, catalog, vault.kdf?.iterations ?? KDF_ITERATIONS),
-    status: "active",
-    createdAt: new Date().toISOString(),
+    prefix: maskKey(key),
+    keyHash: await hashKey(vault.salt, key),
+    encryptedCatalogEnvelope: status === "active" ? await seal(key, vault.salt, filterCatalog(catalog, allowed), vault.kdf?.iterations ?? KDF_ITERATIONS) : "",
+    adminEncryptedKeyString: await sealKeySecret(passphrase, vault, { key, allowed }),
+    allowedModels: allowed,
+    status,
+    createdAt: opts.createdAt ?? new Date().toISOString(),
     expiresAt,
   };
+}
+
+/** Change the admin passphrase: re-seal the catalog envelope and every Envelope B. Envelope A (user keys) is untouched. */
+export async function rekeyAdmin(vault: VaultFile, catalog: ApexCatalog, secrets: Record<string, KeySecret>, nextPassphrase: string): Promise<VaultFile> {
+  const keys: VaultKey[] = [];
+  for (const k of vault.keys) {
+    const sec = secrets[k.id];
+    keys.push(sec ? { ...k, adminEncryptedKeyString: await sealKeySecret(nextPassphrase, vault, sec) } : k);
+  }
+  return { ...vault, adminEnvelope: await seal(nextPassphrase, vault.salt, catalog, vault.kdf?.iterations ?? KDF_ITERATIONS), keys };
 }

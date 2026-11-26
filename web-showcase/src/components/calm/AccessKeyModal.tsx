@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { removeKey, useAccess, verifyKey, type AccessState, type Verdict } from "@/lib/access";
+import { maskKey } from "@/lib/vault";
 import { CIcon } from "./icons";
 import { Sheet } from "./Chrome";
 
@@ -72,7 +73,7 @@ export function AccessKeyModal({ open, onClose, onUnlocked }: { open: boolean; o
   return (
     <Sheet open={open} onClose={onClose} title="Apex API Key">
       <div className="px-2 pb-2 pt-1">
-        <p className={`text-[13.5px] leading-relaxed ${dim}`}>Local models are always free and need no key. An Apex API key (sk-apex-…) unlocks the Apex Cloud Engine. It is verified on this device with SHA-256 + AES-256-GCM, never sent anywhere, and can be revoked by the admin at any time.</p>
+        <p className={`text-[13.5px] leading-relaxed ${dim}`}>Local models are always free and need no key. An Apex API key unlocks the Apex Cloud Engine. It is verified on this device with SHA-256 + AES-256-GCM, never sent anywhere, and can be revoked by the admin at any time.</p>
 
         <AnimatePresence mode="wait" initial={false}>
           {hasKey ? (
@@ -81,7 +82,7 @@ export function AccessKeyModal({ open, onClose, onUnlocked }: { open: boolean; o
                 <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0">
                     <span className="block truncate text-[15px] font-medium">{access.label ?? "Apex API key"}</span>
-                    <span className={`block font-mono text-[12.5px] ${dim}`}>{access.prefix ?? (access.key ? `sk-apex-••••${access.key.slice(-4)}` : "")}</span>
+                    <span className={`block font-mono text-[12.5px] ${dim}`}>{access.prefix ?? (access.key ? maskKey(access.key) : "")}</span>
                   </span>
                   <StatusBadge state={access.state}>{access.state === "active" ? "Active · Verified" : access.state === "checking" ? "Checking…" : access.state === "revoked" ? "Revoked by Admin" : access.message}</StatusBadge>
                 </div>
@@ -100,7 +101,7 @@ export function AccessKeyModal({ open, onClose, onUnlocked }: { open: boolean; o
               <label className="sr-only" htmlFor="access-key-input">Access key</label>
               <div className="relative">
                 <CIcon name="key" size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 opacity-50" />
-                <input id="access-key-input" className="calm-field !rounded-full !pl-11 !font-mono" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void unlock()} placeholder="sk-apex-…" autoComplete="off" autoCapitalize="off" spellCheck={false} />
+                <input id="access-key-input" className="calm-field !rounded-full !pl-11 !font-mono" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void unlock()} placeholder="Paste your Apex API key" autoComplete="off" autoCapitalize="off" spellCheck={false} />
               </div>
               <div className="mt-3 min-h-8">
                 {busy && value.trim().length >= 4 ? (
