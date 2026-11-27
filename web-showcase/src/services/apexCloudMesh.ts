@@ -310,6 +310,19 @@ export async function probeOne(p: MeshProvider): Promise<{ health: Health; model
   return fetchProviderModels(p);
 }
 
+/* ───────── owner overrides (apply to the bundled verified registry too) ───────── */
+let configLoad: Promise<void> | null = null;
+/** Load the owner's mesh.json once (raw GitHub, bundled copy as fallback) so toggles / renames apply before any model sync. */
+export function ensureMeshConfig(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  configLoad ??= loadMeshConfig().then((config) => {
+    if (!state.synced) set({ config });
+  });
+  return configLoad;
+}
+export const isModelDisabled = (provider: string, api: string): boolean => (state.config.disabledModels ?? []).includes(modelKey(provider, api));
+export const modelDisplayName = (provider: string, api: string, fallback: string): string => state.config.renames?.[modelKey(provider, api)]?.trim() || fallback;
+
 /** Pull the live `/models` of every enabled, browser-callable provider and publish them to the app. */
 export async function syncMesh(cfg?: MeshConfig): Promise<MeshState> {
   if (typeof window === "undefined") return state;

@@ -1,5 +1,5 @@
 import verified from "@/data/verified-models.json";
-import { BUILTIN_PROVIDERS, type MeshProvider } from "@/services/apexCloudMesh";
+import { BUILTIN_PROVIDERS, isModelDisabled, type MeshProvider } from "@/services/apexCloudMesh";
 
 export interface VerifiedStep {
   provider: MeshProvider;
@@ -15,6 +15,7 @@ export function verifiedChain(opts: { preferred?: { provider: string; api: strin
   const all = (verified.models as { provider: string; id: string; ms: number }[])
     .map((m) => ({ provider: BUILTIN_PROVIDERS.find((p) => p.id === m.provider), api: m.id, ms: m.ms }))
     .filter((m): m is VerifiedStep => !!m.provider && m.provider.cors)
+    .filter((m) => !isModelDisabled(m.provider.id, m.api))
     .filter((m) => !opts.fastOnly || !SLOW_THINKERS.test(m.api))
     .sort((a, b) => a.ms - b.ms);
   const pref = opts.preferred && all.find((m) => m.provider.id === opts.preferred!.provider && m.api === opts.preferred!.api);

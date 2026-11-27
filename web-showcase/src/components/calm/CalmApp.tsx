@@ -39,6 +39,7 @@ import { AccessKeyModal } from "./AccessKeyModal";
 import { gateApex, getAccess, startAccessWatch, useAccess } from "@/lib/access";
 import { SettingsView } from "./SettingsView";
 import { PdfViewer } from "./PdfViewer";
+import { ensureMeshConfig } from "@/services/apexCloudMesh";
 import { LiveVoice } from "./LiveVoice";
 import { SourceSheet, VaultView } from "./VaultView";
 import { buildRagContext, hasVault, loadVault, search as vaultSearch, useVault } from "@/lib/rag";
@@ -83,6 +84,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   const vault = useVault();
   const composer = useRef<ComposerHandle>(null);
   const [pdf, setPdf] = useState<File | null>(null);
+  useEffect(() => void ensureMeshConfig(), []);
   useEffect(() => {
     const open = (e: Event) => setPdf((e as CustomEvent<File>).detail);
     window.addEventListener("apex:open-pdf", open);

@@ -1,5 +1,6 @@
 "use client";
 
+import { ensureMeshConfig, isModelDisabled, modelDisplayName, useMesh } from "@/services/apexCloudMesh";
 import { VERIFIED_AT, VERIFIED_COUNT, VERIFIED_MODELS, VERIFIED_TESTED } from "@/lib/verified";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -80,6 +81,8 @@ type PopTab = "local" | "uncensored" | "cloud";
 
 /** BeautifulUI-style floating popover under the header pill: 1-tap switching, inline Eject, live RAM meter. */
 export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, access, onKey }: { open: boolean; onClose: () => void; choice: Choice; onPick: (c: Choice) => void; dl: Record<string, DlItem>; onHub: (tab: "trending" | "uncensored" | "search") => void; loading: string | null; access: Access; onKey: () => void }) {
+  useMesh(); // re-render when the owner's mesh.json (disabled / renamed models) arrives
+  useEffect(() => void ensureMeshConfig(), []);
   const apex = useApexModels();
   const eng = useEngine();
   const localChoice = choice.kind === "local" ? CATALOG.find((m) => m.id === choice.id) : undefined;
@@ -190,12 +193,12 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, 
               {tab === "cloud" && (
                 <div data-testid="verified-models">
                   <p className="px-3 pb-0.5 pt-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Live-verified · no key · {VERIFIED_COUNT} of {VERIFIED_TESTED} tested</p>
-                  {VERIFIED_MODELS.map((v) => {
+                  {VERIFIED_MODELS.filter((v) => !isModelDisabled(v.provider, v.id)).map((v) => {
                     const id = `mesh:${v.provider}:${v.id}`;
                     return (
                       <Row key={id} active={choice.kind === "apex" && choice.id === id} onClick={() => { onPick({ kind: "apex", id }); onClose(); }}>
                         <span className="min-w-0">
-                          <span className="block truncate text-[14px]">{v.id}</span>
+                          <span className="block truncate text-[14px]">{modelDisplayName(v.provider, v.id, v.id)}</span>
                           <span className={sub}>{v.provider} · {v.ms} ms answer · verified {VERIFIED_AT.slice(0, 10)}</span>
                         </span>
                       </Row>

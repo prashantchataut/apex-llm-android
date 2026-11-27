@@ -1,5 +1,8 @@
 # PROGRESS
 
+## Session 16 — v1.4.0 release + live-site sync
+**Done (verified in headless Chromium):** per-model admin toggles / rename / live ping and their effect in the app picker + router; pdf.js reader; Copy LaTeX; system-instruction presets; in-app updater progress; version bumped to 1.4.0 with signed-APK release via CI. **Not done:** PAT-in-vault (refused, see STATE), Image Studio redesign, keyless Claude/Gemini/GPT-4.1 (need keys), device test of the Kotlin updater. QA in `docs/qa/session-16/`.
+
 ## Session 3 — brand, onboarding, showcase, visual proof
 **Done (verified):** Apex Tensor Prism logo + launcher assets; 4-scene animated onboarding with replay; Live Lab on the landing page; `sk-apex-` key prefix end-to-end; Rust fmt/clippy/test green; 20 headless screenshots in `docs/qa-session-3/`.
 **Not done:** SQLite persistence, Tauri/Android build, device testing, `icon.icns`. See `.agent/STATE.md`.

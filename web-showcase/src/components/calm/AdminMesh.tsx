@@ -116,14 +116,17 @@ export function AdminMesh({ token }: { token: string }) {
   const pingAll = async () => {
     setBusy(true);
     const queue = mesh.allModels.filter((m) => providers.find((p) => p.id === m.provider)?.cors);
-    let i = 0;
-    const worker = async () => {
-      while (i < queue.length) {
-        const m = queue[i++];
-        await ping(m.provider, m.api);
-      }
-    };
-    await Promise.all([worker(), worker(), worker(), worker()]);
+    // One worker per provider, one request at a time with a short gap: anonymous tiers rate-limit per IP, a burst only measures the limiter.
+    const byProvider = new Map<string, typeof queue>();
+    for (const m of queue) byProvider.set(m.provider, [...(byProvider.get(m.provider) ?? []), m]);
+    await Promise.all(
+      [...byProvider.values()].map(async (list) => {
+        for (const m of list) {
+          await ping(m.provider, m.api);
+          await new Promise((r) => setTimeout(r, 700));
+        }
+      }),
+    );
     setBusy(false);
     say(true, `Tested ${queue.length} models with a real completion.`);
   };
@@ -197,8 +200,8 @@ export function AdminMesh({ token }: { token: string }) {
                 {pg === "running" ? (
                   <span className={`text-[12px] ${dim}`}>testing…</span>
                 ) : pg ? (
-                  <span data-testid={pg.ok ? "badge-working" : "badge-failed"} className="rounded-full px-2.5 py-1 text-[11.5px] font-medium tabular-nums" style={{ background: pg.ok ? "rgba(34,197,94,.16)" : "rgba(239,68,68,.16)", color: pg.ok ? "#15803d" : "#b91c1c" }}>
-                    {pg.ok ? `WORKING (${pg.ms}ms)` : `FAILED${pg.status ? ` ${pg.status}` : ""} (${pg.ms}ms)`}
+                  <span data-testid={pg.ok ? "badge-working" : pg.status === 429 ? "badge-limited" : "badge-failed"} className="rounded-full px-2.5 py-1 text-[11.5px] font-medium tabular-nums" style={pg.ok ? { background: "rgba(34,197,94,.16)", color: "#15803d" } : pg.status === 429 ? { background: "rgba(245,158,11,.18)", color: "#b45309" } : { background: "rgba(239,68,68,.16)", color: "#b91c1c" }}>
+                    {pg.ok ? `WORKING (${pg.ms}ms)` : pg.status === 429 ? `RATE-LIMITED (${pg.ms}ms)` : `FAILED${pg.status ? ` ${pg.status}` : ""} (${pg.ms}ms)`}
                   </span>
                 ) : null}
                 <button type="button" className="calm-chip" onClick={() => ping(m.provider, m.api)} disabled={pg === "running"}>Ping</button>
