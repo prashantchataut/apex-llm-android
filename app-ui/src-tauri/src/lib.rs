@@ -191,6 +191,29 @@ async fn hf_download(rt: State<'_, Runtime>, id: String, repo: String, file: Str
     }
 }
 
+/// GitHub's OAuth device-flow endpoints send no CORS headers, so a WebView cannot call them. This relay only
+/// ever talks to the two fixed github.com URLs below (no caller-supplied host) and returns the JSON body as text.
+#[tauri::command]
+async fn github_oauth(endpoint: String, form: Vec<(String, String)>) -> Result<String, String> {
+    let url = match endpoint.as_str() {
+        "device_code" => "https://github.com/login/device/code",
+        "access_token" => "https://github.com/login/oauth/access_token",
+        _ => return Err("unknown GitHub OAuth endpoint".into()),
+    };
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let resp = client
+        .post(url)
+        .header("Accept", "application/json")
+        .form(&form)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    resp.text().await.map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn hf_pause(rt: State<'_, Runtime>, id: String) -> bool {
     rt.pause(&id)
@@ -284,6 +307,7 @@ pub fn run() {
             hf_search,
             hf_download,
             hf_pause,
+            github_oauth,
             server_status,
             server_start,
             server_stop,

@@ -1,10 +1,11 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { fastComplete } from "./fast-ai";
 
 /** Persistent long-term memory (localStorage). Active memories are injected into every model's system prompt. */
-export type MemGroup = "Identity" | "Projects" | "Preferences" | "Tone";
-export const MEM_GROUPS: MemGroup[] = ["Identity", "Projects", "Preferences", "Tone"];
+export type MemGroup = "Identity" | "Tech Stack" | "Projects" | "Preferences" | "Tone";
+export const MEM_GROUPS: MemGroup[] = ["Identity", "Tech Stack", "Projects", "Preferences", "Tone"];
 
 export interface Memory {
   id: string;
@@ -12,7 +13,8 @@ export interface Memory {
   group: MemGroup;
   on: boolean;
   ts: number;
-  source: "auto" | "manual" | "explicit";
+  source: "auto" | "manual" | "explicit" | "ai";
+  keywords?: string[];
 }
 
 const KEY = "apex.memory.v1";
@@ -56,11 +58,11 @@ export function useMemories(): Memory[] {
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-export function addMemory(text: string, group: MemGroup, source: Memory["source"] = "manual"): Memory | null {
+export function addMemory(text: string, group: MemGroup, source: Memory["source"] = "manual", keywords?: string[]): Memory | null {
   const t = text.trim().replace(/\s+/g, " ").replace(/[.!?]+$/, "");
   if (t.length < 3 || t.length > 160) return null;
   if (mem.some((m) => norm(m.text) === norm(t))) return null;
-  const m: Memory = { id: Math.random().toString(36).slice(2, 10), text: t, group, on: true, ts: Date.now(), source };
+  const m: Memory = { id: Math.random().toString(36).slice(2, 10), text: t, group, on: true, ts: Date.now(), source, ...(keywords?.length ? { keywords } : {}) };
   commit([m, ...mem]);
   return m;
 }
@@ -123,8 +125,54 @@ export function learnFrom(input: string): Memory[] {
   return added;
 }
 
-export function memoryBlock(): string {
+const STOP = new Set("the a an and or of to in on for with is are was be i my me you your it this that what how can do does about from at as by".split(" "));
+const words = (s: string) => norm(s).split(" ").filter((w) => w.length > 2 && !STOP.has(w));
+
+/**
+ * Memories injected into the system prompt. Identity + Preferences + Tone are always relevant; everything else is only
+ * included when its text or keywords overlap the current question, so a large memory never bloats a small context window.
+ */
+export function memoryBlock(query = ""): string {
   const on = mem.filter((m) => m.on);
   if (!on.length) return "";
-  return `\n\nLong-term memory about the user (use naturally, never recite unless asked):\n${on.map((m) => `- ${m.text}`).join("\n")}`;
+  const q = new Set(words(query));
+  const pick = on.length <= 8 || q.size === 0 ? on : on.filter((m) => m.group === "Identity" || m.group === "Preferences" || m.group === "Tone" || [...words(m.text), ...(m.keywords ?? []).flatMap(words)].some((w) => q.has(w)));
+  if (!pick.length) return "";
+  return `\n\nLong-term memory about the user (use naturally, never recite unless asked):\n${pick.slice(0, 24).map((m) => `- ${m.text}`).join("\n")}`;
+}
+
+/* ───────── AI memory distiller ───────── */
+const GROUP_OF: Record<string, MemGroup> = { identity: "Identity", "tech stack": "Tech Stack", tech: "Tech Stack", stack: "Tech Stack", project: "Projects", projects: "Projects", preference: "Preferences", preferences: "Preferences", tone: "Tone" };
+const SYSTEM = `You distill what a user tells an assistant about themselves into atomic memory facts.
+Return ONLY a JSON array (max 8 items), no prose, no code fence. Each item: {"category":"Identity"|"Tech Stack"|"Preference","fact":"<=12 words, third person, no pronoun 'I'","keywords":["1-4 lowercase words"]}.
+Only durable facts (name, device, languages, tools, projects, likes/dislikes, style rules). Skip greetings and one-off requests. Never invent facts.`;
+
+export interface DistillResult {
+  added: Memory[];
+  via: "ai" | "rules";
+  servedBy?: string;
+  ms?: number;
+}
+
+/** True when a chat message looks like it states something durable about the user (cheap gate before any network call). */
+export const looksPersonal = (t: string): boolean => t.length >= 18 && /\b(i am|i'm|i use|i build|i work|i live|i prefer|i hate|i love|i like|my name|my (?:phone|stack|project|laptop|job|app)|remember)\b/i.test(t);
+
+export async function distillMemory(raw: string): Promise<DistillResult> {
+  const input = raw.replace(/\s+/g, " ").trim().slice(0, 1200);
+  try {
+    const r = await fastComplete([{ role: "system", content: SYSTEM }, { role: "user", content: input }], { maxTokens: 400, timeoutMs: 7000 });
+    const body = r.text.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    const arr = JSON.parse(body.slice(body.indexOf("["), body.lastIndexOf("]") + 1)) as { category?: string; fact?: string; keywords?: string[] }[];
+    const added: Memory[] = [];
+    for (const it of arr.slice(0, 8)) {
+      if (!it?.fact) continue;
+      const g = GROUP_OF[String(it.category ?? "").toLowerCase()] ?? "Preferences";
+      const m = addMemory(String(it.fact), g, "ai", Array.isArray(it.keywords) ? it.keywords.map((k) => String(k).toLowerCase()).slice(0, 4) : undefined);
+      if (m) added.push(m);
+    }
+    if (added.length || arr.length) return { added, via: "ai", servedBy: r.servedBy, ms: r.ms };
+  } catch {
+    /* offline, rate-limited or malformed JSON: fall through to the on-device rules */
+  }
+  return { added: learnFrom(input), via: "rules" };
 }

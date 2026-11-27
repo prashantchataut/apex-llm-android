@@ -10,6 +10,7 @@ import { REGISTRY_URL, ago, checkForUpdate, openUpdateModal, simulateUpdate, typ
 import { APP_VERSION } from "@/lib/version";
 import { RELEASES_URL } from "@/lib/site";
 import { useAccess } from "@/lib/access";
+import { getLocalOnly, setLocalOnly } from "@/lib/router";
 import { CIcon } from "./icons";
 import { ViewTitle } from "./Chrome";
 
@@ -19,6 +20,8 @@ export function SettingsView({ mode, setMode, onReplay, cart, update, onAccessKe
   const access = useAccess();
   const [sync, setSync] = useState<string>("");
   const [syncing, setSyncing] = useState(false);
+  const [localOnly, setLocalOnlyState] = useState(false);
+  useEffect(() => setLocalOnlyState(getLocalOnly()), []);
 
   /** Every time Settings opens, re-check both sources (version.json + GitHub releases). */
   useEffect(() => {
@@ -81,13 +84,33 @@ export function SettingsView({ mode, setMode, onReplay, cart, update, onAccessKe
         </div>
       </div>
 
-      <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Assistant style</h2>
-      <div className="flex flex-wrap gap-1.5">
-        {cart.all.map((c) => (
-          <button key={c.id} type="button" aria-pressed={cart.selected.id === c.id} onClick={() => cart.select(c.id)} className="min-h-10 rounded-full px-4 text-[13px] transition-colors" style={cart.selected.id === c.id ? { background: "var(--ink-solid)", color: "var(--canvas)" } : { background: "var(--surface-2)" }}>
-            {c.name}
-          </button>
-        ))}
+      <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Custom instructions &amp; Modelfile</h2>
+      <div className="calm-card p-4">
+        <p className="text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Optional. Applied to every chat, on every model. Leave empty to just talk.</p>
+        <textarea value={cart.settings.instructions} onChange={(e) => cart.update({ instructions: e.target.value })} rows={4} aria-label="Custom instructions and system prompt" placeholder="e.g. Answer briefly. Prefer Rust examples. Never use emojis." className="calm-field mt-3 !rounded-[18px] resize-none leading-snug" />
+        <div className="mt-4 grid grid-cols-2 gap-4">
+          <label className="block text-[12.5px]">
+            <span className="flex justify-between"><span>Temperature</span><span className="tnum opacity-60">{cart.settings.temperature.toFixed(2)}</span></span>
+            <input type="range" min={0} max={1.2} step={0.05} value={cart.settings.temperature} onChange={(e) => cart.update({ temperature: Number(e.target.value) })} className="mt-2 w-full" aria-label="Temperature" />
+          </label>
+          <label className="block text-[12.5px]">
+            <span>Context window (local)</span>
+            <select value={cart.settings.ctx} onChange={(e) => cart.update({ ctx: Number(e.target.value) })} className="calm-field mt-1.5 !rounded-full" aria-label="Context window">
+              {[2048, 4096, 8192].map((n) => <option key={n} value={n}>{n.toLocaleString()} tokens</option>)}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Privacy</h2>
+      <div className="calm-card p-4">
+        <div className="flex items-center justify-between gap-3">
+          <span className="min-w-0">
+            <span className="block text-[14.5px] font-medium">Local-Only mode</span>
+            <span className="mt-0.5 block text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Apex Auto always uses your on-device model and never touches the network.</span>
+          </span>
+          <button type="button" role="switch" aria-checked={localOnly} aria-label="Local-Only mode" className="switch" onClick={() => { setLocalOnly(!localOnly); setLocalOnlyState(!localOnly); }} />
+        </div>
       </div>
 
       <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Voice & haptics</h2>
