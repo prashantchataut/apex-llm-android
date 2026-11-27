@@ -100,7 +100,12 @@ fn sidecar_path(dest: &Path) -> PathBuf {
 
 /// Parse the total out of `Content-Range: bytes 0-0/12345` (None for `*`).
 pub fn parse_content_range_total(v: &str) -> Option<u64> {
-    v.rsplit('/').next()?.trim().parse::<u64>().ok().filter(|n| *n > 0)
+    v.rsplit('/')
+        .next()?
+        .trim()
+        .parse::<u64>()
+        .ok()
+        .filter(|n| *n > 0)
 }
 
 /// Split `https://huggingface.co/{repo}/resolve/{rev}/{file}` into `(repo, file)`.
@@ -113,7 +118,13 @@ pub fn split_hf_resolve_url(url: &str) -> Option<(String, String)> {
 }
 
 fn header_u64(h: &reqwest::header::HeaderMap, name: &str) -> Option<u64> {
-    h.get(name)?.to_str().ok()?.trim().parse::<u64>().ok().filter(|n| *n > 0)
+    h.get(name)?
+        .to_str()
+        .ok()?
+        .trim()
+        .parse::<u64>()
+        .ok()
+        .filter(|n| *n > 0)
 }
 
 /// Best-effort total size. NEVER an error: `None` means "stream it and show an indeterminate bar".
@@ -125,7 +136,8 @@ fn header_u64(h: &reqwest::header::HeaderMap, name: &str) -> Option<u64> {
 pub async fn resolve_total(client: &reqwest::Client, url: &str, hint: Option<u64>) -> Option<u64> {
     if let Ok(resp) = client.head(url).send().await {
         let h = resp.headers();
-        if let Some(n) = header_u64(h, "content-length").or_else(|| header_u64(h, "x-linked-size")) {
+        if let Some(n) = header_u64(h, "content-length").or_else(|| header_u64(h, "x-linked-size"))
+        {
             return Some(n);
         }
     }
@@ -333,7 +345,10 @@ mod tests {
 
     #[test]
     fn content_range_total_parses() {
-        assert_eq!(parse_content_range_total("bytes 0-0/491400032"), Some(491400032));
+        assert_eq!(
+            parse_content_range_total("bytes 0-0/491400032"),
+            Some(491400032)
+        );
         assert_eq!(parse_content_range_total("bytes 0-0/*"), None);
         assert_eq!(parse_content_range_total("garbage"), None);
     }

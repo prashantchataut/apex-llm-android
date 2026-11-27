@@ -300,7 +300,11 @@ mod tests {
     #[test]
     fn roundtrips_unicode_and_whitespace() {
         let t = toy();
-        for s in ["hello world", "  héllo\n\nwörld — 日本語 \u{1F980}", "a  b\tc"] {
+        for s in [
+            "hello world",
+            "  héllo\n\nwörld — 日本語 \u{1F980}",
+            "a  b\tc",
+        ] {
             assert_eq!(t.decode(&t.encode(s, false)), s, "roundtrip of {s:?}");
         }
     }
