@@ -300,7 +300,7 @@ mod tests {
     #[test]
     fn roundtrips_unicode_and_whitespace() {
         let t = toy();
-        for s in ["hello world", "  héllo\n\nwörld — 日本語 🦀", "a  b\tc"] {
+        for s in ["hello world", "  héllo\n\nwörld — 日本語 \u{1F980}", "a  b\tc"] {
             assert_eq!(t.decode(&t.encode(s, false)), s, "roundtrip of {s:?}");
         }
     }
@@ -317,9 +317,9 @@ mod tests {
 
     #[test]
     fn utf8_stream_holds_back_partial_sequences() {
-        let crab = "🦀".as_bytes();
+        let crab = "\u{1F980}".as_bytes();
         let mut s = Utf8Stream::default();
         assert_eq!(s.push(&crab[..2]), "");
-        assert_eq!(s.push(&crab[2..]), "🦀");
+        assert_eq!(s.push(&crab[2..]), "\u{1F980}");
     }
 }

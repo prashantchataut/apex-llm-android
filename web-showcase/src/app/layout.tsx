@@ -7,9 +7,9 @@ import { routeScript } from "@/lib/route-script";
 import { BASE_PATH } from "@/lib/paths";
 
 export const metadata: Metadata = {
-  title: "Apex — intelligence that lives on your phone",
+  title: "Apex — On-Device Local AI Runner and Private Pocket Intelligence Studio",
   description:
-    "Run language, image and video models on your phone. Serve an Ollama-compatible API to your PC. Rust core, no cloud required.",
+    "Run open-weight GGUF models fully offline on your phone, read PDFs, render LaTeX and generate images in one private pocket studio. Rust core, your data stays on the device.",
 };
 
 export const viewport: Viewport = {

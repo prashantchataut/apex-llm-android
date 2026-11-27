@@ -241,7 +241,7 @@ export function AdminMesh() {
       setBusy(true);
       const r = await probeOne({ ...p, builtin: false });
       setBusy(false);
-      if (!r.health.ok) return say(false, `Not added: ${r.health.error ?? "no answer"}. The endpoint must be keyless and send CORS headers.`);
+      if (!r.health.ok) return say(false, `Not added: ${r.health.error ?? "no answer"}. The endpoint must accept anonymous requests and send CORS headers.`);
       setCfg((c) => ({ ...c, custom: [...c.custom, { ...p, fallbackModel: r.models[0]?.api }] }));
       setName("");
       setBase("");
@@ -375,7 +375,7 @@ export function AdminMesh() {
 
       {/* add custom */}
       <div className="mt-6 rounded-2xl bg-[var(--surface-2)] p-4">
-        <p className="text-[14px] font-medium">Add a keyless endpoint</p>
+        <p className="text-[14px] font-medium">Add an open endpoint</p>
         <p className={`mt-0.5 text-[12px] ${dim}`}>OpenAI-compatible base URL (https, CORS enabled, no key). It is probed before it is added.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <input className="calm-field flex-1 basis-[120px]" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="Provider name" />

@@ -49,11 +49,11 @@ export const BUILTIN_PROVIDERS: MeshProvider[] = [
     builtin: true,
     priority: 1,
     fallbackModel: "Meta-Llama-3_3-70B-Instruct",
-    note: "Anonymous tier, rate-limited per IP. Largest keyless catalog.",
+    note: "Anonymous tier, rate-limited per IP. Largest open catalog.",
   },
   {
     id: "llm7",
-    name: "LLM7.io (keyless tier)",
+    name: "LLM7.io (free tier)",
     chat: "https://api.llm7.io/v1/chat/completions",
     models: "https://api.llm7.io/v1/models",
     auth: "Bearer unused",
@@ -84,7 +84,7 @@ export const BUILTIN_PROVIDERS: MeshProvider[] = [
     builtin: true,
     priority: 9,
     fallbackModel: "kilo-auto/free",
-    note: "Works keyless but sends no CORS header, so it is skipped in browsers and WebViews (server / native only).",
+    note: "Answers anonymous requests but sends no CORS header, so it is skipped in browsers and WebViews (server / native only).",
   },
 ];
 
@@ -109,7 +109,7 @@ export const IMPORTED_PROVIDERS: MeshProvider[] = ZEUS_GATEWAYS.map((g) => {
     builtin: true,
     priority: best ? 20 + Math.min(30, Math.round((best.ms ?? 0) / 300)) : 90,
     fallbackModel: best?.id,
-    note: g.cors ? "Imported catalog gateway (keyless)." : "Imported catalog gateway (keyless). No CORS header: not callable from a browser or WebView.",
+    note: g.cors ? "Imported catalog gateway." : "Imported catalog gateway. No CORS header: not callable from a browser or WebView.",
   };
 });
 export const ALL_BUILTIN: MeshProvider[] = [...BUILTIN_PROVIDERS, ...IMPORTED_PROVIDERS];
@@ -433,7 +433,7 @@ export function meshAsApexModels(skipApi: Set<string>): ApexModel[] {
       id: m.id,
       label: m.renamed ? m.label : `Apex-${m.label}`,
       tag: `${name(m.provider)}${health[m.provider]?.ok ? ` · ${health[m.provider].ms}ms` : ""}`,
-      group: `${m.group} · keyless mesh`,
+      group: `${m.group} · Apex Mesh`,
       kind: "text" as const,
       api: m.api,
       reasoning: m.reasoning,

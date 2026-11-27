@@ -122,3 +122,7 @@ here claims a skill ran.
 - **Skills note**: design-taste-frontend / hallmark-ui / open-design-skill / rea / native-rust-systems are not loadable tools in this sandbox; their rules were applied from `RULES.md` + `SKILLS_PROTOCOL.md` by hand (tokens only, no ad-hoc hexes except status colours, >=44 px targets, tabular-nums, reserved space).
 - **Evidence-first**: every UI claim above was checked with Playwright; the screenshots exposed two real bugs (invisible bold text and invisible Copy LaTeX button; a picker that ignored mesh.json) which were fixed before shipping.
 - **Rust**: no Rust changed this session.
+
+
+## Session 18
+- Skill loaders unavailable in this sandbox: rules applied by hand. design-taste-frontend / hallmark-ui: landing hero rewritten (single signature headline, no new hexes), checked in Playwright at 412x915@2x. rea: audited the shipped catalog importer output instead of trusting prior notes (HEAD-checked all 28 model URLs). native-rust-systems: only string literals touched; cargo unavailable, compile UNVERIFIED.
