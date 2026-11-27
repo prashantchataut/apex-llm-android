@@ -7,6 +7,10 @@ import { useChat } from "@/components/app/useChat";
 import { ServerScreen, type KeyRec } from "@/components/app/ServerScreen";
 import type { Attachment } from "@/lib/attachments";
 import { systemPromptFor, useCartridges } from "@/lib/cartridges";
+import { getLocalOnly, imagePromptOf, routeAuto, routeBadge } from "@/lib/router";
+import { generateTitle } from "@/lib/titles";
+import { distillMemory, looksPersonal } from "@/lib/memory";
+import type { ApexModel } from "@/lib/apex-cloud";
 import { getEngineSnapshot, shortModelName } from "@/lib/engine";
 import { activateModel, useDownloadStore } from "@/lib/downloader";
 import { imageUrl, randomSeed, type ImageJob } from "@/lib/images";
@@ -132,7 +136,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
 
   const localModel = choice.kind === "local" ? CATALOG.find((m) => m.id === choice.id) : undefined;
   const keyOk = access.state === "active";
-  const label = choice.kind === "apex" ? `${apexById(choice.id)?.label ?? "Apex API"} · ${keyOk ? "Apex API" : "Locked"}` : localModel ? `${shortModelName(localModel)} · Local` : "Choose a model";
+  const label = choice.kind === "auto" ? "Apex Auto ⚡" : choice.kind === "apex" ? `${apexById(choice.id)?.label ?? "Apex API"} · ${keyOk ? "Apex API" : "Locked"}` : localModel ? `${shortModelName(localModel)} · Local` : "Choose a model";
   const memActive = mems.filter((m) => m.on).length;
   const started = chat.msgs.length > 0;
 
@@ -143,6 +147,17 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     const first = msgs.find((m) => m.role === "user");
     saveConvo(convoId, snapshot(), (first?.text ?? "New chat").replace(/\s+/g, " ").slice(0, 48));
   }, [msgs, busy, convoId, snapshot]);
+
+  /* Ollama-style auto title: after the FIRST exchange only, a fast background call names the chat in 3–4 words. */
+  const titled = useRef(new Set<string>());
+  useEffect(() => {
+    if (busy || msgs.length !== 2 || titled.current.has(convoId)) return;
+    const [u, a] = msgs;
+    if (u.role !== "user" || a.role !== "assistant" || !a.text) return;
+    titled.current.add(convoId);
+    const id = convoId;
+    void generateTitle(u.text, a.text).then((t) => t && renameConvo(id, t));
+  }, [msgs, busy, convoId]);
 
   /* Android back gesture / browser back closes the top overlay before it can leave the app */
   useBackLayer(drawer, () => setDrawer(false));
@@ -205,7 +220,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   /** Apex API is gated: fresh vault check (revoked → lock + local fallback) before every cloud request. */
   const guardApex = useCallback(
     async (c: Choice): Promise<boolean> => {
-      if (c.kind !== "apex") return true;
+      if (c.kind !== "apex" || c.id.startsWith("mesh:")) return true; // keyless mesh models never need the vault
       const g = await gateApex();
       if (g.ok) return true;
       if (!getAccess().key) {
@@ -226,7 +241,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   }, [access.state, choice.kind]);
 
   const pick = (c: Choice) => {
-    if (c.kind === "apex" && access.state !== "active") {
+    if (c.kind === "apex" && !c.id.startsWith("mesh:") && access.state !== "active") {
       setKeyModal(true);
       return;
     }
@@ -241,9 +256,42 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     goView("chat");
   };
 
+  /** Apex Auto: deterministic, zero-network routing (see lib/router.ts). Returns the concrete engine for this message. */
+  const resolveAuto = (text: string): { image?: boolean; msg?: string; eff?: Choice; extra?: { route?: string; apexModel?: ApexModel }; local?: CatalogModel } => {
+    const snap = getEngineSnapshot();
+    const installed = CATALOG.filter((m) => dl[m.id]?.status === "done");
+    const mounted = CATALOG.find((m) => m.id === snap.loaded.a) ?? installed.find((m) => !m.uncensored) ?? installed[0];
+    const d = routeAuto(text, { offline: typeof navigator !== "undefined" && !navigator.onLine, localOnly: getLocalOnly(), localId: mounted?.id, localLabel: mounted ? shortModelName(mounted) : undefined });
+    if (d.kind === "image") return { image: true };
+    if (d.kind === "local") {
+      if (!mounted) return { msg: "No on-device model is installed yet. Open Models and download one to chat offline." };
+      return { eff: { kind: "local", id: mounted.id }, extra: { route: routeBadge(d) }, local: mounted };
+    }
+    const id = `mesh:${d.provider}:${d.api}`;
+    return { eff: { kind: "apex", id }, extra: { route: routeBadge(d), apexModel: { id, label: `Apex-${d.label}`, tag: "", group: "Apex Auto", kind: "text", api: d.api ?? "", provider: d.provider } as ApexModel } };
+  };
+
   const send = async (text: string, atts: Attachment[] = [], voiceMs?: number) => {
     const t = text.trim();
     if (!t && atts.length === 0) return;
+    let eff: Choice = choice;
+    let effLocal = localModel;
+    let extra: { route?: string; apexModel?: ApexModel } = {};
+    if (choice.kind === "auto" && !imageMode && !/^\/imagine\s+/i.test(t)) {
+      const r = resolveAuto(t);
+      if (r.image) {
+        const prompt = imagePromptOf(t);
+        chat.sendImages(t, [{ url: `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?model=flux&nologo=true&width=768&height=768&seed=${randomSeed()}`, prompt }]);
+        return;
+      }
+      if (!r.eff) {
+        say(r.msg ?? "No model available.");
+        return;
+      }
+      eff = r.eff;
+      effLocal = r.local;
+      extra = r.extra ?? {};
+    }
     if (imageMode || /^\/imagine\s+/i.test(t)) {
       const prompt = t.replace(/^\/imagine\s+/i, "");
       const job: ImageJob = { prompt, engine: "", aspect: "1:1", style: "none", negative: "", seed: randomSeed() };
@@ -257,19 +305,34 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
       setImageMode(false);
       return;
     }
-    if (!(await guardApex(choice))) return;
-    if (choice.kind === "local" && localModel && !(await activate(localModel))) return;
+    if (!(await guardApex(eff))) return;
+    if (eff.kind === "local" && effLocal && !(await activate(effLocal))) return;
     const added = learnFrom(t);
-    const tools = choice.kind === "apex";
+    if (looksPersonal(t) && skills.includes("memory")) void distillMemory(t); // background AI extraction, never blocks the reply
+    const tools = eff.kind === "apex" && !eff.id.startsWith("mesh:");
     let rag: { block: string; tags: string[] } = { block: "", tags: [] };
     if (vaultOn && t) {
       await loadVault();
       if (hasVault()) rag = buildRagContext(vaultSearch(t, 4));
     }
-    const system = systemPromptFor(cart.selected) + memoryBlock() + rag.block + (localModel?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (tools ? toolsHint(skills) : "");
-    chat.send(t || "Summarize the attached file.", { attachments: atts, cartridge: cart.selected, ctx: cart.selected.ctx, system, choice, skills, tools, memNote: added.map((m) => m.text), voiceMs, sources: rag.tags });
+    const system = systemPromptFor(cart.selected) + memoryBlock(t) + rag.block + (effLocal?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (tools ? toolsHint(skills) : "");
+    chat.send(t || "Summarize the attached file.", { attachments: atts, cartridge: cart.selected, ctx: cart.selected.ctx, system, choice: eff, ...extra, skills, tools, memNote: added.map((m) => m.text), voiceMs, sources: rag.tags });
   };
-  const opts = () => ({ cartridge: cart.selected, ctx: cart.selected.ctx, system: systemPromptFor(cart.selected) + memoryBlock() + (localModel?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (choice.kind === "apex" ? toolsHint(skills) : ""), choice, skills, tools: choice.kind === "apex" });
+  const opts = () => {
+    let eff: Choice = choice;
+    let effLocal = localModel;
+    let extra: { route?: string; apexModel?: ApexModel } = {};
+    const lastUser = [...msgs].reverse().find((m) => m.role === "user")?.text ?? "";
+    if (choice.kind === "auto") {
+      const r = resolveAuto(lastUser);
+      if (r.eff) {
+        eff = r.eff;
+        effLocal = r.local;
+        extra = r.extra ?? {};
+      }
+    }
+    return { cartridge: cart.selected, ctx: cart.selected.ctx, system: systemPromptFor(cart.selected) + memoryBlock(lastUser) + (effLocal?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (eff.kind === "apex" && !eff.id.startsWith("mesh:") ? toolsHint(skills) : ""), choice: eff, ...extra, skills, tools: eff.kind === "apex" && !eff.id.startsWith("mesh:") };
+  };
 
   const suggest = (t: Suggestion) => {
     if (t === "illustrate") {

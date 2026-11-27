@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { SKILLS, getGithubToken, setGithubToken, toggleSkill, useSkills } from "@/lib/skills";
+import { SKILLS, toggleSkill, useSkills } from "@/lib/skills";
+import { GithubConnect } from "./GithubConnect";
 import { addMcpServer, connectMcp, removeMcpServer, toggleMcpServer, toggleMcpTool, useMcp } from "@/lib/mcp";
 import { CIcon, KeyIcon } from "./icons";
 import { ViewTitle } from "./Chrome";
@@ -12,8 +13,6 @@ export function McpView() {
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [err, setErr] = useState("");
-  const [pat, setPat] = useState(() => getGithubToken());
-  const [saved, setSaved] = useState(false);
 
   const add = () => {
     setErr("");
@@ -46,13 +45,7 @@ export function McpView() {
         ))}
       </div>
 
-      <div className="calm-card mt-3 p-4">
-        <h3 className="flex items-center gap-2 text-[14px] font-medium">GitHub token <span className="text-[12.5px] font-normal text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">optional</span></h3>
-        <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); setGithubToken(pat); setSaved(true); window.setTimeout(() => setSaved(false), 1600); }}>
-          <input type="password" autoComplete="off" value={pat} onChange={(e) => setPat(e.target.value)} placeholder="ghp_… (stored only on this device)" aria-label="GitHub personal access token" className="calm-field !rounded-full" />
-          <button type="submit" className="calm-btn" data-primary="true">{saved ? "Saved" : "Save"}</button>
-        </form>
-      </div>
+      <GithubConnect />
 
       <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">MCP servers</h2>
       <form onSubmit={(e) => { e.preventDefault(); add(); }} className="calm-card flex flex-col gap-2 p-3 sm:flex-row">

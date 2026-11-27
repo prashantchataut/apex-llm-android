@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MEM_GROUPS, addMemory, removeMemory, updateMemory, useMemories, wipeMemories, type MemGroup } from "@/lib/memory";
+import { MEM_GROUPS, distillMemory, removeMemory, updateMemory, useMemories, wipeMemories, type DistillResult } from "@/lib/memory";
 import { CIcon } from "./icons";
 import { ViewTitle } from "./Chrome";
 
@@ -9,32 +9,47 @@ import { ViewTitle } from "./Chrome";
 export function MemoryView() {
   const mems = useMemories();
   const [text, setText] = useState("");
-  const [group, setGroup] = useState<MemGroup>("Preferences");
+  const [busy, setBusy] = useState(false);
+  const [last, setLast] = useState<DistillResult | null>(null);
   const [edit, setEdit] = useState<{ id: string; v: string } | null>(null);
   const [confirm, setConfirm] = useState(false);
 
   return (
     <div className="mx-auto w-full max-w-[640px] px-5 pb-10 pt-3">
-      <ViewTitle title="Memory" sub="Facts Apex remembers across chats and models. Say “remember that I…” in any chat, or add one here. Everything stays on this device." />
+      <ViewTitle title="Memory" sub="Facts Apex remembers across chats and models. Tell Apex about yourself in your own words and AI distills it into clean facts. Everything stays on this device." />
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (addMemory(text, group, "manual")) setText("");
+          if (busy || text.trim().length < 3) return;
+          setBusy(true);
+          setLast(null);
+          void distillMemory(text).then((r) => {
+            setBusy(false);
+            setLast(r);
+            if (r.added.length) setText("");
+          });
         }}
-        className="calm-card mb-6 flex flex-col gap-2 p-3 sm:flex-row"
+        className="calm-card mb-6 flex flex-col gap-2 p-3"
       >
-        <input value={text} onChange={(e) => setText(e.target.value)} aria-label="New memory" placeholder="Prefers Rust and minimal UI" className="calm-field !rounded-full" />
-        <div className="flex gap-2">
-          <select value={group} onChange={(e) => setGroup(e.target.value as MemGroup)} aria-label="Group" className="calm-field !w-auto !rounded-full">
-            {MEM_GROUPS.map((g) => (
-              <option key={g}>{g}</option>
-            ))}
-          </select>
-          <button type="submit" className="calm-btn" data-primary="true" disabled={text.trim().length < 3}>
-            <CIcon name="plus" size={15} /> Add
+        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} aria-label="Tell Apex about yourself" placeholder="I'm Prashant, I use a Nothing Phone 4a, I build Rust & Android apps, and I hate emojis" className="calm-field !rounded-[18px] resize-none leading-snug" />
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]" role="status">
+            {busy ? <span className="distill-shimmer">Distilling memory with AI…</span> : last ? (last.added.length ? `Saved ${last.added.length} fact${last.added.length > 1 ? "s" : ""}${last.via === "ai" ? ` · distilled by ${last.servedBy}` : " · on-device rules (AI offline)"}` : "Nothing new to remember.") : "Write it naturally. Apex keeps only the durable facts."}
+          </span>
+          <button type="submit" className="calm-btn" data-primary="true" disabled={busy || text.trim().length < 3}>
+            <CIcon name="sparkle" size={15} /> Distill
           </button>
         </div>
+        {last && last.added.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1.5" aria-label="Just saved">
+            {last.added.map((m) => (
+              <span key={m.id} className="rounded-full bg-[var(--surface-2)] px-3 py-1.5 text-[12.5px]" data-testid="memory-pill">
+                <b className="font-medium opacity-60">{m.group}</b> · {m.text}
+              </span>
+            ))}
+          </div>
+        )}
       </form>
 
       <span className="node" data-tone="topic">

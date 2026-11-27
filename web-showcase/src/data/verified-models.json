@@ -1,0 +1,301 @@
+{
+  "verifiedAt": "2026-11-27T05:50:50.452Z",
+  "maxMs": 4000,
+  "tested": 39,
+  "models": [
+    {
+      "provider": "pollinations",
+      "id": "openai-fast",
+      "ms": 233,
+      "meta": {
+        "description": "GPT-6 Luna, low reasoning (Azure)",
+        "reasoning": true
+      }
+    },
+    {
+      "provider": "ovh",
+      "id": "Mistral-Small-3.2-24B-Instruct-2506",
+      "ms": 241,
+      "meta": {
+        "owned_by": "mistralai"
+      }
+    },
+    {
+      "provider": "ovh",
+      "id": "Meta-Llama-3_3-70B-Instruct",
+      "ms": 275,
+      "meta": {
+        "owned_by": "meta-llama"
+      }
+    },
+    {
+      "provider": "ovh",
+      "id": "Qwen2.5-VL-72B-Instruct",
+      "ms": 296,
+      "meta": {
+        "owned_by": "Qwen"
+      }
+    },
+    {
+      "provider": "llm7",
+      "id": "codestral-latest",
+      "ms": 299,
+      "meta": {
+        "tier": "turbo",
+        "ctx": 32000,
+        "reasoning": false
+      }
+    },
+    {
+      "provider": "llm7",
+      "id": "gpt-oss:20b",
+      "ms": 309,
+      "meta": {
+        "tier": "turbo",
+        "ctx": 128000,
+        "reasoning": false
+      }
+    },
+    {
+      "provider": "ovh",
+      "id": "DeepSeek-V4.1-Flash-1017",
+      "ms": 312,
+      "meta": {
+        "owned_by": "DeepSeek"
+      }
+    },
+    {
+      "provider": "ovh",
+      "id": "nemotron3-omni-30b",
+      "ms": 443,
+      "meta": {
+        "owned_by": "NVIDIA"
+      }
+    },
+    {
+      "provider": "ovh",
+      "id": "gpt-oss-20b",
+      "ms": 477,
+      "meta": {
+        "owned_by": "OpenAI"
+      }
+    },
+    {
+      "provider": "ovh",
+      "id": "gpt-oss-120b",
+      "ms": 526,
+      "meta": {
+        "owned_by": "OpenAI"
+      }
+    },
+    {
+      "provider": "ovh",
+      "id": "nemotron3-nano-30b",
+      "ms": 588,
+      "meta": {
+        "owned_by": "NVIDIA"
+      }
+    },
+    {
+      "provider": "ovh",
+      "id": "qwen3-vl-30b-a3b",
+      "ms": 598,
+      "meta": {
+        "owned_by": "Qwen"
+      }
+    },
+    {
+      "provider": "ovh",
+      "id": "Olala-v1.0-mini-7A1B",
+      "ms": 705,
+      "meta": {
+        "owned_by": "OVHcloud"
+      }
+    },
+    {
+      "provider": "ovh",
+      "id": "Qwen3.8-27B",
+      "ms": 912,
+      "meta": {
+        "owned_by": "Qwen"
+      }
+    }
+  ],
+  "failed": [
+    {
+      "provider": "llm7",
+      "id": "XiaomiMiMo/MiMo-V2.6-Pro",
+      "status": 401,
+      "ms": 200,
+      "slow": false
+    },
+    {
+      "provider": "llm7",
+      "id": "deepseek-v4.1-flash",
+      "status": 401,
+      "ms": 211,
+      "slow": false
+    },
+    {
+      "provider": "llm7",
+      "id": "deepseek-v4.1-flash-uncensored",
+      "status": 401,
+      "ms": 215,
+      "slow": false
+    },
+    {
+      "provider": "llm7",
+      "id": "gemini-3.6-flash",
+      "status": 401,
+      "ms": 235,
+      "slow": false
+    },
+    {
+      "provider": "llm7",
+      "id": "gemini-3.8-flash",
+      "status": 401,
+      "ms": 217,
+      "slow": false
+    },
+    {
+      "provider": "llm7",
+      "id": "gemini-4-argon",
+      "status": 401,
+      "ms": 262,
+      "slow": false
+    },
+    {
+      "provider": "llm7",
+      "id": "gemma-3-27b",
+      "status": 401,
+      "ms": 188,
+      "slow": false
+    },
+    {
+      "provider": "llm7",
+      "id": "gemma-4-uncensored",
+      "status": 401,
+      "ms": 221,
+      "slow": false
+    },
+    {
+      "provider": "llm7",
+      "id": "glm-5.3-uncensored",
+      "status": 401,
+      "ms": 197,
+      "slow": false
+    },
+    {
+      "provider": "ovh",
+      "id": "clef-flash",
+      "status": 404,
+      "ms": 147,
+      "slow": false
+    },
+    {
+      "provider": "ovh",
+      "id": "gemma-4-26b-a4b",
+      "status": 200,
+      "ms": 743,
+      "slow": false
+    },
+    {
+      "provider": "ovh",
+      "id": "qwen3.6-35b-a3b",
+      "status": 200,
+      "ms": 696,
+      "slow": false
+    },
+    {
+      "provider": "ovh",
+      "id": "Qwen3.6-27B",
+      "status": 200,
+      "ms": 654,
+      "slow": false
+    },
+    {
+      "provider": "ovh",
+      "id": "laguna-xs-2.1",
+      "status": 200,
+      "ms": 729,
+      "slow": false
+    },
+    {
+      "provider": "ovh",
+      "id": "Qwen3.5-397B-A17B",
+      "status": 200,
+      "ms": 838,
+      "slow": false
+    },
+    {
+      "provider": "ovh",
+      "id": "Qwen3.5-9B",
+      "status": 200,
+      "ms": 787,
+      "slow": false
+    },
+    {
+      "provider": "airforce",
+      "id": "llama-instant",
+      "status": 401,
+      "ms": 216,
+      "slow": false
+    },
+    {
+      "provider": "airforce",
+      "id": "mistral-large-4",
+      "status": 401,
+      "ms": 201,
+      "slow": false
+    },
+    {
+      "provider": "airforce",
+      "id": "kimi-k2.7-code",
+      "status": 429,
+      "ms": 178,
+      "slow": false
+    },
+    {
+      "provider": "airforce",
+      "id": "gpt-oss-20b",
+      "status": 401,
+      "ms": 500,
+      "slow": false
+    },
+    {
+      "provider": "llm7",
+      "id": "gemini",
+      "status": 400,
+      "ms": 278,
+      "slow": false
+    },
+    {
+      "provider": "llm7",
+      "id": "gemini-argon",
+      "status": 400,
+      "ms": 355,
+      "slow": false
+    },
+    {
+      "provider": "llm7",
+      "id": "gpt-4o-mini",
+      "status": 400,
+      "ms": 308,
+      "slow": false
+    },
+    {
+      "provider": "llm7",
+      "id": "llama-3.3-70b",
+      "status": 400,
+      "ms": 228,
+      "slow": false
+    },
+    {
+      "provider": "llm7",
+      "id": "deepseek-r1",
+      "status": 400,
+      "ms": 331,
+      "slow": false
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { OnboardingHero } from "./OnboardingHero";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
@@ -171,20 +172,7 @@ export function Onboarding({ theme, onTheme, onDone }: { theme: Theme; onTheme: 
         <AnimatePresence mode="wait" initial={false}>
           {step === 0 && (
             <motion.section key="s0" className="flex flex-1 flex-col items-center justify-center py-4 text-center" exit={{ opacity: 0, filter: "blur(8px)", y: -10 }} transition={{ duration: 0.25 }}>
-              <motion.div initial={{ opacity: 0, scale: 0.85, filter: "blur(14px)" }} animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }} transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}>
-                <Orb />
-              </motion.div>
-              <BlurWords text="Welcome to Apex Local AI Studio." className="mt-6 max-w-[14ch] text-[32px] font-normal leading-[1.08] tracking-[-0.03em]" delay={0.3} />
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 0.8 }} className={`mt-3 max-w-[32ch] text-[15px] leading-relaxed ${dim}`}>
-                Private open-weight GGUF models that run directly on your phone&apos;s silicon. No account, no cloud needed.
-              </motion.p>
-              <ul className="mt-6 flex flex-wrap justify-center gap-2" aria-label="Built in">
-                {BUILT_IN.map((b, i) => (
-                  <motion.li key={b.label} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 1.2 + i * 0.07 }} className="calm-chip">
-                    <CIcon name={b.icon} size={13} /> {b.label}
-                  </motion.li>
-                ))}
-              </ul>
+              <OnboardingHero dim={dim} />
             </motion.section>
           )}
 

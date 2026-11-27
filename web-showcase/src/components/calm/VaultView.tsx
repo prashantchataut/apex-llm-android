@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useRef, useState } from "react";
+import { getSelectedRepo } from "@/lib/github-auth";
 import { addFile, clearCollection, docChunks, importGithubRepo, removeDocument, search, useVault, VAULT_ACCEPT, vaultStats, type Hit, type VaultDoc } from "@/lib/rag";
 import { CIcon } from "./icons";
 import { ViewTitle } from "./Chrome";
@@ -56,7 +57,7 @@ export function VaultView({ ghToken, enabled, setEnabled }: { ghToken: string | 
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
-  const [repo, setRepo] = useState("");
+  const [repo, setRepo] = useState(() => getSelectedRepo());
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);

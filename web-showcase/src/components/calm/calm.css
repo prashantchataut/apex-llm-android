@@ -638,3 +638,8 @@ html.is-android { --safe-top-default: 40px; --safe-bottom-default: 16px; }
 .upd-dot { position: absolute; right: 7px; top: 7px; width: 9px; height: 9px; border-radius: 999px; background: var(--halo-ink); box-shadow: 0 0 0 2px var(--canvas); }
 .upd-dot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--halo-ink); animation: upd-ping 1.8s cubic-bezier(.16,1,.3,1) infinite; }
 @media (prefers-reduced-motion: reduce) { .upd-ping, .upd-dot::after { animation: none; } }
+
+/* AI memory distiller shimmer */
+.distill-shimmer { background: linear-gradient(90deg, rgb(var(--ink-rgb) / .45) 0%, rgb(var(--ink-rgb) / 1) 45%, rgb(var(--ink-rgb) / .45) 90%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: distill-sweep 1.4s linear infinite; }
+@keyframes distill-sweep { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .distill-shimmer { animation: none; color: inherit; background: none; } }
