@@ -1,5 +1,8 @@
 # PROGRESS
 
+## Session 18 - audit, rebrand and wording cleanup (v1.4.0)
+Done (verified in headless Chromium): landing rebrand, emoji-free Rust, no user-visible 'keyless' wording, truthful release notes, old PR/release text cleaned, model URLs re-verified. Not done: PAT in vault (refused), versionCode 14 (would break updates), device test of the Kotlin updater. See .agent/STATE.md.
+
 ## Session 17 — Local Runner Studio (v1.4.0 refresh)
 Done (verified in headless Chromium): imported provider/model catalog with live probes, passphrase-only /admin with model explorer, Image Studio upgrade, emoji removal, obsidian UI layer, public 1-tap GitHub connect. Not done: PAT in vault (refused), versionCode 14, device test of the Kotlin updater. See .agent/STATE.md.
 

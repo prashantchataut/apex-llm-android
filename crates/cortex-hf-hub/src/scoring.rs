@@ -6,20 +6,20 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Compatibility {
-    /// ⚡ Optimal for Your Phone
+    /// Optimal for Your Phone
     Optimal,
-    /// ⚠️ Heavy (High RAM)
+    /// Heavy (High RAM)
     Heavy,
-    /// ❌ Incompatible
+    /// Incompatible
     Incompatible,
 }
 
 impl Compatibility {
     pub fn badge(&self) -> &'static str {
         match self {
-            Compatibility::Optimal => "⚡ Optimal for Your Phone",
-            Compatibility::Heavy => "⚠️ Heavy (High RAM)",
-            Compatibility::Incompatible => "❌ Incompatible",
+            Compatibility::Optimal => "Optimal for Your Phone",
+            Compatibility::Heavy => "Heavy (High RAM)",
+            Compatibility::Incompatible => "Incompatible",
         }
     }
 }
