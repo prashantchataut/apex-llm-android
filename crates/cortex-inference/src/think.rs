@@ -149,12 +149,12 @@ mod tests {
     #[test]
     fn multibyte_is_safe() {
         assert_eq!(
-            run(&["<think>日本", "語</think>✓"]),
+            run(&["<think>日本", "語</think>ok"]),
             [
                 ThinkStart,
                 Thought("日本語".into()),
                 ThinkEnd,
-                Text("✓".into())
+                Text("ok".into())
             ]
         );
     }
