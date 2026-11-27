@@ -1,0 +1,5 @@
+{
+  "_readme": "Owner setup, once: github.com/settings/developers -> New OAuth App -> tick 'Enable Device Flow' -> paste the Client ID below (a Client ID is public, never put a client secret here). 'relay' is optional: an https URL that forwards POST /device_code and /access_token to github.com for the browser build (the Android app does not need it).",
+  "clientId": "",
+  "relay": ""
+}
