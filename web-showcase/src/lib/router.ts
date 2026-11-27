@@ -5,7 +5,7 @@ import { isModelDisabled } from "@/services/apexCloudMesh";
  * Apex Auto: a deterministic, zero-network intent router. No LLM call ever decides the route, so it adds no latency:
  * it is a handful of anchored regexes over the prompt and measures itself with `performance.now()` (typically 0.0x ms).
  *
- * Priority: offline / Local-Only → local model (0 ms, no network probe) → image → code → reasoning → creative → general.
+ * Priority: offline / Local-Only -> local model (0 ms, no network probe) -> image -> code -> reasoning -> creative -> general.
  */
 export type Intent = "local" | "image" | "code" | "reason" | "creative" | "general";
 
@@ -80,7 +80,7 @@ const WHY: Record<Exclude<Intent, "local">, string> = {
   code: "code detected",
   reason: "math / logic detected",
   creative: "creative writing",
-  general: "general chat → fastest verified model",
+  general: "general chat, fastest verified model",
 };
 
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
@@ -88,7 +88,7 @@ const fmt = (ms: number) => (ms < 0.01 ? "<0.01" : ms.toFixed(ms < 1 ? 2 : 1));
 
 export function routeAuto(text: string, ctx: RouteContext): RouteDecision {
   const t0 = now();
-  // Rule 1: offline or Local-Only → the mounted local model, no classification, no network.
+  // Rule 1: offline or Local-Only -> the mounted local model, no classification, no network.
   if (ctx.offline || ctx.localOnly) {
     return { intent: "local", kind: "local", localId: ctx.localId, label: ctx.localLabel ?? "On-device model", reason: ctx.localOnly ? "Local-Only mode" : "offline", ms: now() - t0 };
   }
@@ -99,9 +99,9 @@ export function routeAuto(text: string, ctx: RouteContext): RouteDecision {
   return { intent, kind: "cloud", provider: pick.provider, api: pick.id, label: pick.label, reason: WHY[intent], ms: now() - t0 };
 }
 
-/** The footer badge: "Routed by Apex Auto → Codestral · code detected · 0.12ms routing". */
+/** The footer badge: "Routed by Apex Auto -> Codestral · code detected · 0.12ms routing". */
 export function routeBadge(d: RouteDecision): string {
-  return `Routed by Apex Auto → ${d.label} · ${d.reason} · ${fmt(d.ms)}ms routing`;
+  return `Routed by Apex Auto to ${d.label} · ${d.reason} · ${fmt(d.ms)}ms routing`;
 }
 
 /** Image prompt out of "/image a cat", "draw a cat", "generate an image of a cat". */

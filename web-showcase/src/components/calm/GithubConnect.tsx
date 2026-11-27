@@ -2,8 +2,9 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import { connectWithToken, fetchRepos, getSelectedRepo, loadOauthConfig, openExternal, pollDeviceFlow, setSelectedRepo, signOutGithub, startDeviceFlow, useGithub, type DeviceCode, type GhRepo } from "@/lib/github-auth";
+import { connectPublic, connectWithToken, fetchRepos, OWNER_PUBLIC_LOGIN, getSelectedRepo, loadOauthConfig, openExternal, pollDeviceFlow, setSelectedRepo, signOutGithub, startDeviceFlow, useGithub, type DeviceCode, type GhRepo } from "@/lib/github-auth";
 import { getGithubToken } from "@/lib/skills";
+import { CIcon } from "./icons";
 
 function Octocat({ size = 20 }: { size?: number }) {
   return (
@@ -15,7 +16,7 @@ function Octocat({ size = 20 }: { size?: number }) {
 
 type Phase = { s: "idle" } | { s: "starting" } | { s: "code"; d: DeviceCode; copied: boolean } | { s: "setup" } | { s: "error"; msg: string };
 
-/** Continue with GitHub (Device Flow) → connected profile card + repo picker. A raw token stays available, collapsed, under Advanced. */
+/** Continue with GitHub (Device Flow) -> connected profile card + repo picker. A raw token stays available, collapsed, under Advanced. */
 export function GithubConnect() {
   const gh = useGithub();
   const [phase, setPhase] = useState<Phase>({ s: "idle" });
@@ -24,6 +25,7 @@ export function GithubConnect() {
   const [pat, setPat] = useState("");
   const [patErr, setPatErr] = useState("");
   const ctl = useRef<AbortController | null>(null);
+  const [quick, setQuick] = useState<"" | "busy" | string>("");
 
   useEffect(() => {
     setPicked(getSelectedRepo());
@@ -58,13 +60,22 @@ export function GithubConnect() {
       setPhase(msg === "setup" ? { s: "setup" } : { s: "error", msg });
     }
   };
+  const connectOwner = async () => {
+    setQuick("busy");
+    try {
+      await connectPublic();
+      setQuick("");
+    } catch (e) {
+      setQuick(e instanceof Error ? e.message : "Could not reach GitHub");
+    }
+  };
   const cancel = () => {
     ctl.current?.abort();
     setPhase({ s: "idle" });
   };
 
   return (
-    <div className="calm-card mt-3 overflow-hidden p-4" data-testid="github-connect">
+    <div className="calm-card mt-3 overflow-hidden p-4" data-beam="true" data-testid="github-connect">
       <h3 className="flex items-center gap-2 text-[14px] font-medium"><Octocat size={17} /> GitHub</h3>
 
       <AnimatePresence mode="wait" initial={false}>
@@ -79,13 +90,14 @@ export function GithubConnect() {
               </div>
               <button type="button" className="calm-btn" onClick={signOutGithub}>Sign out</button>
             </div>
+            {gh.publicOnly && <p className="mt-2 text-[12px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Showing public repositories. Sign out and use Continue with GitHub for private ones.</p>}
             {repos.length > 0 && (
               <div className="mt-3">
                 <p className="mb-1.5 text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Pick a repository for Knowledge Vault &amp; the GitHub skill</p>
                 <div className="flex max-h-36 flex-wrap gap-1.5 overflow-auto" role="listbox" aria-label="Repositories">
                   {repos.map((r) => (
                     <button key={r.full_name} type="button" role="option" aria-selected={picked === r.full_name} onClick={() => { setPicked(r.full_name); setSelectedRepo(r.full_name); }} className="min-h-9 rounded-full px-3 text-[12.5px]" style={picked === r.full_name ? { background: "var(--ink-solid)", color: "var(--canvas)" } : { background: "var(--surface-2)" }}>
-                      {r.full_name}{r.private ? " 🔒" : ""}
+                      {r.full_name}{r.private && <CIcon name="lock" size={12} className="ml-1 inline align-[-1px] opacity-60" aria-label="private" />}
                     </button>
                   ))}
                 </div>
@@ -104,7 +116,12 @@ export function GithubConnect() {
           </motion.div>
         ) : (
           <motion.div key="off" initial={{ opacity: 0, y: 8, filter: "blur(6px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0 }} className="mt-3">
-            <p className="text-[12.5px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Sign in to read your repositories, index them into the Knowledge Vault and create Gists. No token to copy.</p>
+            <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={() => void connectOwner()} disabled={quick === "busy"} data-testid="gh-connect-owner" className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full bg-[var(--ink-solid)] px-5 text-[15px] font-medium text-[var(--canvas)] disabled:opacity-60">
+              <Octocat size={20} /> {quick === "busy" ? "Loading repositories…" : `Connect @${OWNER_PUBLIC_LOGIN}`}
+            </motion.button>
+            {quick && quick !== "busy" && <p className="mt-2 text-[12.5px] text-[var(--bad)]" role="alert">{quick}</p>}
+            <p className="mt-2 text-[12px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">One tap loads the public repositories. No token to paste. Private repositories need the sign-in below.</p>
+            <p className="mt-4 text-[12.5px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Sign in to read your repositories, index them into the Knowledge Vault and create Gists. No token to copy.</p>
             <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={() => void begin()} disabled={phase.s === "starting"} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full bg-[#1f2328] px-5 text-[15px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,.14),0_6px_18px_-6px_rgba(0,0,0,.5)] disabled:opacity-60">
               <Octocat size={20} /> {phase.s === "starting" ? "Contacting GitHub…" : "Continue with GitHub"}
             </motion.button>

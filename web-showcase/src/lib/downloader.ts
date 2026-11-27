@@ -91,8 +91,8 @@ export async function scanInstalled(): Promise<void> {
 }
 
 /**
- * Total size without ever failing. Order: Content-Range → Content-Length → X-Linked-Size →
- * Hugging Face `?blobs=true` → catalog size (`known: false`, bar capped at 99% until the stream ends).
+ * Total size without ever failing. Order: Content-Range -> Content-Length -> X-Linked-Size ->
+ * Hugging Face `?blobs=true` -> catalog size (`known: false`, bar capped at 99% until the stream ends).
  * The old "Server did not report a content length" error is gone: a missing header only degrades the bar.
  */
 export async function resolveTotal(m: CatalogModel, res: Response, have: number, expected: number): Promise<{ total: number; known: boolean }> {
@@ -140,7 +140,7 @@ export async function startDownload(id: string): Promise<void> {
     void navigator.storage.persist?.();
     const res = await fetch(modelUrl(m), { signal: ac.signal, headers: have > 0 ? { Range: `bytes=${have}-` } : {} });
     if (!res.ok && res.status !== 206) throw new Error(`Hugging Face answered ${res.status}`);
-    if (have > 0 && res.status === 200) have = 0; // server ignored Range → restart cleanly
+    if (have > 0 && res.status === 200) have = 0; // server ignored Range -> restart cleanly
     const sized = await resolveTotal(m, res, have, expected);
     const total = sized.total;
     if (!res.body) throw new Error("No response body");

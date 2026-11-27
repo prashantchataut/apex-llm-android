@@ -2,7 +2,7 @@
  * Apex HapticsEngine — one tactile vocabulary for the whole product.
  *
  * Delivery order:
- *   1. Android native bridge `window.ApexHaptics` (MainActivity.kt → VibrationEffect: amplitude control + the
+ *   1. Android native bridge `window.ApexHaptics` (MainActivity.kt -> VibrationEffect: amplitude control + the
  *      system's tuned TICK / CLICK / HEAVY_CLICK primitives).
  *   2. `navigator.vibrate` (Android WebView / Chrome).
  *   3. Nothing (iOS Safari, desktop) — events are still emitted so the website can draw the waveform.

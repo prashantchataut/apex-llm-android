@@ -3,7 +3,8 @@
 import "./calm.css";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { loadVault, publishVault, verifyOwner } from "@/lib/admin";
+import { loadVault, publishVault } from "@/lib/admin";
+import { RepoTokenProvider, useRepoToken } from "./RepoToken";
 import { MIN_KEY_LEN, OWNER_LOGIN, generateSecretKey, hashKey, keyStrength, mintRecord, openAsAdmin, openKeySecrets, randomHex, rekeyAdmin, type ApexCatalog, type KeySecret, type VaultFile, type VaultKey } from "@/lib/vault";
 import { REPO, REPO_URL } from "@/lib/site";
 import { CIcon } from "./icons";
@@ -58,7 +59,6 @@ function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
 const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "Never");
 
 interface Session {
-  token: string;
   vault: VaultFile;
   sha: string;
   catalog: ApexCatalog;
@@ -70,7 +70,6 @@ interface Session {
 
 /* ───────── gate ───────── */
 function Gate({ onUnlock }: { onUnlock: (s: Session) => void }) {
-  const [token, setToken] = useState("");
   const [pass, setPass] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -88,14 +87,7 @@ function Gate({ onUnlock }: { onUnlock: (s: Session) => void }) {
     setBusy(true);
     setErr("");
     try {
-      try {
-        await verifyOwner(token.trim());
-      } catch (e) {
-        const m = e instanceof Error ? e.message : "";
-        if (m === "rejected" || m === "not-owner") throw new Error("auth");
-        throw e;
-      }
-      const { vault, sha } = await loadVault(token.trim());
+      const { vault, sha } = await loadVault("");
       let catalog: ApexCatalog;
       try {
         catalog = await openAsAdmin(vault, pass);
@@ -104,16 +96,14 @@ function Gate({ onUnlock }: { onUnlock: (s: Session) => void }) {
       }
       const secrets = await openKeySecrets(vault, pass);
       bfClear();
-      const t = token.trim();
       const p = pass;
-      setToken("");
       setPass("");
-      onUnlock({ token: t, vault, sha, catalog, passphrase: p, secrets });
+      onUnlock({ vault, sha, catalog, passphrase: p, secrets });
     } catch (e) {
       const m = e instanceof Error ? e.message : "";
       if (m === "auth") {
         const until = bfFail();
-        setErr("Couldn't unlock. Check the owner token and the passphrase.");
+        setErr("Couldn't unlock. Check the passphrase.");
         setWait(Math.max(0, Math.ceil((until - Date.now()) / 1000)));
       } else setErr(m || "Network problem. Try again.");
     }
@@ -122,12 +112,12 @@ function Gate({ onUnlock }: { onUnlock: (s: Session) => void }) {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[460px] flex-col justify-center px-5 py-10" data-testid="admin-gate">
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="calm-card p-6">
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="calm-card p-6" data-beam="true">
         <span className="grid h-12 w-12 place-items-center rounded-full" style={{ background: "var(--halo-a)", color: "var(--halo-ink)" }}>
           <CIcon name="shield" size={22} />
         </span>
         <h1 className="mt-4 text-[22px] font-medium tracking-[-0.03em]">Apex API Vault</h1>
-        <p className={`mt-1 text-[13.5px] leading-relaxed ${dim}`}>Owner access only. Nothing is loaded or rendered until both factors check out: a GitHub token that belongs to <span className="font-mono">{OWNER_LOGIN}</span>, and the vault passphrase.</p>
+        <p className={`mt-1 text-[13.5px] leading-relaxed ${dim}`}>Owner access only. Enter the admin passphrase. Nothing is decrypted or rendered until it checks out.</p>
         <form
           className="mt-5 grid gap-3"
           onSubmit={(e) => {
@@ -136,12 +126,8 @@ function Gate({ onUnlock }: { onUnlock: (s: Session) => void }) {
           }}
         >
           <label className="grid gap-1.5 text-[13px]">
-            <span className={dim}>GitHub personal access token</span>
-            <input className="calm-field !font-mono" type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="ghp_…" autoComplete="off" autoCapitalize="off" name="apex-admin-pat" spellCheck={false} aria-label="GitHub personal access token" />
-          </label>
-          <label className="grid gap-1.5 text-[13px]">
             <span className={dim}>Admin master passphrase</span>
-            <input className="calm-field !font-mono" type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="••••-••••-••••" autoComplete="off" spellCheck={false} aria-label="Admin master passphrase" />
+            <input className="calm-field !font-mono" type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Admin passphrase" autoComplete="current-password" autoFocus spellCheck={false} aria-label="Admin passphrase" />
           </label>
           {err && (
             <p role="alert" className="flex items-start gap-2 rounded-2xl bg-[var(--surface-2)] px-3.5 py-2.5 text-[13px] text-[#d6685f]">
@@ -149,12 +135,12 @@ function Gate({ onUnlock }: { onUnlock: (s: Session) => void }) {
             </p>
           )}
           {wait > 0 && <p className={`text-[12.5px] ${dim}`}>Too many attempts. Try again in {wait >= 60 ? `${Math.ceil(wait / 60)} min` : `${wait}s`}.</p>}
-          <button type="submit" className="calm-btn !h-12" data-primary="true" disabled={busy || wait > 0 || token.trim().length < 20 || pass.length < 8}>
+          <button type="submit" className="calm-btn !h-12" data-primary="true" disabled={busy || wait > 0 || pass.length < 8}>
             <CIcon name="unlock" size={16} /> {busy ? "Verifying…" : "Unlock console"}
           </button>
         </form>
         <div className="mt-4"><ZeroTrustBadge /></div>
-        <p className={`mt-3 text-[12px] leading-relaxed ${dim}`}>The token is checked live against api.github.com/user and kept in memory only. The console locks itself after 15 minutes of inactivity or when this tab closes.</p>
+        <p className={`mt-3 text-[12px] leading-relaxed ${dim}`}>Only the passphrase is asked for. The console locks itself after 15 minutes of inactivity or when this tab closes.</p>
       </motion.div>
     </div>
   );
@@ -168,7 +154,7 @@ function ZeroTrustBadge() {
         <CIcon name="shield" size={15} />
       </span>
       <p className={`text-[12.5px] leading-relaxed ${dim}`}>
-        <span className="font-medium text-[rgb(var(--ink-rgb))]">Client-Side Zero-Trust Mode:</span> Your GitHub PAT never leaves your browser memory and is only sent directly to <span className="font-mono">api.github.com</span> over TLS.
+        <span className="font-medium text-[rgb(var(--ink-rgb))]">Client-Side Zero-Trust Mode:</span> Everything is decrypted in this tab. A repository token, if you connect one, is sealed on this device under your passphrase, never stored in the repo, and only sent to <span className="font-mono">api.github.com</span> over TLS.
       </p>
     </div>
   );
@@ -467,7 +453,8 @@ function PassphraseCard({ busy, onChange }: { busy: boolean; onChange: (next: st
 
 /* ───────── console ───────── */
 function Console({ session, setSession, onLock }: { session: Session; setSession: (s: Session) => void; onLock: () => void }) {
-  const { vault, token, catalog, secrets, passphrase } = session;
+  const { vault, catalog, secrets, passphrase } = session;
+  const repo = useRepoToken();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [form, setForm] = useState(false);
@@ -478,6 +465,7 @@ function Console({ session, setSession, onLock }: { session: Session; setSession
 
   /** Commit a new vault to GitHub, then adopt it (and the secrets / passphrase that go with it) as the live session. */
   const commit = async (next: VaultFile, nextSecrets: Record<string, KeySecret>, text: string, nextPass = passphrase) => {
+    const token = await repo.ensure();
     const r = await publishVault(token, next, session.sha, text);
     setSession({ ...session, vault: next, sha: r.sha, secrets: nextSecrets, passphrase: nextPass });
     setMsg({ ok: true, text: `Committed to ${REPO} and live. ${r.commitUrl}` });
@@ -557,7 +545,7 @@ function Console({ session, setSession, onLock }: { session: Session; setSession
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-[24px] font-medium tracking-[-0.03em]">Apex API Vault</h1>
-          <p className={`mt-1 text-[13.5px] ${dim}`}>Signed in as <span className="font-mono">{OWNER_LOGIN}</span> · auto-locks after 15 min idle</p>
+          <p className={`mt-1 text-[13.5px] ${dim}`}>Unlocked with the admin passphrase · auto-locks after 15 min idle</p>
         </div>
         <button type="button" className="calm-btn shrink-0" onClick={onLock} data-testid="lock-console">
           <CIcon name="lock" size={15} /> Lock Console
@@ -588,6 +576,20 @@ function Console({ session, setSession, onLock }: { session: Session; setSession
           <span className={`block text-[12.5px] ${dim}`}>Turn Apex API off for every device on its next check. Local models keep working.</span>
         </span>
         <Switch on={vault.enabled} onChange={(v) => void killSwitch(v)} label="Apex API enabled" />
+      </div>
+
+      <div className="calm-card mt-3 flex items-center justify-between gap-4 p-4" data-testid="repo-sync">
+        <span>
+          <span className="block text-[14.5px] font-medium">Repository sync</span>
+          <span className={`block text-[12.5px] ${dim}`}>
+            {repo.connected ? `Connected to ${REPO} on this device. Save & Publish commits in one click.` : "Not connected on this device. You'll be asked once, at your first publish."}
+          </span>
+        </span>
+        {repo.connected ? (
+          <button type="button" className="calm-btn shrink-0" onClick={repo.disconnect}>Disconnect</button>
+        ) : (
+          <button type="button" className="calm-btn shrink-0" onClick={() => void repo.ensure().catch(() => undefined)}>Connect</button>
+        )}
       </div>
 
       <PassphraseCard busy={busy} onChange={changePass} />
@@ -670,11 +672,11 @@ function Console({ session, setSession, onLock }: { session: Session; setSession
       </div>
 
       <div className="mt-8">
-        <AdminMesh token={token} />
+        <AdminMesh />
       </div>
 
       <div className="mt-8">
-        <AdminCatalog token={token} vault={vault} />
+        <AdminCatalog vault={vault} />
       </div>
 
       <p className={`mt-10 text-center text-[12px] ${dim}`}>
@@ -720,7 +722,13 @@ export function AdminConsole() {
     <div className="calm relative min-h-dvh overflow-x-clip" data-cmode="dark">
       <div className="calm-glow" style={{ height: 520 }} aria-hidden="true" />
       <div className="relative z-10 pt-safe">
-      {session ? <Console session={session} setSession={setSession} onLock={lock} /> : <Gate onUnlock={setSession} />}
+      {session ? (
+        <RepoTokenProvider passphrase={session.passphrase} salt={session.vault.salt}>
+          <Console session={session} setSession={setSession} onLock={lock} />
+        </RepoTokenProvider>
+      ) : (
+        <Gate onUnlock={setSession} />
+      )}
       </div>
     </div>
   );

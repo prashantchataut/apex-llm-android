@@ -5,7 +5,7 @@ import { MEM_GROUPS, distillMemory, removeMemory, updateMemory, useMemories, wip
 import { CIcon } from "./icons";
 import { ViewTitle } from "./Chrome";
 
-/** What Apex knows about you, as a connected tree: You ↳ Identity | Projects | Preferences | Tone. */
+/** What Apex knows about you, as a connected tree: You > Identity | Projects | Preferences | Tone. */
 export function MemoryView() {
   const mems = useMemories();
   const [text, setText] = useState("");

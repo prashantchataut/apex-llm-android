@@ -5,10 +5,11 @@
   "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.4.0",
   "publishedAt": "2026-11-27T10:00:00Z",
   "changelog": [
-    "Native in-app APK updater: downloads and installs inside the app with live progress, never opens Chrome",
-    "On-Device Local AI Runner onboarding; new local models (Qwen3, Gemma 3, LFM2, SmolLM2, Dolphin 3.0)",
-    "/admin: per-model on/off, inline rename and live ping for keyless models; changes reach the app picker and router",
-    "Built-in offline PDF reader (pages, zoom, search, Summarize, Ask AI) and Copy LaTeX on KaTeX math",
-    "System-instruction presets in Settings"
+    "Native in-app updater: downloads the APK inside the app with live progress and opens the system installer, never a browser",
+    "On-Device Local AI Runner and Private Pocket Intelligence Studio: new onboarding, 28 downloadable local models",
+    "/admin: passphrase-only login, full provider and model catalog with search, All / Working / Enabled / Failed tabs, inline rename, categories, Test Live and batch verify",
+    "Image Studio: Enhance prompt, 1:1 / 9:16 / 16:9 / 4:5, style presets, Flux model picker with automatic fallback, saved gallery",
+    "Built-in PDF reader, offline LaTeX with Copy LaTeX, system-instruction presets, 1-tap Connect @prashantchataut (public repositories)",
+    "Obsidian dark surfaces, border-beam cards, segmented pills; no emoji anywhere"
   ]
 }

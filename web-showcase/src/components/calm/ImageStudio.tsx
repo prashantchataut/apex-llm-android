@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ASPECTS, LOCAL_ENGINE_SLOT, STYLES, addToGallery, downloadImage, fetchImage, imageUrl, makeThumb, randomSeed, removeFromGallery, useGallery, type ImageJob } from "@/lib/images";
+import { ASPECTS, IMAGE_MODELS, STYLES, addToGallery, downloadImage, enhancePrompt, fetchImageChain, imageUrlChain, makeThumb, randomSeed, removeFromGallery, useGallery, type ImageJob } from "@/lib/images";
 import { useApexModels } from "@/lib/apex-cloud";
 import { CIcon } from "./icons";
 import { ViewTitle } from "./Chrome";
@@ -15,30 +15,45 @@ const Seg = ({ label, on, onClick }: { label: string; on: boolean; onClick: () =
 export function ImageStudio({ onUseInChat, onZoom }: { onUseInChat: (url: string, prompt: string, src: string) => void; onZoom: (url: string, prompt: string) => void }) {
   const [prompt, setPrompt] = useState("");
   const apex = useApexModels();
-  const [engineSel, setEngine] = useState("");
-  const engine = engineSel || apex.image[0]?.id || "";
+  const [engine, setEngine] = useState(IMAGE_MODELS[0].id);
+  const [enhancing, setEnhancing] = useState(false);
+  const [note, setNote] = useState("");
   const [aspect, setAspect] = useState("1:1");
   const [style, setStyle] = useState("soft");
   const [negative, setNegative] = useState("");
   const [seed, setSeed] = useState(() => randomSeed());
-  const [res, setRes] = useState<{ url: string; job: ImageJob; state: "loading" | "ok" | "err"; src?: string; wait?: number; err?: string } | null>(null);
+  const [res, setRes] = useState<{ url: string; job: ImageJob; state: "loading" | "ok" | "err"; src?: string; wait?: number; err?: string; fell?: string; servedApi?: string } | null>(null);
   const gallery = useGallery();
   const token = useRef(0);
 
   const generate = (s = seed) => {
     if (!prompt.trim()) return;
     const job: ImageJob = { prompt: prompt.trim(), engine, aspect, style, negative, seed: s };
-    const url = imageUrl(job);
-    if (!url) return;
+    const chain = imageUrlChain(job);
+    if (!chain.length) return;
+    const url = chain[0].url;
     const t = ++token.current;
     setRes({ url, job, state: "loading" });
-    fetchImage(url, (w) => t === token.current && setRes((r) => (r ? { ...r, wait: w } : r)))
-      .then(async (src) => {
+    fetchImageChain(chain, {
+      onWait: (w) => t === token.current && setRes((r) => (r ? { ...r, wait: w } : r)),
+      onFallback: (api) => t === token.current && setRes((r) => (r ? { ...r, fell: api } : r)),
+    })
+      .then(async ({ src, api }) => {
         if (t !== token.current) return;
-        setRes({ url, job, state: "ok", src });
-        addToGallery(job, url, await makeThumb(src));
+        const used = chain.find((c) => c.api === api)?.url ?? url;
+        setRes({ url: used, job, state: "ok", src, servedApi: api });
+        addToGallery(job, used, await makeThumb(src));
       })
       .catch((e: unknown) => t === token.current && setRes({ url, job, state: "err", err: e instanceof Error ? e.message : "Generation failed" }));
+  };
+  const enhance = async () => {
+    if (!prompt.trim() || enhancing) return;
+    setEnhancing(true);
+    setNote("");
+    const r = await enhancePrompt(prompt);
+    setPrompt(r.text);
+    setNote(r.by === "ai" ? "Prompt enhanced." : "AI is busy, so a quick rewrite was used.");
+    setEnhancing(false);
   };
   const reroll = () => {
     const s = randomSeed();
@@ -56,16 +71,22 @@ export function ImageStudio({ onUseInChat, onZoom }: { onUseInChat: (url: string
             <span className="mb-1.5 block text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Prompt</span>
             <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} placeholder="A quiet harbor at dawn, soft pastel light" className="calm-field resize-none" />
           </label>
+          <div className="-mt-1 flex items-center gap-3">
+            <button type="button" className="calm-btn" onClick={() => void enhance()} disabled={!prompt.trim() || enhancing} data-testid="enhance-prompt">
+              <CIcon name="wand" size={15} /> {enhancing ? "Enhancing…" : "Enhance prompt"}
+            </button>
+            {note && <span className="text-[12px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]" role="status">{note}</span>}
+          </div>
           {!apex.unlocked && (
-            <p className="rounded-[18px] bg-[var(--surface-2)] px-4 py-3 text-[13px] leading-relaxed text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Image engines are part of Apex API. Unlock it with your Apex API key (Settings → Apex API key) to generate images.</p>
+            <p className="rounded-[18px] bg-[var(--surface-2)] px-4 py-3 text-[13px] leading-relaxed text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Image engines are part of Apex API. Unlock it with your Apex API key (Settings, Apex API key) to generate images.</p>
           )}
           <fieldset>
-            <legend className="mb-1.5 text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Engine</legend>
-            <div className="space-y-1.5">
-              {[...apex.image.map((m) => ({ id: m.id, label: m.label, sub: m.tag, local: false })), LOCAL_ENGINE_SLOT].map((e) => (
-                <button key={e.id} type="button" disabled={e.local} aria-pressed={engine === e.id} onClick={() => setEngine(e.id)} className="flex min-h-[50px] w-full items-center gap-3 rounded-[18px] px-4 text-left transition-colors disabled:opacity-50" style={engine === e.id ? { background: "var(--halo-a)" } : { background: "var(--surface-2)" }}>
+            <legend className="mb-1.5 text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Model</legend>
+            <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Image model">
+              {IMAGE_MODELS.map((e) => (
+                <button key={e.id} type="button" role="radio" aria-checked={engine === e.id} onClick={() => setEngine(e.id)} data-testid={`img-model-${e.id}`} className="flex min-h-[56px] items-center gap-2 rounded-[18px] px-3.5 text-left transition-colors" style={engine === e.id ? { background: "var(--halo-a)" } : { background: "var(--surface-2)" }}>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13.5px]">{e.label}</span>
+                    <span className="block truncate text-[13.5px] font-medium">{e.label}</span>
                     <span className="block truncate text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{e.sub}</span>
                   </span>
                   {engine === e.id && <CIcon name="check" size={16} />}
@@ -75,9 +96,9 @@ export function ImageStudio({ onUseInChat, onZoom }: { onUseInChat: (url: string
           </fieldset>
           <fieldset>
             <legend className="mb-1.5 text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Aspect ratio</legend>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="calm-seg" role="group" aria-label="Aspect ratio">
               {ASPECTS.map((a) => (
-                <Seg key={a.id} label={a.label} on={aspect === a.id} onClick={() => setAspect(a.id)} />
+                <button key={a.id} type="button" aria-pressed={aspect === a.id} onClick={() => setAspect(a.id)}>{a.label}</button>
               ))}
             </div>
           </fieldset>
@@ -108,11 +129,11 @@ export function ImageStudio({ onUseInChat, onZoom }: { onUseInChat: (url: string
         </section>
 
         <section aria-label="Result" aria-live="polite">
-          <div className="calm-card overflow-hidden p-3">
+          <div className="calm-card overflow-hidden p-3" data-beam="true">
             <div className="relative mx-auto w-full overflow-hidden rounded-[18px]" style={{ aspectRatio: `${size.w} / ${size.h}`, maxHeight: 560 }}>
               {(!res || res.state !== "ok") && (
                 <div className={`absolute inset-0 grid place-items-center px-6 text-center text-[13px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))] ${res?.state === "loading" ? "shimmer" : "bg-[var(--surface-2)]"}`}>
-                  <span className="relative z-[1]">{!res ? "Your image appears here" : res.state === "loading" ? (res.wait ? `Free tier allows 1 image every 45 s — retrying in ${res.wait}s` : "Generating — this can take 5–20 seconds…") : (res.err ?? "Generation failed. Try again.")}</span>
+                  <span className="relative z-[1]">{!res ? "Your image appears here" : res.state === "loading" ? (res.wait ? `All models are busy, retrying in ${res.wait}s` : res.fell ? `Switching to ${res.fell} automatically…` : "Generating, this can take 5 to 20 seconds…") : (res.err ?? "Generation failed. Try again.")}</span>
                 </div>
               )}
               {res?.state === "ok" && res.src && (

@@ -8,9 +8,9 @@ import { APP_VERSION } from "./version";
 /**
  * AutoUpdater (v1.0.0 rewrite). Why the old one never showed "Update available":
  *  1. `/releases/latest` ignores pre-releases and answers 404 when only pre-releases exist.
- *  2. It was a single unauthenticated GitHub API call: 60 req/h per IP, shared by whole mobile carriers (403 → "error").
+ *  2. It was a single unauthenticated GitHub API call: 60 req/h per IP, shared by whole mobile carriers (403 -> "error").
  *  3. The comparison split on `.` and `-` and counted suffix numbers, so `v0.9.0-beta` vs `0.9.0` misfired.
- *  4. The app shipped as 0.9.0 while the newest published release was v0.7.0 → "remote > local" was never true.
+ *  4. The app shipped as 0.9.0 while the newest published release was v0.7.0 -> "remote > local" was never true.
  *  5. The result only surfaced inside Settings; there was no banner or badge anywhere else.
  * Fix: a canonical `version.json` (raw GitHub, cache-busted) is checked TOGETHER with the 5 newest releases, with
  * `cache: "no-store"`; the highest version wins; versions compare numerically with `v` and pre-release suffixes stripped.

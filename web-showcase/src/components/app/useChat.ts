@@ -37,7 +37,7 @@ export interface EngineTag {
   backend: Backend;
   label: string;
   cartridge?: string;
-  /** Apex Auto: which engine was picked and why, e.g. "Routed by Apex Auto → Codestral · code detected · 0.12ms routing". */
+  /** Apex Auto: which engine was picked and why, e.g. "Routed by Apex Auto -> Codestral · code detected · 0.12ms routing". */
   route?: string;
 }
 
@@ -90,7 +90,7 @@ function withSources(text: string, sources?: string[]): string {
 
 export const MODEL_KEY = "apex.model.v1";
 
-/** Pretty label for a GGUF filename: `SmolLM2-135M-Instruct-Q3_K_M.gguf` → `SmolLM2-135M-Instruct · Q3_K_M`. */
+/** Pretty label for a GGUF filename: `SmolLM2-135M-Instruct-Q3_K_M.gguf` -> `SmolLM2-135M-Instruct · Q3_K_M`. */
 export function modelLabel(file: string | null): string {
   if (!file) return "No model";
   const base = file.replace(/\.gguf$/i, "");
@@ -147,7 +147,7 @@ function visiblePath(nodes: ChatMsg[], sel: Record<string, number>): ChatMsg[] {
 
 /**
  * Chat driver with a non-destructive branch tree.
- * Backends (see `lib/engine.ts`): external router → Rust core in the Android app → wllama (llama.cpp WASM) → sandbox.
+ * Backends (see `lib/engine.ts`): external router -> Rust core in the Android app -> wllama (llama.cpp WASM) -> sandbox.
  * Editing a prompt or regenerating a reply adds a sibling instead of overwriting; `branchInfo` powers the `< 2 / 2 >` pager.
  */
 export function useChat() {
@@ -428,7 +428,7 @@ export function useChat() {
     [clear, spawnReply],
   );
 
-  /** Edit a user prompt → new sibling branch, regenerated from there. The old branch stays reachable. */
+  /** Edit a user prompt -> new sibling branch, regenerated from there. The old branch stays reachable. */
   const edit = useCallback(
     (userId: number, text: string, opts: SendOpts = {}) => {
       const orig = nodesRef.current.find((n) => n.id === userId);
@@ -445,7 +445,7 @@ export function useChat() {
     [clear, spawnReply],
   );
 
-  /** Regenerate an assistant reply → new sibling under the same prompt. */
+  /** Regenerate an assistant reply -> new sibling under the same prompt. */
   const regenerate = useCallback(
     (asstId: number, opts: SendOpts = {}) => {
       const a = nodesRef.current.find((n) => n.id === asstId);

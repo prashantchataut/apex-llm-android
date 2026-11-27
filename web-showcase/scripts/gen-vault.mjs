@@ -22,7 +22,8 @@ const ITER = 200000;
 const B62 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 const rnd62 = (n) => { let s = ""; while (s.length < n) for (const b of randomBytes(64)) if (b < 248 && s.length < n) s += B62[b % 62]; return s; };
 const pass = process.env.APEX_ADMIN_PASSPHRASE ?? randomBytes(12).toString("hex").replace(/(.{4})/g, "$1-").slice(0, -1);
-if (pass.length < 16) { console.error("APEX_ADMIN_PASSPHRASE must be at least 16 characters"); process.exit(1); }
+if (pass.length < 8) { console.error("APEX_ADMIN_PASSPHRASE must be at least 8 characters (the /admin gate minimum)"); process.exit(1); }
+if (pass.length < 16) console.error("warning: passphrase shorter than 16 characters. It is the only thing between a public vault file and your key list. Prefer 16+.");
 const secret = (arg("key") ?? `sk-apex-${rnd62(40)}`).trim();
 if (secret.length < 8) { console.error("key must be at least 8 characters"); process.exit(1); }
 

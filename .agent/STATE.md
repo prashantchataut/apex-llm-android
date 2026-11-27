@@ -1,3 +1,17 @@
+# STATE — last updated: Session 17 (branch feat/v140-local-runner-studio)
+
+## [SESSION 17 — WHAT ACTUALLY HAPPENED]
+- **PR #13 was already merged** (and #14 after it). Branch `feat/v140-local-runner-studio` was cut from `main`; no new PR was opened.
+- **Catalog import** (`web-showcase/scripts/import-zeus-catalog.mjs`, output `src/data/zeus-catalog.json`): read-only checkout of `NikitHamal/zeusdesigns`, resolved every (provider, model) to its gateway, added live `/models` discovery, probed each with a real completion. Result: 55 gateways, 471 models, 159 verified (143 browser-callable). Paid routes (Kilo non-free, BlockRun non-free) were NOT imported. 39 models from 6 providers that need a key were skipped. **The reference repo hard-codes real third-party API keys (agnescloud, volcark, zhipudirect, longcat); none were copied. Tell the repo owner to rotate them.** The "600+" target was not reached honestly: 471 imported + the built-in live lists; nothing was padded.
+- Imported models are OFF by default unless verified AND browser-callable (CORS); the owner can force one on (`enabledModels`). Failover adds the six fastest verified imported gateways.
+- **/admin**: passphrase-only gate (one field). The repository token is NOT in the vault or repo: pasted once per device, sealed under the passphrase in localStorage, then publish is one click. Catalog explorer: search, All/Working/Enabled/Failed tabs, inline rename + category, per-model Test Live, batch verify, "turn off offline". `mesh.json` gained `enabledModels` and `categories`.
+- **Vault regenerated**: the old vault's passphrase and key were never recorded, neither `apex-admin-2025` nor `APEX-PRO-2025` opened it. New vault: passphrase `apex-admin-2025`, key `APEX-PRO-2025`, catalog = Pollinations text + four image engines. The old `sk-apex-...4Rtm` key no longer works. The passphrase is public (it is in the brief): it protects the key list only, never repo write access.
+- **DELIBERATELY NOT DONE**: (1) PAT inside the vault / embedded in the app: the vault is public, so a passphrase-sealed token is an offline-brute-forceable `repo`+`workflow` token. "Connect @prashantchataut" instead reads public repos with no token. (2) `versionCode 14`: Tauri derives 1004000 from 1.4.0; 14 would be a downgrade. (3) A `gh-pages` branch is not what Pages serves (build_type=workflow from main), see the deploy notes in the PR.
+- Image Studio: `flux-anime` / `flux-3d` do not exist upstream (HTTP 402). Anime and 3D are `flux` + a style suffix; chain flux -> turbo -> sana.
+- Emoji: the real ones (two lightning bolts, a lock) are SVG now; typographic arrows were replaced with ASCII.
+- UI: obsidian #09090B, border-beam cards (opt-in `data-beam`), `.calm-seg` pills. Android top inset was already 40px + 10px.
+- QA: Playwright at 412x915@2x, screenshots in `docs/qa/v140-local-runner-studio/`. The chat reply and the generated image in those shots are stubbed responses (to show the LaTeX renderer and gallery deterministically); admin Test Live hit real endpoints. Kotlin updater still unverified on a device. Security: a PAT was pasted in chat again, revoke it.
+
 # STATE — last updated: Session 16 (branch feat/session-16-release-v140-and-live-site-sync)
 
 ## [SESSION 16 — WHAT ACTUALLY HAPPENED]

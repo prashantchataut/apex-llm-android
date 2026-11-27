@@ -48,11 +48,11 @@
 }
 .calm[data-cmode="dark"] {
   color-scheme: dark;
-  --canvas: #0d0d0f;
-  --surface: #161618;
-  --surface-2: #1e1e22;
+  --canvas: #09090B;
+  --surface: #111113;
+  --surface-2: #19191d;
   --ink-rgb: 236 236 240;
-  --inv-rgb: 13 13 15;
+  --inv-rgb: 9 9 11;
   --ink-2-a: 0.74;
   --ink-3-a: 0.56;
   --accent: #8fd3b6;
@@ -643,3 +643,21 @@ html.is-android { --safe-top-default: 40px; --safe-bottom-default: 16px; }
 .distill-shimmer { background: linear-gradient(90deg, rgb(var(--ink-rgb) / .45) 0%, rgb(var(--ink-rgb) / 1) 45%, rgb(var(--ink-rgb) / .45) 90%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: distill-sweep 1.4s linear infinite; }
 @keyframes distill-sweep { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .distill-shimmer { animation: none; color: inherit; background: none; } }
+
+
+/* ── Beautiful UI layer: border-beam cards, tactile segmented pills, spring press ── */
+@property --beam-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+.calm-card[data-beam="true"] { position: relative; isolation: isolate; }
+.calm-card[data-beam="true"]::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: conic-gradient(from var(--beam-angle), transparent 0 72%, var(--accent) 86%, var(--accent-2) 94%, transparent 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: beam-spin 7s linear infinite; opacity: .55;
+}
+@keyframes beam-spin { to { --beam-angle: 360deg; } }
+.calm-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-2); box-shadow: inset 0 1px 2px rgb(0 0 0 / .25), inset 0 0 0 1px var(--hairline-strong); }
+.calm-seg > button { min-height: 36px; padding: 0 16px; border-radius: 999px; font-size: 13px; font-weight: 500; color: rgb(var(--ink-rgb) / var(--ink-3-a)); transition: transform .18s cubic-bezier(.34,1.56,.64,1), background-color .2s, color .2s, box-shadow .2s; }
+.calm-seg > button:active { transform: scale(.94); }
+.calm-seg > button[aria-pressed="true"], .calm-seg > button[aria-checked="true"] { background: var(--ink-solid); color: var(--canvas); box-shadow: 0 1px 0 rgb(255 255 255 / .22) inset, 0 4px 12px -4px rgb(0 0 0 / .5); }
+.calm .calm-btn:active { transform: scale(.965); transition: transform .12s cubic-bezier(.34,1.56,.64,1); }
+@media (prefers-reduced-motion: reduce) { .calm-card[data-beam="true"]::before { animation: none; } }

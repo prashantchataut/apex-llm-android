@@ -9,7 +9,7 @@ import { RichInline } from "./Rich";
 /**
  * Follow-up / multiple-choice pills. When a request is ambiguous the assistant asks one short question and offers a
  * few options. Each option is a full-width soft pill (no box, no border); picking sends the choice back as the next
- * message. "Something else" lets you type your own. Keyboard: 1–9 pick, ↑/↓ move focus, Enter/Space toggle.
+ * message. "Something else" lets you type your own. Keyboard: 1–9 pick, Up/Down move focus, Enter/Space toggle.
  */
 export function ChoiceCards({ question, options, multi, onAnswer }: { question: string; options: ChoiceOption[]; multi: boolean; onAnswer?: (text: string) => void }) {
   const [picked, setPicked] = useState<number[]>([]);

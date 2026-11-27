@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
+import { useRepoToken } from "./RepoToken";
 import { loadJsonFile, publishJsonFile } from "@/lib/admin";
 import { repoGgufs } from "@/lib/hf";
 import { buildOtaModel, OTA_PATH, type OtaCatalog } from "@/lib/ota";
@@ -15,7 +16,9 @@ const dim = "text-[rgb(var(--ink-rgb)/var(--ink-3-a))]";
 const spring = { type: "spring", stiffness: 380, damping: 34 } as const;
 
 /** Owner tools below the key list: OTA model catalog (featured Trending / Uncensored GGUFs), live system configuration, one-tap export. */
-export function AdminCatalog({ token, vault }: { token: string; vault: VaultFile }) {
+export function AdminCatalog({ vault }: { vault: VaultFile }) {
+  const sync = useRepoToken();
+  const token = sync.token;
   const [cat, setCat] = useState<OtaCatalog | null>(null);
   const [sha, setSha] = useState("");
   const [saved, setSaved] = useState("");
@@ -68,7 +71,7 @@ export function AdminCatalog({ token, vault }: { token: string; vault: VaultFile
     setErr("");
     try {
       const next = { ...cat, version: (cat.version ?? 1) + 1, updatedAt: new Date().toISOString() };
-      const r = await publishJsonFile(token, OTA_PATH, next, sha, `admin: update OTA model catalog (${next.models.length} models)`);
+      const r = await publishJsonFile(await sync.ensure(), OTA_PATH, next, sha, `admin: update OTA model catalog (${next.models.length} models)`);
       setCat(next);
       setSha(r.sha);
       setSaved(JSON.stringify(next));

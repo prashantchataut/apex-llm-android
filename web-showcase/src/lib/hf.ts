@@ -29,7 +29,7 @@ export async function repoGgufs(repo: string, signal?: AbortSignal): Promise<HfF
     .sort((a, b) => a.size - b.size);
 }
 
-/** `https://huggingface.co/<owner>/<repo>/resolve/main/<file>.gguf` (or /blob/) → parts. Any other direct URL is kept as-is. */
+/** `https://huggingface.co/<owner>/<repo>/resolve/main/<file>.gguf` (or /blob/) -> parts. Any other direct URL is kept as-is. */
 export function parseGgufUrl(u: string): { repo: string; file: string; url: string } | null {
   try {
     const x = new URL(u.trim());
