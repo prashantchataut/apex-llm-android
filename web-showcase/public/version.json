@@ -1,14 +1,14 @@
 {
-  "version": "1.3.0",
-  "tag": "v1.3.0",
-  "apkUrl": "https://github.com/prashantchataut/apex-llm-android/releases/download/v1.3.0/apex-llm-v1.3.0-arm64-v8a.apk",
-  "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.3.0",
-  "publishedAt": "2026-11-27T06:00:00Z",
+  "version": "1.4.0",
+  "tag": "v1.4.0",
+  "apkUrl": "https://github.com/prashantchataut/apex-llm-android/releases/download/v1.4.0/Apex-LLM-v1.4.0-arm64-release.apk",
+  "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.4.0",
+  "publishedAt": "2026-11-27T10:00:00Z",
   "changelog": [
-    "Fixed 'server did not report a content length' when installing local models (reqwest HEAD length bug) with HF, Range and catalog-size fallbacks",
-    "Apex Auto: a sub-millisecond, zero-network smart router (offline and Local-Only go straight to the on-device model)",
-    "Live-verified keyless models only, with 3.5 s first-token self-healing failover",
-    "Ollama-style multi-turn context, AI chat titles, AI memory distiller; the four assistant style cards are gone",
-    "Continue with GitHub (OAuth device flow) replaces pasting a token; redesigned first onboarding screen"
+    "Native in-app APK updater: downloads and installs inside the app with live progress, never opens Chrome",
+    "On-Device Local AI Runner onboarding; new local models (Qwen3, Gemma 3, LFM2, SmolLM2, Dolphin 3.0)",
+    "/admin: per-model on/off, inline rename and live ping for keyless models; changes reach the app picker and router",
+    "Built-in offline PDF reader (pages, zoom, search, Summarize, Ask AI) and Copy LaTeX on KaTeX math",
+    "System-instruction presets in Settings"
   ]
 }
