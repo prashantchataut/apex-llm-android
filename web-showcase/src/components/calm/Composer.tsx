@@ -39,6 +39,7 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
   const skills = useSkills();
   const textRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const pdfRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
   const t0 = useRef(0);
   const spoken = useRef<{ text: string; ms: number } | null>(null);
@@ -173,6 +174,7 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
     <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6 }} transition={{ type: "spring", stiffness: 420, damping: 32 }} className="calm-card absolute bottom-full left-0 z-20 mb-2 w-[220px] p-1.5" role="menu" aria-label="Add">
       {[
         { l: "Attach file", i: "clip" as const, f: () => fileRef.current?.click() },
+        { l: "Open PDF reader", i: "clip" as const, f: () => { setMenu(null); pdfRef.current?.click(); } },
         { l: "Photo", i: "image" as const, f: () => photoRef.current?.click() },
         { l: imageMode ? "Image mode · on" : "Image mode", i: "image" as const, f: () => { setImageMode(!imageMode); setMenu(null); } },
         { l: "Live voice", i: "wave" as const, f: () => { setMenu(null); onLive(); } },
@@ -187,6 +189,7 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
 
   return (
     <div className="relative">
+      <input ref={pdfRef} type="file" accept="application/pdf,.pdf" hidden data-testid="pdf-input" onChange={(e) => { const f = e.target.files?.[0]; if (f) window.dispatchEvent(new CustomEvent("apex:open-pdf", { detail: f })); e.target.value = ""; }} />
       <input ref={fileRef} type="file" multiple accept={TEXT_ACCEPT} hidden onChange={(e) => { void pick(e.target.files, "text"); e.target.value = ""; }} />
       <input ref={photoRef} type="file" accept="image/*" hidden onChange={(e) => { void pick(e.target.files, "image"); e.target.value = ""; }} />
       <AnimatePresence>{menu === "skills" && skillsMenu}</AnimatePresence>
@@ -224,6 +227,9 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
               <div className="mt-2 flex items-center gap-0.5">
                 <button type="button" className="ibtn" aria-label="Attach" title="Attach" onClick={() => fileRef.current?.click()}>
                   <CIcon name="clip" size={19} />
+                </button>
+                <button type="button" className="ibtn" aria-label="Open PDF reader" title="PDF reader" onClick={() => pdfRef.current?.click()}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4" /></svg>
                 </button>
                 <button type="button" className="ibtn" aria-label="Create image" title="Create image" aria-pressed={imageMode} data-on={imageMode} onClick={() => setImageMode(!imageMode)}>
                   <CIcon name="image" size={19} />

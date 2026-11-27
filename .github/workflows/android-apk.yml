@@ -21,7 +21,7 @@ on:
     inputs:
       tag:
         description: Release tag to publish to (created if missing)
-        default: v1.3.0
+        default: v1.4.0
       publish:
         description: Publish a GitHub Release
         type: boolean
@@ -122,7 +122,9 @@ jobs:
 
           bash scripts/verify-apk.sh "$OUT" | tee dist/verify-report.txt
           cp "$OUT" "dist/apex-llm-v${VERSION}-android.apk"
-          (cd dist && sha256sum apex-llm-*.apk > "apex-llm-v${VERSION}.sha256")
+          # Same signed bytes under the display name used in the release notes / version.json.
+          cp "$OUT" "dist/Apex-LLM-v${VERSION}-arm64-release.apk"
+          (cd dist && sha256sum apex-llm-*.apk Apex-LLM-*.apk > "apex-llm-v${VERSION}.sha256")
           ls -l dist
       - uses: actions/upload-artifact@v4
         with:
@@ -142,7 +144,7 @@ jobs:
             gh release edit "$TAG" --notes-file "$NOTES_FILE" --latest
           fi
           for attempt in 1 2 3 4 5; do
-            if gh release upload "$TAG" dist/apex-llm-*.apk dist/apex-llm-*.sha256 dist/verify-report.txt --clobber; then
+            if gh release upload "$TAG" dist/apex-llm-*.apk dist/Apex-LLM-*.apk dist/apex-llm-*.sha256 dist/verify-report.txt --clobber; then
               echo "uploaded on attempt $attempt"; exit 0
             fi
             echo "upload attempt $attempt failed, retrying in $((attempt * 20))s"; sleep $((attempt * 20))

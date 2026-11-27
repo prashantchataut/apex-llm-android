@@ -2,7 +2,7 @@
 
 import katex from "katex";
 import "katex/dist/katex.min.css";
-import { Fragment, useMemo, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { parseAssistant, safePrefix, type Seg } from "@/lib/richtext";
 import { splitFences } from "@/lib/artifacts";
 import { ChoiceCards } from "./ChoiceCards";
@@ -14,8 +14,20 @@ function tex(src: string, display: boolean): string {
 
 export function Math({ src, display = false }: { src: string; display?: boolean }) {
   const html = useMemo(() => tex(src, display), [src, display]);
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    void navigator.clipboard?.writeText(src).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    });
+  };
   return display ? (
-    <div className="math-block" dangerouslySetInnerHTML={{ __html: html }} />
+    <div className="math-block relative">
+      <div dangerouslySetInnerHTML={{ __html: html }} />
+      <button type="button" onClick={copy} aria-label="Copy LaTeX" data-testid="copy-latex" className="mt-1 rounded-full bg-[var(--surface-2)] px-3 py-1.5 text-[11.5px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-2-a,0.8))] active:scale-95">
+        {copied ? "Copied" : "Copy LaTeX"}
+      </button>
+    </div>
   ) : (
     <span className="math-inline" dangerouslySetInnerHTML={{ __html: html }} />
   );
@@ -39,7 +51,7 @@ function Inline({ text }: { text: string }) {
             {p.replace(/^\[Source:\s*/i, "").replace(/\]$/, "")}
           </button>
         ) : p.startsWith("**") && p.endsWith("**") && p.length > 4 ? (
-          <strong key={i} className="font-medium text-white">
+          <strong key={i} className="font-semibold">
             {p.slice(2, -2)}
           </strong>
         ) : p.startsWith("`") && p.endsWith("`") && p.length > 2 ? (
