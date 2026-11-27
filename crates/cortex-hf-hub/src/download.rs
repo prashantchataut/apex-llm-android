@@ -73,6 +73,8 @@ pub fn plan_segments(total: u64, n: u32) -> Vec<Segment> {
 pub struct DownloadOptions {
     pub segments: u32,
     pub expected_sha256: Option<String>,
+    /// Catalog size in bytes, used only when the server (and the hub API) do not report one.
+    pub size_hint: Option<u64>,
 }
 
 impl Default for DownloadOptions {
@@ -80,6 +82,7 @@ impl Default for DownloadOptions {
         Self {
             segments: 4,
             expected_sha256: None,
+            size_hint: None,
         }
     }
 }
@@ -95,11 +98,92 @@ fn sidecar_path(dest: &Path) -> PathBuf {
     PathBuf::from(s)
 }
 
-async fn content_length(client: &reqwest::Client, url: &str) -> Result<u64, HubError> {
-    let resp = client.head(url).send().await?.error_for_status()?;
-    resp.content_length()
-        .filter(|l| *l > 0)
-        .ok_or(HubError::NoLength)
+/// Parse the total out of `Content-Range: bytes 0-0/12345` (None for `*`).
+pub fn parse_content_range_total(v: &str) -> Option<u64> {
+    v.rsplit('/').next()?.trim().parse::<u64>().ok().filter(|n| *n > 0)
+}
+
+/// Split `https://huggingface.co/{repo}/resolve/{rev}/{file}` into `(repo, file)`.
+pub fn split_hf_resolve_url(url: &str) -> Option<(String, String)> {
+    let rest = url.strip_prefix("https://huggingface.co/")?;
+    let (repo, tail) = rest.split_once("/resolve/")?;
+    let (_rev, file) = tail.split_once('/')?;
+    let file = file.split('?').next()?;
+    Some((repo.to_string(), file.to_string()))
+}
+
+fn header_u64(h: &reqwest::header::HeaderMap, name: &str) -> Option<u64> {
+    h.get(name)?.to_str().ok()?.trim().parse::<u64>().ok().filter(|n| *n > 0)
+}
+
+/// Best-effort total size. NEVER an error: `None` means "stream it and show an indeterminate bar".
+///
+/// Order: real `Content-Length` header on HEAD (note `reqwest::Response::content_length()` is the
+/// body-size hint and is always 0 for HEAD, which is what used to raise "server did not report a
+/// content length") → `X-Linked-Size` → `Range: bytes=0-0` probe + `Content-Range` → Hugging Face
+/// `?blobs=true` JSON → the catalog's `size_hint`.
+pub async fn resolve_total(client: &reqwest::Client, url: &str, hint: Option<u64>) -> Option<u64> {
+    if let Ok(resp) = client.head(url).send().await {
+        let h = resp.headers();
+        if let Some(n) = header_u64(h, "content-length").or_else(|| header_u64(h, "x-linked-size")) {
+            return Some(n);
+        }
+    }
+    if let Ok(resp) = client.get(url).header("Range", "bytes=0-0").send().await {
+        let h = resp.headers();
+        if let Some(n) = h
+            .get("content-range")
+            .and_then(|v| v.to_str().ok())
+            .and_then(parse_content_range_total)
+            .or_else(|| header_u64(h, "x-linked-size"))
+        {
+            return Some(n);
+        }
+    }
+    if let Some((repo, file)) = split_hf_resolve_url(url) {
+        let api = format!("https://huggingface.co/api/models/{repo}?blobs=true");
+        if let Ok(resp) = client.get(api).send().await {
+            if let Ok(v) = resp.json::<serde_json::Value>().await {
+                let size = v["siblings"].as_array().and_then(|a| {
+                    a.iter()
+                        .find(|s| s["rfilename"].as_str() == Some(file.as_str()))
+                        .and_then(|s| s["size"].as_u64())
+                });
+                if let Some(n) = size.filter(|n| *n > 0) {
+                    return Some(n);
+                }
+            }
+        }
+    }
+    hint.filter(|n| *n > 0)
+}
+
+/// Single-connection streaming download for servers that give no usable length at all.
+/// Progress is reported as `progress(received, 0)` (total 0 = unknown); the caller shows an
+/// indeterminate bar. Completion is `stream ended`, never a byte comparison.
+async fn download_unknown_length(
+    client: &reqwest::Client,
+    url: &str,
+    part: &Path,
+    progress: &(impl Fn(u64, u64) + Send + Sync),
+) -> Result<u64, HubError> {
+    let resp = client.get(url).send().await?.error_for_status()?;
+    let mut file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(part)
+        .await?;
+    let mut stream = resp.bytes_stream();
+    let mut got = 0u64;
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        file.write_all(&chunk).await?;
+        got += chunk.len() as u64;
+        progress(got, 0);
+    }
+    file.flush().await?;
+    Ok(got)
 }
 
 pub async fn sha256_file(path: &Path) -> Result<String, HubError> {
@@ -135,7 +219,20 @@ pub async fn download(
     {
         Some(s) if s.url == url && part.exists() => s,
         _ => {
-            let total = content_length(client, url).await?;
+            let Some(total) = resolve_total(client, url, opts.size_hint).await else {
+                // Unknown length: stream to .part, then rename. No resume (nothing to plan against).
+                let got = download_unknown_length(client, url, &part, &progress).await?;
+                if let Some(expected) = opts.expected_sha256 {
+                    let actual = sha256_file(&part).await?;
+                    if !actual.eq_ignore_ascii_case(&expected) {
+                        let _ = tokio::fs::remove_file(&part).await;
+                        return Err(HubError::ChecksumMismatch { expected, actual });
+                    }
+                }
+                tokio::fs::rename(&part, dest).await?;
+                progress(got, got);
+                return Ok(());
+            };
             let f = OpenOptions::new()
                 .create(true)
                 .write(true)
@@ -232,6 +329,22 @@ mod tests {
             }
         }
         assert!(plan_segments(0, 4).is_empty());
+    }
+
+    #[test]
+    fn content_range_total_parses() {
+        assert_eq!(parse_content_range_total("bytes 0-0/491400032"), Some(491400032));
+        assert_eq!(parse_content_range_total("bytes 0-0/*"), None);
+        assert_eq!(parse_content_range_total("garbage"), None);
+    }
+
+    #[test]
+    fn hf_resolve_url_splits() {
+        assert_eq!(
+            split_hf_resolve_url("https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/q4.gguf?download=true"),
+            Some(("Qwen/Qwen2.5-0.5B-Instruct-GGUF".to_string(), "q4.gguf".to_string()))
+        );
+        assert_eq!(split_hf_resolve_url("https://example.com/x.gguf"), None);
     }
 
     #[tokio::test]

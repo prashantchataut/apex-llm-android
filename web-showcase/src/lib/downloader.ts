@@ -90,6 +90,30 @@ export async function scanInstalled(): Promise<void> {
   }
 }
 
+/**
+ * Total size without ever failing. Order: Content-Range → Content-Length → X-Linked-Size →
+ * Hugging Face `?blobs=true` → catalog size (`known: false`, bar capped at 99% until the stream ends).
+ * The old "Server did not report a content length" error is gone: a missing header only degrades the bar.
+ */
+export async function resolveTotal(m: CatalogModel, res: Response, have: number, expected: number): Promise<{ total: number; known: boolean }> {
+  const cr = res.headers.get("Content-Range")?.match(/\/(\d+)$/);
+  if (cr && Number(cr[1]) > 0) return { total: Number(cr[1]), known: true };
+  const cl = Number(res.headers.get("Content-Length") ?? 0);
+  if (cl > 0) return { total: res.status === 206 ? have + cl : cl, known: true };
+  const linked = Number(res.headers.get("X-Linked-Size") ?? 0);
+  if (linked > 0) return { total: linked, known: true };
+  if (m.repo && m.file && !m.url) {
+    try {
+      const j = (await (await fetch(`https://huggingface.co/api/models/${m.repo}?blobs=true`)).json()) as { siblings?: { rfilename: string; size?: number }[] };
+      const hit = j.siblings?.find((s) => s.rfilename === m.file)?.size ?? 0;
+      if (hit > 0) return { total: hit, known: true };
+    } catch {
+      /* offline or blocked: use the catalog estimate */
+    }
+  }
+  return { total: expected, known: false };
+}
+
 export async function startDownload(id: string): Promise<void> {
   const m = CATALOG.find((c) => c.id === id);
   if (!m) return;
@@ -117,8 +141,8 @@ export async function startDownload(id: string): Promise<void> {
     const res = await fetch(modelUrl(m), { signal: ac.signal, headers: have > 0 ? { Range: `bytes=${have}-` } : {} });
     if (!res.ok && res.status !== 206) throw new Error(`Hugging Face answered ${res.status}`);
     if (have > 0 && res.status === 200) have = 0; // server ignored Range → restart cleanly
-    const cr = res.headers.get("Content-Range")?.match(/\/(\d+)$/);
-    const total = cr ? Number(cr[1]) : have + Number(res.headers.get("Content-Length") ?? 0) || expected;
+    const sized = await resolveTotal(m, res, have, expected);
+    const total = sized.total;
     if (!res.body) throw new Error("No response body");
     writer = await fh.createWritable({ keepExistingData: have > 0 });
     if (have > 0) await writer.seek(have);
@@ -138,12 +162,15 @@ export async function startDownload(id: string): Promise<void> {
         mbps = mbps === 0 ? inst : mbps * 0.6 + inst * 0.4;
         lastT = now;
         lastB = loaded;
-        set(id, { status: "downloading", loaded, total, mbps });
+        set(id, { status: "downloading", loaded: sized.known ? loaded : Math.min(loaded, total * 0.99), total, mbps });
       }
     }
     await writer.close();
     writer = null;
-    if (loaded < total * 0.99) throw new Error("Download ended early — tap Resume");
+    // Only trust the byte count when the server (or the hub API) actually reported one. A catalog estimate
+    // must never turn a clean end-of-stream into an error.
+    if (sized.known && loaded < total * 0.99) throw new Error("Download ended early — tap Resume");
+    if (loaded <= 0) throw new Error("The server sent no data — tap Retry");
     set(id, { status: "done", loaded, total: loaded, mbps: 0 });
     haptic("heavyLock");
   } catch (e) {

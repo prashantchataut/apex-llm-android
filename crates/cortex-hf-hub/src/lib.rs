@@ -29,8 +29,6 @@ pub enum HubError {
     Io(#[from] std::io::Error),
     #[error("json: {0}")]
     Json(#[from] serde_json::Error),
-    #[error("server did not report a content length")]
-    NoLength,
     #[error("sha256 mismatch: expected {expected}, got {actual}")]
     ChecksumMismatch { expected: String, actual: String },
 }
