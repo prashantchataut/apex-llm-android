@@ -13,6 +13,12 @@ const SAMPLES = [
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
+const CAPS = [
+  { t: "True Offline Local LLMs", d: "Qwen 3, Gemma 3, Llama 3.2, DeepSeek R1 and uncensored Dolphin running privately on-device.", icon: "M7 3h10v4H7zM4 9h16v8H4zM8 21v-4M16 21v-4M9 13h.01M15 13h.01" },
+  { t: "Document, PDF & LaTeX Intelligence", d: "Built-in PDF reader, local RAG vault, and native KaTeX math rendering.", icon: "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4" },
+  { t: "Multi-Modal Creation & Apex Auto", d: "Image Generation Studio, Live Voice Mode, and under 1ms smart routing.", icon: "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.9 2.1L22 19l-2.1.9L19 22l-.9-2.1L16 19l2.1-.9z" },
+] as const;
+
 /** Isometric prism: three faces lit from the top-left, a slow light sweep, and a soft contact glow. */
 function Prism({ reduce }: { reduce: boolean }) {
   return (
@@ -91,25 +97,42 @@ function RoutingCard({ reduce }: { reduce: boolean }) {
 
 export function OnboardingHero({ dim }: { dim: string }) {
   const reduce = !!useReducedMotion();
-  const words = "Apex picks the model. You just talk.".split(" ");
+  const words = "Run Open-Weight AI Directly on Your Phone.".split(" ");
   return (
     <div className="flex w-full flex-col items-center text-center">
       <motion.div initial={{ opacity: 0, scale: 0.85, filter: "blur(14px)" }} animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }} transition={{ duration: 1.1, ease }}>
         <Prism reduce={reduce} />
       </motion.div>
-      <h1 className="mt-7 max-w-[15ch] text-[31px] font-normal leading-[1.08] tracking-[-0.03em]">
+      <motion.span initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6, ease }} className="mt-6 inline-flex h-7 items-center gap-2 rounded-full bg-[var(--surface-2)] px-3 text-[10.5px] font-medium uppercase tracking-[0.1em]" data-testid="onboarding-eyebrow">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#34d399]" aria-hidden="true" />
+        On-Device Local AI Runner
+      </motion.span>
+      <h1 className="mt-3 max-w-[17ch] text-[27px] font-normal leading-[1.1] tracking-[-0.03em]">
         {words.map((w, k) => (
           <motion.span key={k} className="mr-[0.26em] inline-block" initial={{ opacity: 0, y: 10, filter: "blur(8px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.8, delay: 0.3 + k * 0.07, ease }}>
             {w}
           </motion.span>
         ))}
       </h1>
-      <motion.p initial={{ opacity: 0, filter: "blur(6px)" }} animate={{ opacity: 1, filter: "blur(0px)" }} transition={{ delay: 0.95, duration: 0.8 }} className={`mt-3 max-w-[34ch] text-[14.5px] leading-relaxed ${dim}`}>
-        A private model on your phone when you&apos;re offline, the fastest verified cloud model when you&apos;re not. Chosen in under a millisecond.
+      <motion.p initial={{ opacity: 0, filter: "blur(6px)" }} animate={{ opacity: 1, filter: "blur(0px)" }} transition={{ delay: 0.95, duration: 0.8 }} className={`mt-3 max-w-[38ch] text-[13.5px] leading-relaxed ${dim}`}>
+        Download and execute GGUF &amp; ONNX models 100% offline on your phone&apos;s silicon, analyze PDFs &amp; documents privately, render LaTeX math, generate studio imagery, and route across fast cloud models in under 1ms.
       </motion.p>
       <motion.div className="mt-6 flex w-full justify-center" initial={{ opacity: 0, y: 18, filter: "blur(8px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ type: "spring", stiffness: 140, damping: 20, delay: 1.15 }}>
         <RoutingCard reduce={reduce} />
       </motion.div>
+      <motion.ul className="mt-4 grid w-full max-w-[380px] gap-2 text-left" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.4, duration: 0.7, ease }} data-testid="capability-cards">
+        {CAPS.map((c) => (
+          <li key={c.t} className="calm-card flex items-start gap-3 p-3">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[var(--surface-2)]" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={c.icon} /></svg>
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[13.5px] font-medium leading-tight">{c.t}</span>
+              <span className={`mt-0.5 block text-[12px] leading-snug ${dim}`}>{c.d}</span>
+            </span>
+          </li>
+        ))}
+      </motion.ul>
     </div>
   );
 }

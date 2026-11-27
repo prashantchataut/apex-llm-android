@@ -1,3 +1,18 @@
+# STATE — last updated: Session 15 (branch feat/session-15-native-updater-admin-studio-pdf-latex)
+
+## [SESSION 15 — WHAT ACTUALLY HAPPENED]
+- **PR #12 was already merged** into `main` (d668b33). Nothing to merge.
+- **The repo is Tauri v2, not Capacitor.** The brief's `ApexUpdaterPlugin.java` + `registerPlugin()` do not exist here. The equivalent is a Kotlin WebView bridge, same as `ApexBars` / `ApexHaptics`.
+- **Updater bug root cause**: `MainActivity.Opener.url()` (`window.ApexOpen`) fired `ACTION_VIEW` on the GitHub release URL, i.e. it opened Chrome. **Fixed**: new `ApexUpdater.kt` (`window.ApexUpdater`: `start/cancel/install/status/canInstall/openInstallSettings`). It streams the APK with `HttpURLConnection` (redirects followed natively), writes `Download/Apex-LLM-update.apk` (via `.part`, ZIP-magic check), emits `apex-update` events every 100 ms (`status, percent, downloadedMB, totalMB, speedKBps`) and opens the system installer through `FileProvider` (`<applicationId>.fileprovider`). Manifest has `REQUEST_INSTALL_PACKAGES`; `file_paths.xml` has `external-files-path Download/` + `cache-path`. Web: `downloadApk()` no longer opens any URL; the browser path streams with fetch + ReadableStream and saves a blob. `UpdateUI.tsx` shows `Downloading v1.4.0... 68% • 22.4 MB / 33.1 MB • 4.2 MB/s`, a Cancel button and an install-permission button. The "Release notes" external link was removed from the modal.
+- **NOT compiled or run**: no Java / Kotlin / Android SDK / cargo in the sandbox. The Kotlin file is unverified until CI builds the APK. The progress UI was typechecked and built, but not run on a device.
+- **Onboarding**: hero now reads ON-DEVICE LOCAL AI RUNNER / "Run Open-Weight AI Directly on Your Phone." with three capability cards (inline SVG, no emoji). A repo-wide search found no "coding agent" string before or after.
+- **Local model hub**: added SmolLM2 360M, LFM2 350M / 1.2B, Qwen3 0.6B / 1.7B / 4B, Gemma 3 4B, Dolphin 3.0 3B. Repo, file name and byte size were read from the Hugging Face tree API. Qwen3 0.6B / 1.7B only publish Q8_0 officially. Layer / KV-head numbers are from model cards.
+- **Deliberately NOT done**:
+  - **PAT inside `apex-vault.json`.** The brief's default passphrase `apex-admin-2025` is public (it is in the brief), so PBKDF2 + AES-GCM would only be a speed bump on a PAT sitting in a public repo. Treat that as publishing the token. Safer path for "Connect GitHub": register a GitHub OAuth App with Device Flow and set the Client ID in `public/config/github-oauth.json` (already supported), or paste a fine-grained PAT once and keep it in Android Keystore.
+  - **Image Studio redesign**: `https://image.pollinations.ai/models` currently returns only `["sana"]`; the Flux / SDXL list in the brief cannot be verified.
+  - **/admin keyless toggles + live ping, discover-keyless-models.mjs, pdfjs viewer, KaTeX, slash commands, export, Playwright QA screenshots, v1.4.0 build/sign/release, version bump.** Not started (scope). `public/version.json` stays 1.3.0 so installed apps are never offered an APK that does not exist.
+- **Security**: a GitHub PAT was pasted in chat again. It was used only to push this branch / open the PR and is stored nowhere in the repo. **Revoke it and issue a new one.**
+
 # STATE — last updated: Session 14 (branch feat/session-14-download-fix-auto-router-oauth-v130)
 
 ## [SESSION 14 — WHAT ACTUALLY HAPPENED]

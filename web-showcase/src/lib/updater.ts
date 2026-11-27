@@ -208,49 +208,124 @@ export function ago(ts: number): string {
   return `${Math.round(s / 60)} min ago`;
 }
 
-/** Android bridge (MainActivity.Opener): opens the APK URL in the system downloader → Package Installer. */
-const nativeOpen = (url: string): boolean => {
+export interface UpdateProgress {
+  status: "idle" | "starting" | "downloading" | "installing" | "done" | "error";
+  percent: number;
+  downloadedMB: number;
+  totalMB: number;
+  speedKBps: number;
+  version?: string;
+  message?: string;
+}
+
+interface ApexUpdaterBridge {
+  start: (apkUrl: string, version: string, expectedBytes: number) => boolean;
+  cancel: () => void;
+  install: (version: string) => boolean;
+  canInstall: () => boolean;
+  openInstallSettings: () => void;
+  status: () => string;
+}
+const bridge = (): ApexUpdaterBridge | null => {
+  if (typeof window === "undefined") return null;
+  return (window as unknown as { ApexUpdater?: ApexUpdaterBridge }).ApexUpdater ?? null;
+};
+export const hasNativeUpdater = (): boolean => bridge() !== null;
+export const cancelApkDownload = (): void => {
   try {
-    const b = (window as unknown as { ApexOpen?: { url: (u: string) => boolean } }).ApexOpen;
-    return !!b && b.url(url);
+    bridge()?.cancel();
   } catch {
-    return false;
+    /* ignore */
+  }
+};
+export const openInstallSettings = (): void => {
+  try {
+    bridge()?.openInstallSettings();
+  } catch {
+    /* ignore */
+  }
+};
+export const canInstallApks = (): boolean => {
+  try {
+    return bridge()?.canInstall() ?? true;
+  } catch {
+    return true;
   }
 };
 
+/** Human line for the progress UI: `Downloading v1.4.0... 68% • 22.4 MB / 33.1 MB • 4.2 MB/s`. */
+export function progressLine(p: UpdateProgress, tag: string): string {
+  const speed = p.speedKBps >= 1024 ? `${(p.speedKBps / 1024).toFixed(1)} MB/s` : `${Math.round(p.speedKBps)} KB/s`;
+  if (p.status === "starting") return `Connecting for ${tag}...`;
+  if (p.status === "installing") return `Download complete. Opening Android installer for ${tag}...`;
+  const size = p.totalMB > 0 ? `${p.downloadedMB.toFixed(1)} MB / ${p.totalMB.toFixed(1)} MB` : `${p.downloadedMB.toFixed(1)} MB`;
+  return `Downloading ${tag}... ${p.totalMB > 0 ? `${Math.round(p.percent)}% \u2022 ` : ""}${size} \u2022 ${speed}`;
+}
+
 /**
- * Download the APK. 1) Android: hand the URL to the system (Package Installer takes over). 2) Browser: stream with a
- * real progress bar when the asset host allows CORS, then trigger a file save. 3) Otherwise open the URL directly.
+ * Download the update INSIDE the app; nothing here ever opens Chrome or navigates away.
+ *  - Android: the native `ApexUpdater` bridge streams the APK (following GitHub's 302 natively), emits `apex-update`
+ *    events, then launches Android's package installer through FileProvider.
+ *  - Browser preview: stream with fetch + ReadableStream (live progress) and save the blob via a download anchor.
+ * Resolves "installer" (Android system dialog opened) or "saved" (browser file saved); rejects with a readable message.
  */
-export async function downloadApk(apk: ApkAsset, onProgress: (loaded: number, total: number) => void): Promise<"saved" | "handed-off"> {
-  if (nativeOpen(apk.url)) return "handed-off";
-  try {
-    const r = await fetch(apk.url);
-    if (!r.ok || !r.body) throw new Error("blocked");
-    const total = Number(r.headers.get("content-length")) || apk.size;
-    const reader = r.body.getReader();
-    const chunks: Uint8Array<ArrayBuffer>[] = [];
-    let n = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value as Uint8Array<ArrayBuffer>);
-      n += value.length;
-      onProgress(n, total);
-    }
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob(chunks, { type: "application/vnd.android.package-archive" }));
-    a.download = apk.name;
-    a.click();
-    return "saved";
-  } catch {
-    const a = document.createElement("a");
-    a.href = apk.url;
-    a.rel = "noopener";
-    a.download = apk.name;
-    a.click();
-    return "handed-off";
+export async function downloadApk(apk: ApkAsset, tag: string, onProgress: (p: UpdateProgress) => void): Promise<"installer" | "saved"> {
+  const b = bridge();
+  if (b) {
+    return new Promise((resolve, reject) => {
+      const onEvt = (e: Event) => {
+        const d = (e as CustomEvent<UpdateProgress>).detail;
+        onProgress(d);
+        if (d.status === "installing") {
+          window.removeEventListener("apex-update", onEvt);
+          resolve("installer");
+        } else if (d.status === "error") {
+          window.removeEventListener("apex-update", onEvt);
+          reject(new Error(d.message || "Download failed"));
+        }
+      };
+      window.addEventListener("apex-update", onEvt);
+      let ok = false;
+      try {
+        ok = b.start(apk.url, tag, apk.size || 0);
+      } catch {
+        ok = false;
+      }
+      if (!ok) {
+        window.removeEventListener("apex-update", onEvt);
+        reject(new Error("The update could not be started (another download may be running)."));
+      }
+    });
   }
+  const r = await fetch(apk.url);
+  if (!r.ok || !r.body) throw new Error(`Download failed (HTTP ${r.status}).`);
+  const total = Number(r.headers.get("content-length")) || apk.size || 0;
+  const reader = r.body.getReader();
+  const chunks: Uint8Array<ArrayBuffer>[] = [];
+  let n = 0;
+  const t0 = performance.now();
+  let lastTick = 0;
+  const emit = (status: UpdateProgress["status"]) =>
+    onProgress({ status, percent: total ? Math.min(100, (n / total) * 100) : 0, downloadedMB: n / 1048576, totalMB: total / 1048576, speedKBps: n / 1024 / Math.max(0.1, (performance.now() - t0) / 1000), version: tag });
+  emit("starting");
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value as Uint8Array<ArrayBuffer>);
+    n += value.length;
+    const now = performance.now();
+    if (now - lastTick >= 100) {
+      lastTick = now;
+      emit("downloading");
+    }
+  }
+  emit("downloading");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(chunks, { type: "application/vnd.android.package-archive" }));
+  a.download = apk.name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+  return "saved";
 }
 
 /** OTA registry: new models can be published by editing registry.json in the repo — no APK needed. */

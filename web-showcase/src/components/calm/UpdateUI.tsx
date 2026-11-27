@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { APP_VERSION } from "@/lib/version";
-import { checkForUpdate, closeUpdateModal, compareSemver, dismissBanner, downloadApk, openUpdateModal, releaseOf, useUpdateUi, useUpdater } from "@/lib/updater";
+import { cancelApkDownload, canInstallApks, checkForUpdate, closeUpdateModal, compareSemver, dismissBanner, downloadApk, openInstallSettings, openUpdateModal, progressLine, releaseOf, useUpdateUi, useUpdater, type UpdateProgress } from "@/lib/updater";
 import { CIcon } from "./icons";
 import { Sheet } from "./Chrome";
 
@@ -43,16 +43,23 @@ export function UpdateModal() {
   const ui = useUpdateUi();
   const rel = releaseOf(u);
   const newer = u.s === "available";
-  const [dl, setDl] = useState<{ loaded: number; total: number } | null>(null);
+  const [dl, setDl] = useState<UpdateProgress | null>(null);
   const [msg, setMsg] = useState("");
+  const [failed, setFailed] = useState(false);
   const install = async () => {
     setMsg("");
-    setDl({ loaded: 0, total: rel.apkSize || 1 });
-    const how = await downloadApk({ name: `apex-llm-${rel.tag}-arm64-v8a.apk`, size: rel.apkSize, url: rel.apkUrl }, (loaded, total) => setDl({ loaded, total }));
+    setFailed(false);
+    setDl({ status: "starting", percent: 0, downloadedMB: 0, totalMB: rel.apkSize / 1048576, speedKBps: 0 });
+    try {
+      const how = await downloadApk({ name: `apex-llm-${rel.tag}-arm64-v8a.apk`, size: rel.apkSize, url: rel.apkUrl }, rel.tag, setDl);
+      setMsg(how === "installer" ? (canInstallApks() ? "Android's installer is open. Tap Update to finish." : "Allow Apex LLM to install apps in the screen that just opened, then tap Update.") : "Downloaded. Open the saved file to install it.");
+    } catch (e) {
+      setFailed(true);
+      setMsg(e instanceof Error ? e.message : "Download failed.");
+    }
     setDl(null);
-    setMsg(how === "saved" ? "Downloaded. Open the file to install it." : "Download started in your browser. When it finishes, tap it to open Android's installer.");
   };
-  const pct = dl ? Math.min(100, (dl.loaded / Math.max(1, dl.total)) * 100) : 0;
+  const pct = dl ? Math.min(100, dl.percent) : 0;
   return (
     <Sheet open={ui.modal} onClose={closeUpdateModal} title={newer ? `Update ${rel.tag} available` : `Apex ${rel.tag}`}>
       <div className="px-2 pb-2 pt-1" data-testid="update-modal">
@@ -72,15 +79,16 @@ export function UpdateModal() {
           ))}
         </ul>
         {dl && (
-          <div className="mt-4" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100} aria-label="APK download progress">
-            <div className="meter"><i style={{ width: `${Math.max(3, pct)}%` }} /></div>
-            <p className={`tnum mt-1 text-[12px] ${dim}`}>{(dl.loaded / 1e6).toFixed(1)} / {(dl.total / 1e6).toFixed(1)} MB</p>
+          <div className="mt-4" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100} aria-label="APK download progress" data-testid="update-progress">
+            <div className="meter"><i style={{ width: `${Math.max(3, pct)}%`, transition: "width 120ms linear" }} /></div>
+            <p className={`tnum mt-1.5 text-[12px] ${dim}`} aria-live="polite">{progressLine(dl, rel.tag)}</p>
+            <button type="button" className="calm-btn mt-2 w-full" onClick={cancelApkDownload}>Cancel download</button>
           </div>
         )}
         <div className="mt-4 grid gap-2">
           {newer && (
             <button type="button" className="calm-btn w-full !h-12" data-primary="true" onClick={() => void install()} disabled={!!dl}>
-              <CIcon name="download" size={16} /> Download &amp; Install APK {mb(rel.apkSize) && `· ${mb(rel.apkSize)}`}
+              <CIcon name="download" size={16} /> Update Now {mb(rel.apkSize) && `· ${mb(rel.apkSize)}`}
             </button>
           )}
           <button type="button" className="calm-btn w-full" onClick={() => void install()} disabled={!!dl} data-primary={newer ? undefined : "true"}>
@@ -90,10 +98,10 @@ export function UpdateModal() {
             <button type="button" className="calm-btn flex-1" onClick={() => void checkForUpdate()} disabled={u.s === "checking"}>
               <CIcon name="refresh" size={15} /> {u.s === "checking" ? "Checking…" : "Check again"}
             </button>
-            <a className="calm-btn flex-1" href={rel.releaseUrl} target="_blank" rel="noreferrer">Release notes</a>
           </div>
         </div>
         {msg && <p className="mt-3 text-[12.5px] leading-snug" role="status">{msg}</p>}
+        {msg && !failed && !canInstallApks() && <button type="button" className="calm-btn mt-2 w-full" onClick={openInstallSettings}>Open install permission</button>}
         {!newer && compareSemver(rel.version, APP_VERSION) <= 0 && <p className={`mt-3 text-[12px] ${dim}`}>You&apos;re on the latest version. Reinstalling keeps your data when the signing key matches.</p>}
       </div>
     </Sheet>

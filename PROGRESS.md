@@ -63,3 +63,9 @@ PR #6 conflicts resolved and merged; Android status-bar fix; /admin keyless acce
 ## Session 14 (v1.3.0, branch feat/session-14-download-fix-auto-router-oauth-v130)
 Done: download fix (Rust + web), live keyless verifier + registry (14/39), Apex Auto router, 3.5 s self-healing failover, Ollama-style context + titles, AI memory distiller, style cards removed, GitHub device-flow UI + Rust relay, onboarding screen 1, QA screenshots in docs/qa-session-14.
 Open: Rust unverified until CI; GitHub OAuth needs a Client ID; APK build/sign/release and merge are owner steps.
+
+## Session 15 (partial)
+- [x] In-app APK updater (Kotlin `ApexUpdater` bridge, progress UI, no Chrome hand-off) — needs CI compile + device test
+- [x] Onboarding rebrand: Local AI Runner hero + capability cards
+- [x] +8 local models (Qwen3 0.6B/1.7B/4B, Gemma 3 4B, LFM2 350M/1.2B, SmolLM2 360M, Dolphin 3B)
+- [ ] /admin keyless model manager, keyless discovery script, Image Studio, pdfjs, KaTeX, slash commands, export, QA shots, v1.4.0 release
