@@ -1,5 +1,6 @@
 "use client";
 
+import { VERIFIED_AT, VERIFIED_COUNT, VERIFIED_MODELS, VERIFIED_TESTED } from "@/lib/verified";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CATALOG } from "@/lib/models";
@@ -120,6 +121,13 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, 
         <>
           <motion.div className="fixed inset-0 z-30 bg-black/15 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} aria-hidden="true" />
           <motion.div role="dialog" aria-label="Choose a model" data-testid="model-popover" initial={{ opacity: 0, y: -8, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ type: "spring", stiffness: 460, damping: 34 }} className="calm-card pop-in absolute left-1/2 top-pop z-40 max-h-[min(70dvh,560px)] w-[min(380px,calc(100vw-24px))] -translate-x-1/2 overflow-y-auto p-2">
+            <Row active={choice.kind === "auto"} onClick={() => { onPick({ kind: "auto", id: "auto" }); onClose(); }}>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[16px]" style={{ background: "var(--halo-a)", color: "var(--halo-ink)" }} aria-hidden="true">⚡</span>
+              <span className="min-w-0">
+                <span className="block truncate text-[14px] font-medium">Apex Auto (Smart Router)</span>
+                <span className={sub}>Picks the best model for each message · adds under 1 ms · offline → on-device</span>
+              </span>
+            </Row>
             <div className="rounded-2xl bg-[var(--surface-2)] p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
@@ -178,6 +186,22 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, 
                     <CIcon name="key" size={13} /> Enter Apex API key
                   </span>
                 </button>
+              )}
+              {tab === "cloud" && (
+                <div data-testid="verified-models">
+                  <p className="px-3 pb-0.5 pt-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Live-verified · no key · {VERIFIED_COUNT} of {VERIFIED_TESTED} tested</p>
+                  {VERIFIED_MODELS.map((v) => {
+                    const id = `mesh:${v.provider}:${v.id}`;
+                    return (
+                      <Row key={id} active={choice.kind === "apex" && choice.id === id} onClick={() => { onPick({ kind: "apex", id }); onClose(); }}>
+                        <span className="min-w-0">
+                          <span className="block truncate text-[14px]">{v.id}</span>
+                          <span className={sub}>{v.provider} · {v.ms} ms answer · verified {VERIFIED_AT.slice(0, 10)}</span>
+                        </span>
+                      </Row>
+                    );
+                  })}
+                </div>
               )}
               {tab === "cloud" && apex.unlocked && (
                 <>

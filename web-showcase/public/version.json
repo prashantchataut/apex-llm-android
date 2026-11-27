@@ -1,13 +1,14 @@
 {
-  "version": "1.2.0",
-  "tag": "v1.2.0",
-  "apkUrl": "https://github.com/prashantchataut/apex-llm-android/releases/download/v1.2.0/apex-llm-v1.2.0-arm64-v8a.apk",
-  "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.2.0",
-  "publishedAt": "2026-11-26T17:00:00Z",
+  "version": "1.3.0",
+  "tag": "v1.3.0",
+  "apkUrl": "https://github.com/prashantchataut/apex-llm-android/releases/download/v1.3.0/apex-llm-v1.3.0-arm64-v8a.apk",
+  "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.3.0",
+  "publishedAt": "2026-11-27T06:00:00Z",
   "changelog": [
-    "Android 15 / Nothing OS install hardening: targetSdk 34, arm64-only, 16 KB-aligned native library, stable signing key",
-    "Keyless Provider Mesh: OVHcloud, LLM7.io, Pollinations with live model sync and instant failover",
-    "/admin Keyless Provider Mesh panel: health, sync, add endpoints without a rebuild",
-    "Every CI run now builds, verifies and uploads an APK"
+    "Fixed 'server did not report a content length' when installing local models (reqwest HEAD length bug) with HF, Range and catalog-size fallbacks",
+    "Apex Auto: a sub-millisecond, zero-network smart router (offline and Local-Only go straight to the on-device model)",
+    "Live-verified keyless models only, with 3.5 s first-token self-healing failover",
+    "Ollama-style multi-turn context, AI chat titles, AI memory distiller; the four assistant style cards are gone",
+    "Continue with GitHub (OAuth device flow) replaces pasting a token; redesigned first onboarding screen"
   ]
 }

@@ -113,3 +113,6 @@ here claims a skill ran.
   in repo secrets, `scripts/verify-apk.sh` gate, workflow builds every push.
 - **UI:** one new admin panel using the existing Calm design tokens; Android status-bar fallback raised 38 -> 40 px.
 - **Not done:** `https://www.beautifului.dev/` components were not pulled in; no on-device test (no phone/emulator available).
+
+## Session 14
+- `rea`, `design-taste-frontend`, `hallmark-ui`, `open-design-skill`, `native-rust-systems`: these names are not callable tools in this environment, so they were NOT executed. The equivalent work was done by hand: reverse-engineering the download bug from source (found the reqwest HEAD `content_length()` cause), live `curl`/`fetch` probing of providers, and a manual design pass (blur-to-sharp type, spring motion, one glass card). beautifului.dev was not fetched.

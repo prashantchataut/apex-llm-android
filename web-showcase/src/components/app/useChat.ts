@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildContext, estimateTokens, type Attachment } from "@/lib/attachments";
 import { systemPromptFor, type Cartridge } from "@/lib/cartridges";
+import { contextBudget, estTokens, trimHistory } from "@/lib/context";
 import { activeBackend, estimateRamMb, getEngineSnapshot, routerChat, setNativeModel, shortModelName, splitThink, wllamaChat, type Backend, type ChatTurn } from "@/lib/engine";
 import { createTokenTicker, haptic } from "@/lib/haptics";
 import { invokeNative, isNative, streamNative } from "@/lib/native";
 import { CATALOG } from "@/lib/models";
 import { pickReply } from "@/lib/demo-script";
-import { apexById, apexChat, servedLabel } from "@/lib/apex-cloud";
+import { apexById, apexChat, servedLabel, type ApexModel } from "@/lib/apex-cloud";
 import { parseToolCall, preRun, runTool, stripToolCall, type SkillId, type ToolNote } from "@/lib/skills";
 import type { GenStats } from "@/lib/engine";
 
@@ -36,6 +37,8 @@ export interface EngineTag {
   backend: Backend;
   label: string;
   cartridge?: string;
+  /** Apex Auto: which engine was picked and why, e.g. "Routed by Apex Auto → Codestral · code detected · 0.12ms routing". */
+  route?: string;
 }
 
 export interface ChatMsg {
@@ -102,7 +105,7 @@ export interface SendOpts {
   ctx?: number;
   /** Full system prompt (cartridge + memory + presets). */
   system?: string;
-  choice?: { kind: "apex" | "local"; id: string };
+  choice?: { kind: "apex" | "local" | "auto"; id: string };
   skills?: SkillId[];
   /** Allow the model to call tools via <tool_call>. */
   tools?: boolean;
@@ -110,6 +113,9 @@ export interface SendOpts {
   voiceMs?: number;
   /** Knowledge Vault citation tags retrieved for this turn; appended to the reply when the model forgot to cite. */
   sources?: string[];
+  /** A keyless mesh model resolved by Apex Auto (no vault entry needed). */
+  apexModel?: ApexModel;
+  route?: string;
 }
 
 export interface BranchInfo {
@@ -237,10 +243,17 @@ export function useChat() {
           }
         }
 
+        // Ollama-style sliding window: full structured history, oldest whole turns dropped to fit the model's window.
+        {
+          const room = contextBudget(backend, ctx) - estTokens(sysText) - estTokens(messages[messages.length - 1].content) - (backend === "apex" || backend === "external" ? 900 : 512);
+          const kept = trimHistory(history, Math.max(256, room));
+          messages.splice(1, messages.length - 2, ...kept);
+        }
+
         // ───────── real engines: Rust core (native) ─────────
         if (backend === "native") {
           const model = getEngineSnapshot().nativeModel ?? "model";
-          patch({ engine: { backend, label: modelLabel(model), cartridge: cartName } });
+          patch({ engine: { backend, label: modelLabel(model), cartridge: cartName, route: opts.route } });
           let thought = "";
           let pieces = 0;
           let text = "";
@@ -279,9 +292,9 @@ export function useChat() {
         if (backend === "wllama" || backend === "external" || backend === "apex") {
           const snap = getEngineSnapshot();
           const cat = CATALOG.find((c) => c.id === (opts.choice?.kind === "local" ? opts.choice.id : snap.loaded.a));
-          const kl = apexById(opts.choice?.id ?? "") ?? { id: "", label: "Apex API", tag: "", group: "", kind: "text" as const, api: "" };
+          const kl = opts.apexModel ?? apexById(opts.choice?.id ?? "") ?? { id: "", label: "Apex API", tag: "", group: "", kind: "text" as const, api: "" };
           const label = backend === "apex" ? `${kl.label} · Apex API` : backend === "external" ? `${snap.router?.model ?? "router"} · ${new URL(snap.router?.baseUrl ?? "http://x").host}` : shortModelName(cat);
-          patch({ engine: { backend, label, cartridge: cartName } });
+          patch({ engine: { backend, label, cartridge: cartName, route: opts.route } });
           const ctl = new AbortController();
           abort.current = ctl;
           let served = "";
@@ -331,7 +344,7 @@ export function useChat() {
               text: withSources(m.text || (m.steps?.length ? m.steps.join("\n\n") : "The model returned an empty reply — tap regenerate to try again."), opts.sources),
               thinkEnd: performance.now(),
               stats: { ...res.st, ramMb: backend === "wllama" ? estimateRamMb(cat) : undefined, temperature, topP },
-              engine: backend === "apex" ? { backend, label: `${servedLabel(served)} · Apex API`, cartridge: cartName } : m.engine,
+              engine: backend === "apex" ? { backend, label: `${servedLabel(served)} · Apex API`, cartridge: cartName, route: opts.route } : m.engine,
             }));
           } catch (e) {
             const aborted = ctl.signal.aborted;

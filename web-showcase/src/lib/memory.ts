@@ -100,15 +100,16 @@ export function extractMemories(input: string): Candidate[] {
     return out;
   }
   let m: RegExpMatchArray | null;
-  if ((m = s.match(/\bmy name is ([A-Z][\w'-]{1,20})/))) push(`Name is ${m[1]}`, "Identity");
+  if ((m = s.match(/\b(?:my name is|I(?:'m| am)) ([A-Z][a-z'-]{1,20})(?=[,.!]| and|$)/))) push(`Name is ${m[1]}`, "Identity");
+  if ((m = s.match(/\bI (?:build|make|develop|code in|write) ([A-Za-z+#&][\w\s+#&/-]{2,50}?)(?=[,.!?]|$| and (?:I|my))/i))) push(`Builds ${m[1]}`, /rust|kotlin|python|typescript|android|swift|\bgo\b/i.test(m[1]) ? "Tech Stack" : "Projects");
   if ((m = s.match(/\bI(?:'m| am) (?:a|an) ([a-z][\w\s/-]{2,40}?)(?=[.,!?]| and | who | at |$)/i))) push(`Is a ${m[1]}`, "Identity");
   if ((m = s.match(/\bI live in ([A-Z][\w\s,-]{2,30}?)(?=[.,!?]|$| and )/))) push(`Lives in ${m[1]}`, "Identity");
   if ((m = s.match(/\bI(?:'m| am)? ?(?:currently )?(?:building|making|developing|working on|writing) (.{4,70}?)(?=[.,!?]|$| and | using | with )/i))) push(`Working on ${m[1]}`, "Projects");
   if ((m = s.match(/\bI work (?:at|for) (.{3,40}?)(?=[.,!?]|$| and )/i))) push(`Works at ${m[1]}`, "Identity");
-  if ((m = s.match(/\bI (?:really )?(prefer|like|love|enjoy|always use|use|hate|dislike) (.{3,60}?)(?=[.,!?]|$| but | because )/i))) {
-    const verb = m[1].toLowerCase();
-    const thing = m[2];
-    if (!/^(it|this|that|them|to )\b/i.test(thing) && thing.split(" ").length <= 9) push(`${/hate|dislike/.test(verb) ? "Dislikes" : /^(use|always use)$/.test(verb) ? "Uses" : /prefer/.test(verb) ? "Prefers" : "Likes"} ${thing}`, "Preferences");
+  for (const pm of s.matchAll(/\bI (?:really )?(prefer|like|love|enjoy|always use|use|hate|dislike) (.{3,60}?)(?=[.,!?]|$| but | because | and I )/gi)) {
+    const verb = pm[1].toLowerCase();
+    const thing = pm[2];
+    if (!/^(it|this|that|them|to )\b/i.test(thing) && thing.split(" ").length <= 9) push(`${/hate|dislike/.test(verb) ? "Dislikes" : /^(use|always use)$/.test(verb) ? "Uses" : /prefer/.test(verb) ? "Prefers" : "Likes"} ${thing}`, /^(use|always use)$/.test(verb) ? "Tech Stack" : "Preferences");
   }
   if ((m = s.match(/\bmy (?:tech )?stack is (.{3,70}?)(?=[.!?]|$)/i))) push(`Stack: ${m[1]}`, "Preferences");
   if ((m = s.match(/\b(?:always|never) (?:answer|reply|respond|write|explain|use) (.{3,70}?)(?=[.!?]|$)/i))) push(`${/never/i.test(m[0]) ? "Never" : "Always"} ${m[0].replace(/^(always|never) /i, "")}`, "Tone");
@@ -142,7 +143,8 @@ export function memoryBlock(query = ""): string {
 }
 
 /* ───────── AI memory distiller ───────── */
-const GROUP_OF: Record<string, MemGroup> = { identity: "Identity", "tech stack": "Tech Stack", tech: "Tech Stack", stack: "Tech Stack", project: "Projects", projects: "Projects", preference: "Preferences", preferences: "Preferences", tone: "Tone" };
+/** Models invent their own labels ("Device", "Tools", "Name"…), so map by meaning, not by exact string. */
+const groupOf = (c: string): MemGroup => (/name|identity|person|device|phone|location|role|job|age/i.test(c) ? "Identity" : /tech|stack|tool|lang|framework|skill|software|hardware/i.test(c) ? "Tech Stack" : /project|app|work|build/i.test(c) ? "Projects" : /tone|style|voice/i.test(c) ? "Tone" : "Preferences");
 const SYSTEM = `You distill what a user tells an assistant about themselves into atomic memory facts.
 Return ONLY a JSON array (max 8 items), no prose, no code fence. Each item: {"category":"Identity"|"Tech Stack"|"Preference","fact":"<=12 words, third person, no pronoun 'I'","keywords":["1-4 lowercase words"]}.
 Only durable facts (name, device, languages, tools, projects, likes/dislikes, style rules). Skip greetings and one-off requests. Never invent facts.`;
@@ -166,7 +168,7 @@ export async function distillMemory(raw: string): Promise<DistillResult> {
     const added: Memory[] = [];
     for (const it of arr.slice(0, 8)) {
       if (!it?.fact) continue;
-      const g = GROUP_OF[String(it.category ?? "").toLowerCase()] ?? "Preferences";
+      const g = groupOf(String(it.category ?? ""));
       const m = addMemory(String(it.fact), g, "ai", Array.isArray(it.keywords) ? it.keywords.map((k) => String(k).toLowerCase()).slice(0, 4) : undefined);
       if (m) added.push(m);
     }

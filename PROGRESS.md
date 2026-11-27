@@ -59,3 +59,7 @@ PR #6 conflicts resolved and merged; Android status-bar fix; /admin keyless acce
 - [x] Live research of 12 endpoints (`.agent/KEYLESS_PROVIDERS_RESEARCH.md`)
 - [ ] On-device install test on Nothing Phone 4a (owner)
 - [ ] beautifului.dev component pass, genuine Flux image models (not available keyless)
+
+## Session 14 (v1.3.0, branch feat/session-14-download-fix-auto-router-oauth-v130)
+Done: download fix (Rust + web), live keyless verifier + registry (14/39), Apex Auto router, 3.5 s self-healing failover, Ollama-style context + titles, AI memory distiller, style cards removed, GitHub device-flow UI + Rust relay, onboarding screen 1, QA screenshots in docs/qa-session-14.
+Open: Rust unverified until CI; GitHub OAuth needs a Client ID; APK build/sign/release and merge are owner steps.

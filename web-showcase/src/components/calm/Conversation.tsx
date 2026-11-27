@@ -288,6 +288,9 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
                     <AssistantBody text={m.text} streaming={!!m.streaming} onChoice={(a) => onSend(a)} />
                   </div>
                 )}
+                {!m.streaming && m.engine?.route && (
+                  <p className="mb-1 flex items-center gap-1.5 text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]" data-testid="route-badge"><span aria-hidden="true">⚡</span>{m.engine.route}</p>
+                )}
                 {!m.streaming && (m.text || m.images?.length) && (
                   <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[12px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">
                     <span className="mr-1.5 max-w-[220px] truncate">{m.engine?.label}{m.stats && m.stats.tps > 0 && m.engine?.backend !== "apex" ? ` · ${m.stats.tps.toFixed(0)} tok/s` : ""}</span>

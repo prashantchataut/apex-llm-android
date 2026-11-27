@@ -4,6 +4,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import type { ChatTurn, GenOpts, GenStats } from "./engine";
 import { getAccess, useAccess } from "./access";
 import type { ApexCatalog, ApexModel } from "./vault";
+import { verifiedChain } from "./verified";
 import { candidatesFor, isMeshId, markFailure, markSuccess, meshAsApexModels, parseMeshId, syncMesh } from "@/services/apexCloudMesh";
 
 /**
@@ -221,12 +222,15 @@ interface Step {
  */
 export async function apexChat(model: ApexModel, messages: ChatTurn[], opts: GenOpts, onText: (raw: string) => void): Promise<ApexStats> {
   const cat = getAccess().catalog;
-  if (!cat) throw new Error("Apex API is locked. Enter your Apex API key to unlock it.");
+  // Keyless mesh models (Apex Auto) never need the vault; vault models still do.
+  if (!cat && !isMeshId(model.id)) throw new Error("Apex API is locked. Enter your Apex API key to unlock it.");
   const plan: Step[] = [];
   const meshStep = (c: { provider: { id: string; chat: string; auth?: string }; api: string }): Step => ({ endpoint: c.provider.chat, api: c.api, headers: c.provider.auth ? { Authorization: c.provider.auth } : undefined, provider: c.provider.id });
   const pref = isMeshId(model.id) ? parseMeshId(model.id) : null;
-  if (!pref) for (const api of [...new Set([model.api, cat.fallbackApi])]) plan.push({ endpoint: cat.endpoints.text, api });
+  if (!pref && cat) for (const api of [...new Set([model.api, cat.fallbackApi])]) plan.push({ endpoint: cat.endpoints.text, api });
   for (const c of candidatesFor(pref ?? undefined)) plan.push(meshStep(c));
+  // Self-healing: the live-verified models (fastest first) are the last-resort backups so a prompt never dead-ends.
+  for (const v of verifiedChain({ preferred: pref ?? undefined })) plan.push(meshStep({ provider: v.provider, api: v.api }));
   const uniq = plan.filter((s, i) => plan.findIndex((x) => x.endpoint === s.endpoint && x.api === s.api) === i);
   let lastErr: unknown = new Error("No Apex API model answered");
   for (let i = 0; i < uniq.length; i++) {
@@ -234,7 +238,7 @@ export async function apexChat(model: ApexModel, messages: ChatTurn[], opts: Gen
     const started = { v: false };
     const last = i === uniq.length - 1;
     try {
-      const st = await attempt(step.endpoint, step.api, messages, opts, onText, started, { headers: step.headers, retry429: last, timeoutMs: last ? 30000 : 12000 });
+      const st = await attempt(step.endpoint, step.api, messages, opts, onText, started, { headers: step.headers, retry429: last, timeoutMs: last ? 30000 : 3500 });
       if (step.provider) markSuccess(step.provider, step.api);
       return { ...st, servedBy: step.api };
     } catch (e) {
