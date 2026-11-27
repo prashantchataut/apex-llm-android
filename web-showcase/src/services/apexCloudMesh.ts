@@ -92,11 +92,17 @@ export interface MeshConfig {
   custom: Omit<MeshProvider, "builtin">[];
   /** Provider ids switched off by the owner. */
   disabled: string[];
+  /** Individual models switched off by the owner, keyed `provider:api`. They vanish from the picker and the failover chain. */
+  disabledModels?: string[];
+  /** Owner display-name overrides, keyed `provider:api`. Shown verbatim in the app picker. */
+  renames?: Record<string, string>;
   updatedAt?: string;
 }
 export const MESH_CONFIG_PATH = "web-showcase/public/config/mesh.json";
 const MESH_RAW = `https://raw.githubusercontent.com/${REPO}/main/${MESH_CONFIG_PATH}`;
-export const EMPTY_CONFIG: MeshConfig = { schema: 1, custom: [], disabled: [] };
+export const EMPTY_CONFIG: MeshConfig = { schema: 1, custom: [], disabled: [], disabledModels: [], renames: {} };
+/** Config key of a model: `provider:api`. */
+export const modelKey = (provider: string, api: string) => `${provider}:${api}`;
 
 export interface MeshModel {
   /** Unique app id: `mesh:<provider>:<api>`. */
@@ -108,6 +114,9 @@ export interface MeshModel {
   reasoning: boolean;
   vision: boolean;
   uncensored: boolean;
+  /** True when the owner renamed it in /admin: `label` is then shown verbatim (no `Apex-` prefix). */
+  renamed?: boolean;
+  disabled?: boolean;
 }
 export interface Health {
   ok: boolean;
@@ -120,12 +129,15 @@ export interface MeshState {
   synced: boolean;
   syncing: boolean;
   providers: MeshProvider[];
+  /** Enabled models only: what the app picker and router see. */
   models: MeshModel[];
+  /** Every discovered model including owner-disabled ones (the /admin table). */
+  allModels: MeshModel[];
   health: Record<string, Health>;
   config: MeshConfig;
 }
 
-const INITIAL: MeshState = { synced: false, syncing: false, providers: BUILTIN_PROVIDERS, models: [], health: {}, config: EMPTY_CONFIG };
+const INITIAL: MeshState = { synced: false, syncing: false, providers: BUILTIN_PROVIDERS, models: [], allModels: [], health: {}, config: EMPTY_CONFIG };
 let state: MeshState = INITIAL;
 const subs = new Set<() => void>();
 const set = (patch: Partial<MeshState>) => {
@@ -172,7 +184,14 @@ export async function loadMeshConfig(): Promise<MeshConfig> {
       const r = await timed(url, 5000);
       if (r.ok) {
         const j = (await r.json()) as Partial<MeshConfig>;
-        return { schema: 1, custom: Array.isArray(j.custom) ? j.custom : [], disabled: Array.isArray(j.disabled) ? j.disabled : [], updatedAt: j.updatedAt };
+        return {
+          schema: 1,
+          custom: Array.isArray(j.custom) ? j.custom : [],
+          disabled: Array.isArray(j.disabled) ? j.disabled : [],
+          disabledModels: Array.isArray(j.disabledModels) ? j.disabledModels : [],
+          renames: j.renames && typeof j.renames === "object" ? j.renames : {},
+          updatedAt: j.updatedAt,
+        };
       }
     } catch {
       /* try next */
@@ -258,10 +277,51 @@ export async function probeAll(providers: MeshProvider[]): Promise<Record<string
   return health;
 }
 
+export interface ModelPing {
+  ok: boolean;
+  ms: number;
+  status?: number;
+  text?: string;
+  error?: string;
+  at: number;
+}
+/** A real chat completion ("Reply with OK") against one model: the same request the app sends, not a /models listing. */
+export async function pingModel(p: MeshProvider, api: string, timeoutMs = 12_000): Promise<ModelPing> {
+  const t0 = performance.now();
+  try {
+    const r = await timed(p.chat, timeoutMs, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(p.auth ? { Authorization: p.auth } : {}) },
+      body: JSON.stringify({ model: api, messages: [{ role: "user", content: "Reply with OK" }], max_tokens: 48, stream: false }),
+    });
+    const ms = Math.round(performance.now() - t0);
+    if (!r.ok) return { ok: false, ms, status: r.status, error: `HTTP ${r.status}`, at: Date.now() };
+    const j = (await r.json().catch(() => null)) as { choices?: { message?: { content?: string; reasoning_content?: string } }[] } | null;
+    const m = j?.choices?.[0]?.message;
+    const text = (m?.content ?? m?.reasoning_content ?? "").trim();
+    return text ? { ok: true, ms, status: 200, text: text.slice(0, 40), at: Date.now() } : { ok: false, ms, status: 200, error: "empty reply", at: Date.now() };
+  } catch (e) {
+    return { ok: false, ms: Math.round(performance.now() - t0), error: e instanceof Error && e.name === "AbortError" ? "timeout" : "unreachable (CORS or network)", at: Date.now() };
+  }
+}
+
 /** Probe one candidate endpoint (used by "Test" before an owner adds a custom provider). */
 export async function probeOne(p: MeshProvider): Promise<{ health: Health; models: MeshModel[] }> {
   return fetchProviderModels(p);
 }
+
+/* ───────── owner overrides (apply to the bundled verified registry too) ───────── */
+let configLoad: Promise<void> | null = null;
+/** Load the owner's mesh.json once (raw GitHub, bundled copy as fallback) so toggles / renames apply before any model sync. */
+export function ensureMeshConfig(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  configLoad ??= loadMeshConfig().then((config) => {
+    if (!state.synced) set({ config });
+  });
+  return configLoad;
+}
+export const isModelDisabled = (provider: string, api: string): boolean => (state.config.disabledModels ?? []).includes(modelKey(provider, api));
+export const modelDisplayName = (provider: string, api: string, fallback: string): string => state.config.renames?.[modelKey(provider, api)]?.trim() || fallback;
 
 /** Pull the live `/models` of every enabled, browser-callable provider and publish them to the app. */
 export async function syncMesh(cfg?: MeshConfig): Promise<MeshState> {
@@ -278,8 +338,15 @@ export async function syncMesh(cfg?: MeshConfig): Promise<MeshState> {
     models.push(...r.models);
   }
   const rank = (g: MeshGroup) => MESH_GROUP_ORDER.indexOf(g);
-  models.sort((a, b) => rank(a.group) - rank(b.group) || a.label.localeCompare(b.label));
-  set({ synced: true, syncing: false, providers, models, health, config });
+  const off = new Set(config.disabledModels ?? []);
+  const names = config.renames ?? {};
+  const all = models.map<MeshModel>((m) => {
+    const k = modelKey(m.provider, m.api);
+    const rn = names[k]?.trim();
+    return { ...m, label: rn || m.label, renamed: !!rn, disabled: off.has(k) };
+  });
+  all.sort((a, b) => rank(a.group) - rank(b.group) || a.label.localeCompare(b.label));
+  set({ synced: true, syncing: false, providers, models: all.filter((m) => !m.disabled), allModels: all, health, config });
   return state;
 }
 
@@ -291,7 +358,7 @@ export function meshAsApexModels(skipApi: Set<string>): ApexModel[] {
     .filter((m) => !(m.provider === "pollinations" && skipApi.has(m.api)))
     .map((m) => ({
       id: m.id,
-      label: `Apex-${m.label}`,
+      label: m.renamed ? m.label : `Apex-${m.label}`,
       tag: `${name(m.provider)}${health[m.provider]?.ok ? ` · ${health[m.provider].ms}ms` : ""}`,
       group: `${m.group} · keyless mesh`,
       kind: "text" as const,
@@ -318,14 +385,15 @@ export interface Candidate {
 }
 /** Preferred provider/model first, then every other healthy browser-callable provider's stand-in model by priority. */
 export function candidatesFor(preferred?: { provider: string; api: string }): Candidate[] {
-  const { providers, models } = state;
+  const { providers, models, config } = state;
+  const off = new Set(config.disabledModels ?? []);
   const usable = providers.filter((p) => p.cors);
   const out: Candidate[] = [];
   const pref = preferred && usable.find((p) => p.id === preferred.provider);
-  if (pref && preferred) out.push({ provider: pref, api: preferred.api });
+  if (pref && preferred && !off.has(modelKey(pref.id, preferred.api))) out.push({ provider: pref, api: preferred.api });
   for (const p of usable) {
     const own = models.filter((m) => m.provider === p.id).map((m) => m.api);
-    const apis = [p.fallbackModel, ...own].filter((a): a is string => !!a);
+    const apis = [p.fallbackModel, ...own].filter((a): a is string => !!a && !off.has(modelKey(p.id, a)));
     // up to two distinct stand-in models per provider (a second model on the same host has its own anonymous quota)
     const take = [...new Set(apis)].filter((a) => !(p.id === pref?.id && a === preferred?.api)).slice(0, 2);
     for (const api of take) out.push({ provider: p, api });

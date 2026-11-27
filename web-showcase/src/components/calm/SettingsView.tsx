@@ -87,6 +87,17 @@ export function SettingsView({ mode, setMode, onReplay, cart, update, onAccessKe
       <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Custom instructions &amp; Modelfile</h2>
       <div className="calm-card p-4">
         <p className="text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Optional. Applied to every chat, on every model. Leave empty to just talk.</p>
+        <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="System instruction presets" data-testid="sys-presets">
+          {[
+            ["Concise", "Answer briefly and directly. No filler, no preamble."],
+            ["Rust expert", "You are a senior Rust engineer. Prefer idiomatic, safe Rust with short runnable examples."],
+            ["Step by step", "Think step by step and show your reasoning before the final answer."],
+            ["ELI5", "Explain like I am five: plain words, small steps, one analogy."],
+            ["No emojis", "Never use emojis or decorative symbols."],
+          ].map(([name, text]) => (
+            <button key={name} type="button" className="calm-chip" data-on={cart.settings.instructions.trim() === text} onClick={() => cart.update({ instructions: cart.settings.instructions.trim() === text ? "" : text })}>{name}</button>
+          ))}
+        </div>
         <textarea value={cart.settings.instructions} onChange={(e) => cart.update({ instructions: e.target.value })} rows={4} aria-label="Custom instructions and system prompt" placeholder="e.g. Answer briefly. Prefer Rust examples. Never use emojis." className="calm-field mt-3 !rounded-[18px] resize-none leading-snug" />
         <div className="mt-4 grid grid-cols-2 gap-4">
           <label className="block text-[12.5px]">

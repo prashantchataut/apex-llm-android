@@ -1,5 +1,7 @@
 {
   "schema": 1,
   "custom": [],
-  "disabled": []
+  "disabled": [],
+  "disabledModels": [],
+  "renames": {}
 }

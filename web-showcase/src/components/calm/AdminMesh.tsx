@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadJsonFile, publishJsonFile } from "@/lib/admin";
-import { allProviders, customProvider, EMPTY_CONFIG, MESH_CONFIG_PATH, MESH_GROUP_ORDER, probeAll, probeOne, syncMesh, useMesh, type Health, type MeshConfig, type MeshProvider } from "@/services/apexCloudMesh";
+import { allProviders, customProvider, EMPTY_CONFIG, MESH_CONFIG_PATH, MESH_GROUP_ORDER, modelKey, pingModel, probeAll, probeOne, syncMesh, useMesh, type Health, type MeshConfig, type MeshProvider, type ModelPing } from "@/services/apexCloudMesh";
 
 const dim = "text-[rgb(var(--ink-rgb)/var(--ink-3-a))]";
 const btn = "rounded-full bg-[var(--surface-2)] px-4 py-2 text-[13px] font-medium transition-transform active:scale-[0.97] disabled:opacity-40";
@@ -23,6 +23,7 @@ export function AdminMesh({ token }: { token: string }) {
   const [name, setName] = useState("");
   const [base, setBase] = useState("");
   const [test, setTest] = useState<string>("");
+  const [pings, setPings] = useState<Record<string, ModelPing | "running">>({});
 
   const providers = useMemo(() => allProviders(cfg), [cfg]);
 
@@ -37,6 +38,7 @@ export function AdminMesh({ token }: { token: string }) {
     }
     setCfg(c);
     setSaved(JSON.stringify(c));
+    await syncMesh(c);
     await probeAll(allProviders(c));
   }, [token]);
   useEffect(() => void load(), [load]);
@@ -81,8 +83,8 @@ export function AdminMesh({ token }: { token: string }) {
   const publish = async () => {
     setBusy(true);
     try {
-      const data = { ...cfg, schema: 1, updatedAt: new Date().toISOString() };
-      const r = await publishJsonFile(token, MESH_CONFIG_PATH, data, sha, `chore(mesh): ${cfg.custom.length} custom provider(s), ${cfg.disabled.length} disabled`);
+      const data = { ...cfg, schema: 1 as const, updatedAt: new Date().toISOString() };
+      const r = await publishJsonFile(token, MESH_CONFIG_PATH, data, sha, `chore(mesh): ${cfg.custom.length} custom provider(s), ${cfg.disabled.length} provider(s) / ${(cfg.disabledModels ?? []).length} model(s) disabled, ${Object.keys(cfg.renames ?? {}).length} renamed`);
       setSha(r.sha);
       setSaved(JSON.stringify(cfg));
       await syncMesh(cfg);
@@ -92,6 +94,44 @@ export function AdminMesh({ token }: { token: string }) {
     }
     setBusy(false);
   };
+
+  /* ───── per-model controls: enable/disable, inline rename, real completion ping ───── */
+  const offModels = useMemo(() => new Set(cfg.disabledModels ?? []), [cfg.disabledModels]);
+  const toggleModel = (k: string) => setCfg((c) => ({ ...c, disabledModels: (c.disabledModels ?? []).includes(k) ? (c.disabledModels ?? []).filter((x) => x !== k) : [...(c.disabledModels ?? []), k] }));
+  const rename = (k: string, v: string) =>
+    setCfg((c) => {
+      const next = { ...(c.renames ?? {}) };
+      if (v.trim()) next[k] = v;
+      else delete next[k];
+      return { ...c, renames: next };
+    });
+  const ping = async (provider: string, api: string) => {
+    const p = providers.find((x) => x.id === provider);
+    if (!p) return;
+    const k = modelKey(provider, api);
+    setPings((m) => ({ ...m, [k]: "running" }));
+    const r = await pingModel(p, api);
+    setPings((m) => ({ ...m, [k]: r }));
+  };
+  const pingAll = async () => {
+    setBusy(true);
+    const queue = mesh.allModels.filter((m) => providers.find((p) => p.id === m.provider)?.cors);
+    // One worker per provider, one request at a time with a short gap: anonymous tiers rate-limit per IP, a burst only measures the limiter.
+    const byProvider = new Map<string, typeof queue>();
+    for (const m of queue) byProvider.set(m.provider, [...(byProvider.get(m.provider) ?? []), m]);
+    await Promise.all(
+      [...byProvider.values()].map(async (list) => {
+        for (const m of list) {
+          await ping(m.provider, m.api);
+          await new Promise((r) => setTimeout(r, 700));
+        }
+      }),
+    );
+    setBusy(false);
+    say(true, `Tested ${queue.length} models with a real completion.`);
+  };
+  const pinged = Object.values(pings).filter((x): x is ModelPing => x !== "running");
+  const working = pinged.filter((x) => x.ok).length;
 
   const byGroup = MESH_GROUP_ORDER.map((g) => [g, mesh.models.filter((m) => m.group === g).length] as const).filter(([, n]) => n > 0);
 
@@ -134,6 +174,43 @@ export function AdminMesh({ token }: { token: string }) {
           <span className="calm-chip">Total · {mesh.models.length}</span>
         </p>
       )}
+
+      <div className="mt-5" data-testid="mesh-models">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[15px] font-medium">Models</p>
+            <p className={`text-[12px] ${dim}`}>Switch a model off to remove it from the app picker and the failover chain. Rename it inline. Ping sends a real chat completion.{pinged.length > 0 ? ` ${working} of ${pinged.length} working.` : ""}</p>
+          </div>
+          <button type="button" className={btn} onClick={pingAll} disabled={busy || mesh.allModels.length === 0} data-testid="mesh-test-all">Test all models live</button>
+        </div>
+        <ul className="mt-3 space-y-1.5">
+          {mesh.allModels.map((m) => {
+            const k = modelKey(m.provider, m.api);
+            const off = offModels.has(k);
+            const pg = pings[k];
+            return (
+              <li key={k} data-testid="mesh-model-row" className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl bg-[var(--surface-2)] px-3 py-2.5 ${off ? "opacity-55" : ""}`}>
+                <button type="button" role="switch" aria-checked={!off} aria-label={`${off ? "Enable" : "Disable"} ${m.label}`} onClick={() => toggleModel(k)} className="relative h-6 w-10 shrink-0 rounded-full transition-colors" style={{ background: off ? "var(--surface-1)" : "#22c55e" }}>
+                  <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform" style={{ transform: `translateX(${off ? 2 : 18}px)` }} />
+                </button>
+                <div className="min-w-0 flex-1 basis-40">
+                  <input value={cfg.renames?.[k] ?? ""} onChange={(e) => rename(k, e.target.value)} placeholder={m.label} aria-label={`Display name for ${m.api}`} className="w-full min-w-0 rounded-lg bg-transparent px-1 py-0.5 text-[14px] font-medium outline-none placeholder:text-current focus:bg-[var(--surface-1)]" />
+                  <p className={`truncate px-1 text-[11.5px] ${dim}`}>{m.provider} · {m.api} · {m.group}</p>
+                </div>
+                {pg === "running" ? (
+                  <span className={`text-[12px] ${dim}`}>testing…</span>
+                ) : pg ? (
+                  <span data-testid={pg.ok ? "badge-working" : pg.status === 429 ? "badge-limited" : "badge-failed"} className="rounded-full px-2.5 py-1 text-[11.5px] font-medium tabular-nums" style={pg.ok ? { background: "rgba(34,197,94,.16)", color: "#15803d" } : pg.status === 429 ? { background: "rgba(245,158,11,.18)", color: "#b45309" } : { background: "rgba(239,68,68,.16)", color: "#b91c1c" }}>
+                    {pg.ok ? `WORKING (${pg.ms}ms)` : pg.status === 429 ? `RATE-LIMITED (${pg.ms}ms)` : `FAILED${pg.status ? ` ${pg.status}` : ""} (${pg.ms}ms)`}
+                  </span>
+                ) : null}
+                <button type="button" className="calm-chip" onClick={() => ping(m.provider, m.api)} disabled={pg === "running"}>Ping</button>
+              </li>
+            );
+          })}
+          {mesh.allModels.length === 0 && <li className={`text-[12.5px] ${dim}`}>No models discovered yet. Press "Sync live models from all providers".</li>}
+        </ul>
+      </div>
 
       <div className="mt-5 rounded-2xl bg-[var(--surface-2)] p-4">
         <p className="text-[13px] font-medium">Add a keyless endpoint</p>

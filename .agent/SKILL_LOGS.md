@@ -116,3 +116,9 @@ here claims a skill ran.
 
 ## Session 14
 - `rea`, `design-taste-frontend`, `hallmark-ui`, `open-design-skill`, `native-rust-systems`: these names are not callable tools in this environment, so they were NOT executed. The equivalent work was done by hand: reverse-engineering the download bug from source (found the reqwest HEAD `content_length()` cause), live `curl`/`fetch` probing of providers, and a manual design pass (blur-to-sharp type, spring motion, one glass card). beautifului.dev was not fetched.
+
+
+## Session 16
+- **Skills note**: design-taste-frontend / hallmark-ui / open-design-skill / rea / native-rust-systems are not loadable tools in this sandbox; their rules were applied from `RULES.md` + `SKILLS_PROTOCOL.md` by hand (tokens only, no ad-hoc hexes except status colours, >=44 px targets, tabular-nums, reserved space).
+- **Evidence-first**: every UI claim above was checked with Playwright; the screenshots exposed two real bugs (invisible bold text and invisible Copy LaTeX button; a picker that ignored mesh.json) which were fixed before shipping.
+- **Rust**: no Rust changed this session.

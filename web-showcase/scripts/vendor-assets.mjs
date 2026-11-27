@@ -11,6 +11,8 @@ const jobs = [
   [join(nm, "onnxruntime-web/dist/ort-wasm-simd-threaded.mjs"), join(root, "public/vendor/transformers/ort-wasm-simd-threaded.mjs")],
   [join(nm, "onnxruntime-web/dist/ort-wasm-simd-threaded.wasm"), join(root, "public/vendor/transformers/ort-wasm-simd-threaded.wasm")],
   [join(nm, "onnxruntime-web/dist/ort.wasm.bundle.min.mjs"), join(root, "public/vendor/transformers/ort-bundle.js")],
+  // Built-in PDF reader (pdf.js legacy build for older Android WebViews). Served from our own origin: offline, no CDN.
+  [join(nm, "pdfjs-dist/legacy/build/pdf.worker.min.mjs"), join(root, "public/vendor/pdfjs/pdf.worker.min.mjs")],
 ];
 for (const [from, to] of jobs) {
   if (!existsSync(from)) {

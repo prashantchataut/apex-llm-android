@@ -38,6 +38,8 @@ import { Onboarding } from "./Onboarding";
 import { AccessKeyModal } from "./AccessKeyModal";
 import { gateApex, getAccess, startAccessWatch, useAccess } from "@/lib/access";
 import { SettingsView } from "./SettingsView";
+import { PdfViewer } from "./PdfViewer";
+import { ensureMeshConfig } from "@/services/apexCloudMesh";
 import { LiveVoice } from "./LiveVoice";
 import { SourceSheet, VaultView } from "./VaultView";
 import { buildRagContext, hasVault, loadVault, search as vaultSearch, useVault } from "@/lib/rag";
@@ -81,6 +83,13 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   const access = useAccess();
   const vault = useVault();
   const composer = useRef<ComposerHandle>(null);
+  const [pdf, setPdf] = useState<File | null>(null);
+  useEffect(() => void ensureMeshConfig(), []);
+  useEffect(() => {
+    const open = (e: Event) => setPdf((e as CustomEvent<File>).detail);
+    window.addEventListener("apex:open-pdf", open);
+    return () => window.removeEventListener("apex:open-pdf", open);
+  }, []);
   const toastTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -449,6 +458,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
         <ModelSheet open={sheet} onClose={() => setSheet(false)} choice={choice} onPick={pick} dl={dl} onHub={(t) => { setHubTab(t); goView("hub"); }} loading={loadingId} access={access} onKey={() => setKeyModal(true)} />
       </motion.div>
 
+      {pdf && <PdfViewer file={pdf} onClose={() => setPdf(null)} onAsk={(prompt, att) => { setPdf(null); setView("chat"); void send(prompt, [att]); }} />}
       <UpdateModal />
       <AccessKeyModal open={keyModal} onClose={() => setKeyModal(false)} onUnlocked={() => say("Apex API unlocked. Local models stay free.")} />
       <LiveVoice open={live} onClose={() => { setLive(false); say("Voice session saved to this chat."); }} msgs={chat.msgs} busy={chat.busy} modelLabel={label} onSend={(t, ms) => void send(t, [], ms)} onStopChat={chat.stop} />

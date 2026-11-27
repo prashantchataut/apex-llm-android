@@ -1,4 +1,5 @@
 import verified from "@/data/verified-models.json";
+import { isModelDisabled } from "@/services/apexCloudMesh";
 
 /**
  * Apex Auto: a deterministic, zero-network intent router. No LLM call ever decides the route, so it adds no latency:
@@ -48,7 +49,9 @@ interface V {
   ms: number;
 }
 const LIVE: V[] = (verified.models as V[]).slice().sort((a, b) => a.ms - b.ms);
-const has = (provider: string, id: string) => LIVE.some((m) => m.provider === provider && m.id === id);
+/** Verified models the owner has not switched off in /admin. */
+const liveNow = () => LIVE.filter((m) => !isModelDisabled(m.provider, m.id));
+const has = (provider: string, id: string) => liveNow().some((m) => m.provider === provider && m.id === id);
 
 /** Preference lists. Each entry is only used if the last live verification run (`scripts/verify-keyless-models.mjs`) passed it. */
 const PREFS: Record<Exclude<Intent, "local" | "image">, { provider: string; id: string; label: string }[]> = {
@@ -91,7 +94,7 @@ export function routeAuto(text: string, ctx: RouteContext): RouteDecision {
   }
   const intent = classifyIntent(text);
   if (intent === "image") return { intent, kind: "image", label: "Apex Flux", reason: WHY.image, ms: now() - t0 };
-  const pick = PREFS[intent].find((p) => has(p.provider, p.id)) ?? (LIVE[0] && { provider: LIVE[0].provider, id: LIVE[0].id, label: LIVE[0].id });
+  const pick = PREFS[intent].find((p) => has(p.provider, p.id)) ?? (liveNow()[0] && { provider: liveNow()[0].provider, id: liveNow()[0].id, label: liveNow()[0].id });
   if (!pick) return { intent: "local", kind: "local", localId: ctx.localId, label: ctx.localLabel ?? "On-device model", reason: "no verified cloud model", ms: now() - t0 };
   return { intent, kind: "cloud", provider: pick.provider, api: pick.id, label: pick.label, reason: WHY[intent], ms: now() - t0 };
 }
