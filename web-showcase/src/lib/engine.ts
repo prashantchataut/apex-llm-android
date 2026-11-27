@@ -127,13 +127,13 @@ export function activeBackend(s: EngineSnapshot = snap): Backend {
   return "sandbox";
 }
 
-/** `SmolLM2-135M-Instruct-Q8_0.gguf` → `SmolLM2-135M (Q8_0)`. */
+/** `SmolLM2-135M-Instruct-Q8_0.gguf` -> `SmolLM2-135M (Q8_0)`. */
 export function shortModelName(m: CatalogModel | undefined | null): string {
   if (!m) return "model";
   return `${m.name.split("·")[0].trim().replace(/ Instruct$/, "")} (${m.quant})`;
 }
 
-// ───────────────────────── wllama (llama.cpp → WebAssembly SIMD) ─────────────────────────
+// ───────────────────────── wllama (llama.cpp -> WebAssembly SIMD) ─────────────────────────
 
 const pool = new Map<Slot, Wllama>();
 

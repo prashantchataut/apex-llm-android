@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import { assetUrl } from "@/lib/paths";
 import { REPO } from "@/lib/site";
 import type { ApexModel } from "@/lib/vault";
+import ZEUS from "@/data/zeus-catalog.json";
 
 /**
  * Apex Cloud Mesh — a multi-provider router for FREE, KEYLESS, browser-callable (CORS) OpenAI-compatible endpoints.
@@ -87,6 +88,32 @@ export const BUILTIN_PROVIDERS: MeshProvider[] = [
   },
 ];
 
+/* ───────── imported catalog (NikitHamal/zeusdesigns + live /models discovery, probed with real completions) ───────── */
+interface ZeusModel { id: string; label: string; note?: string; reasoning?: boolean; vision?: boolean; ctx?: number; src: string; verified?: boolean; ms?: number }
+interface ZeusGateway { id: string; name: string; base: string; auth?: string; cors: boolean; zeusProviders: string[]; models: ZeusModel[] }
+const ZEUS_DATA = ZEUS as unknown as { generatedAt: string; gateways: ZeusGateway[] };
+const covered = (g: ZeusGateway) => BUILTIN_PROVIDERS.some((b) => b.chat.startsWith(g.base));
+const ZEUS_GATEWAYS = ZEUS_DATA.gateways.filter((g) => g.models.length > 0 && !covered(g));
+const bestOf = (g: ZeusGateway) => g.models.filter((m) => m.verified).sort((a, b) => (a.ms ?? 1e9) - (b.ms ?? 1e9))[0];
+export const isImported = (providerId: string) => providerId.startsWith("z-");
+export const CATALOG_GENERATED_AT = ZEUS_DATA.generatedAt;
+export const IMPORTED_PROVIDERS: MeshProvider[] = ZEUS_GATEWAYS.map((g) => {
+  const best = bestOf(g);
+  return {
+    id: g.id,
+    name: g.zeusProviders[0] ?? g.name,
+    chat: `${g.base}/chat/completions`,
+    models: `${g.base}/models`,
+    auth: g.auth,
+    cors: g.cors,
+    builtin: true,
+    priority: best ? 20 + Math.min(30, Math.round((best.ms ?? 0) / 300)) : 90,
+    fallbackModel: best?.id,
+    note: g.cors ? "Imported catalog gateway (keyless)." : "Imported catalog gateway (keyless). No CORS header: not callable from a browser or WebView.",
+  };
+});
+export const ALL_BUILTIN: MeshProvider[] = [...BUILTIN_PROVIDERS, ...IMPORTED_PROVIDERS];
+
 export interface MeshConfig {
   schema: 1;
   custom: Omit<MeshProvider, "builtin">[];
@@ -96,11 +123,15 @@ export interface MeshConfig {
   disabledModels?: string[];
   /** Owner display-name overrides, keyed `provider:api`. Shown verbatim in the app picker. */
   renames?: Record<string, string>;
+  /** Imported models are hidden until they pass a live probe; the owner can force one on. Keyed `provider:api`. */
+  enabledModels?: string[];
+  /** Owner category overrides, keyed `provider:api`. */
+  categories?: Record<string, MeshGroup>;
   updatedAt?: string;
 }
 export const MESH_CONFIG_PATH = "web-showcase/public/config/mesh.json";
 const MESH_RAW = `https://raw.githubusercontent.com/${REPO}/main/${MESH_CONFIG_PATH}`;
-export const EMPTY_CONFIG: MeshConfig = { schema: 1, custom: [], disabled: [], disabledModels: [], renames: {} };
+export const EMPTY_CONFIG: MeshConfig = { schema: 1, custom: [], disabled: [], disabledModels: [], renames: {}, enabledModels: [], categories: {} };
 /** Config key of a model: `provider:api`. */
 export const modelKey = (provider: string, api: string) => `${provider}:${api}`;
 
@@ -117,6 +148,19 @@ export interface MeshModel {
   /** True when the owner renamed it in /admin: `label` is then shown verbatim (no `Apex-` prefix). */
   renamed?: boolean;
   disabled?: boolean;
+  /** Imported from the reference catalog (not discovered from a built-in provider's live list). */
+  imported?: boolean;
+  /** Result of the import-time real-completion probe. */
+  verified?: boolean;
+  ms?: number;
+  note?: string;
+  /** Label / category before owner overrides (the /admin editor derives its live view from these). */
+  baseLabel?: string;
+  baseGroup?: MeshGroup;
+  /** Whether the model is on without any owner override. */
+  defaultOn?: boolean;
+  /** Provider sends no CORS header: not callable from a browser / WebView. */
+  nativeOnly?: boolean;
 }
 export interface Health {
   ok: boolean;
@@ -137,7 +181,7 @@ export interface MeshState {
   config: MeshConfig;
 }
 
-const INITIAL: MeshState = { synced: false, syncing: false, providers: BUILTIN_PROVIDERS, models: [], allModels: [], health: {}, config: EMPTY_CONFIG };
+const INITIAL: MeshState = { synced: false, syncing: false, providers: ALL_BUILTIN, models: [], allModels: [], health: {}, config: EMPTY_CONFIG };
 let state: MeshState = INITIAL;
 const subs = new Set<() => void>();
 const set = (patch: Partial<MeshState>) => {
@@ -169,12 +213,12 @@ const timed = async (url: string, ms: number, init?: RequestInit) => {
 
 export function providersFrom(cfg: MeshConfig): MeshProvider[] {
   const custom: MeshProvider[] = cfg.custom.map((c) => ({ ...c, builtin: false, cors: c.cors !== false }));
-  return [...BUILTIN_PROVIDERS, ...custom].filter((p) => !cfg.disabled.includes(p.id)).sort((a, b) => a.priority - b.priority);
+  return [...ALL_BUILTIN, ...custom].filter((p) => !cfg.disabled.includes(p.id)).sort((a, b) => a.priority - b.priority);
 }
 /** Every provider including disabled ones (the /admin table shows them greyed out). */
 export function allProviders(cfg: MeshConfig): MeshProvider[] {
   const custom: MeshProvider[] = cfg.custom.map((c) => ({ ...c, builtin: false, cors: c.cors !== false }));
-  return [...BUILTIN_PROVIDERS, ...custom].sort((a, b) => a.priority - b.priority);
+  return [...ALL_BUILTIN, ...custom].sort((a, b) => a.priority - b.priority);
 }
 
 /** Owner config: raw GitHub first (OTA, no rebuild), the bundled copy as fallback. */
@@ -190,6 +234,8 @@ export async function loadMeshConfig(): Promise<MeshConfig> {
           disabled: Array.isArray(j.disabled) ? j.disabled : [],
           disabledModels: Array.isArray(j.disabledModels) ? j.disabledModels : [],
           renames: j.renames && typeof j.renames === "object" ? j.renames : {},
+          enabledModels: Array.isArray(j.enabledModels) ? j.enabledModels : [],
+          categories: j.categories && typeof j.categories === "object" ? j.categories : {},
           updatedAt: j.updatedAt,
         };
       }
@@ -329,21 +375,48 @@ export async function syncMesh(cfg?: MeshConfig): Promise<MeshState> {
   set({ syncing: true });
   const config = cfg ?? (await loadMeshConfig());
   const providers = providersFrom(config);
-  const results = await Promise.all(providers.filter((p) => p.cors).map(async (p) => [p, await fetchProviderModels(p)] as const));
+  const results = await Promise.all(providers.filter((p) => p.cors && !isImported(p.id)).map(async (p) => [p, await fetchProviderModels(p)] as const));
   const health: Record<string, Health> = {};
   const models: MeshModel[] = [];
-  for (const p of providers) if (!p.cors) health[p.id] = { ...NO_CORS, at: Date.now() };
+  for (const p of providers) if (!p.cors && !isImported(p.id)) health[p.id] = { ...NO_CORS, at: Date.now() };
   for (const [p, r] of results) {
     health[p.id] = r.health;
     models.push(...r.models);
   }
+  // Imported gateways: seeded from the bundled catalog (no 40 extra requests at launch). Health = the import-time probe.
+  const stamp = Date.parse(CATALOG_GENERATED_AT) || Date.now();
+  for (const g of ZEUS_GATEWAYS) {
+    const p = providers.find((x) => x.id === g.id);
+    if (!p) continue;
+    const best = bestOf(g);
+    health[g.id] = best ? { ok: true, ms: best.ms ?? 0, count: g.models.length, at: stamp } : { ok: false, ms: 0, count: g.models.length, at: stamp, error: "no model answered at import" };
+    for (const m of g.models) {
+      models.push({
+        id: `mesh:${g.id}:${m.id}`,
+        provider: g.id,
+        api: m.id,
+        label: m.label || pretty(m.id),
+        note: m.note,
+        imported: true,
+        verified: m.verified,
+        ms: m.ms,
+        nativeOnly: !g.cors,
+        ...classify(m.id, m),
+      });
+    }
+  }
   const rank = (g: MeshGroup) => MESH_GROUP_ORDER.indexOf(g);
   const off = new Set(config.disabledModels ?? []);
   const names = config.renames ?? {};
+  const forced = new Set(config.enabledModels ?? []);
+  const cats = config.categories ?? {};
   const all = models.map<MeshModel>((m) => {
     const k = modelKey(m.provider, m.api);
     const rn = names[k]?.trim();
-    return { ...m, label: rn || m.label, renamed: !!rn, disabled: off.has(k) };
+    // Imported models are on by default only when they answered a real completion AND the browser can reach them.
+    const defaultOn = m.imported ? !!m.verified && !m.nativeOnly : true;
+    const enabled = !off.has(k) && (defaultOn || forced.has(k));
+    return { ...m, baseLabel: m.label, baseGroup: m.group, group: cats[k] ?? m.group, label: rn || m.label, renamed: !!rn, defaultOn, disabled: !enabled };
   });
   all.sort((a, b) => rank(a.group) - rank(b.group) || a.label.localeCompare(b.label));
   set({ synced: true, syncing: false, providers, models: all.filter((m) => !m.disabled), allModels: all, health, config });
@@ -391,7 +464,12 @@ export function candidatesFor(preferred?: { provider: string; api: string }): Ca
   const out: Candidate[] = [];
   const pref = preferred && usable.find((p) => p.id === preferred.provider);
   if (pref && preferred && !off.has(modelKey(pref.id, preferred.api))) out.push({ provider: pref, api: preferred.api });
+  let importedUsed = 0;
   for (const p of usable) {
+    if (isImported(p.id)) {
+      if (!p.fallbackModel || importedUsed >= 6) continue; // last-resort breadth: the six fastest verified imported gateways
+      importedUsed++;
+    }
     const own = models.filter((m) => m.provider === p.id).map((m) => m.api);
     const apis = [p.fallbackModel, ...own].filter((a): a is string => !!a && !off.has(modelKey(p.id, a)));
     // up to two distinct stand-in models per provider (a second model on the same host has its own anonymous quota)
@@ -408,4 +486,20 @@ export function isMeshId(id: string): boolean {
 export function parseMeshId(id: string): { provider: string; api: string } | null {
   const m = /^mesh:([^:]+):(.+)$/.exec(id);
   return m ? { provider: m[1], api: m[2] } : null;
+}
+
+/** Toggle a model with the right override list: default-off imports need `enabledModels`, everything else uses `disabledModels`. */
+export function setModelEnabled(cfg: MeshConfig, m: Pick<MeshModel, "provider" | "api" | "defaultOn">, enabled: boolean): MeshConfig {
+  const k = modelKey(m.provider, m.api);
+  const off = new Set(cfg.disabledModels ?? []);
+  const on = new Set(cfg.enabledModels ?? []);
+  if (enabled) {
+    off.delete(k);
+    if (!m.defaultOn) on.add(k);
+  } else {
+    on.delete(k);
+    if (m.defaultOn) off.add(k);
+    else off.add(k);
+  }
+  return { ...cfg, disabledModels: [...off], enabledModels: [...on] };
 }

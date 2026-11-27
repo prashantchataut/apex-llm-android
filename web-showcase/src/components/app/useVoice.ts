@@ -8,7 +8,7 @@ import type { VoiceState } from "./PromptBar";
 const MB = 1_000_000;
 
 /**
- * Real dictation: microphone → AnalyserNode (live FFT bars) → Whisper tiny.en on-device → text in the prompt bar.
+ * Real dictation: microphone -> AnalyserNode (live FFT bars) -> Whisper tiny.en on-device -> text in the prompt bar.
  * If Whisper cannot be fetched (first use while offline) the platform recogniser is used and labelled as such.
  */
 export function useVoice(commit: (text: string) => void) {

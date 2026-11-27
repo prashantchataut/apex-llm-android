@@ -2,7 +2,7 @@
 
 /**
  * Real microphone pipeline.
- *  1. `getUserMedia` → `AudioContext` → `AnalyserNode`: the waveform reads `getByteFrequencyData` at display rate.
+ *  1. `getUserMedia` -> `AudioContext` -> `AnalyserNode`: the waveform reads `getByteFrequencyData` at display rate.
  *  2. `MediaRecorder` keeps the take; on stop it is decoded to 16 kHz mono PCM.
  *  3. Whisper-tiny.en (ONNX Runtime WebAssembly via transformers.js, int8 ≈ 40 MB) transcribes it on-device.
  *     The model is fetched once from Hugging Face and then served from the browser Cache API (offline afterwards).

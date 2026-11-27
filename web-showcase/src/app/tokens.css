@@ -36,11 +36,11 @@
 }
 [data-mode="dark"] {
   color-scheme: dark;
-  --canvas: #0d0d0f;
+  --canvas: #09090B;
   --surface: #161618;
   --surface-2: #1e1e22;
   --ink-rgb: 236 236 240;
-  --inv-rgb: 13 13 15;
+  --inv-rgb: 9 9 11;
   --ink-3-a: 0.56;
   --accent: #8fd3b6;
   --accent-2: #a9a4f2;

@@ -68,7 +68,7 @@ type Tab = "cursor" | "continue" | "openwebui" | "curl";
 const TAB_LABEL: Record<Tab, string> = { cursor: "Cursor", continue: "VS Code Continue", openwebui: "OpenWebUI", curl: "curl" };
 
 function snippet(tab: Tab, key: string, base: string, model: string): string {
-  if (tab === "cursor") return `Settings → Models → OpenAI API Key\nOverride OpenAI Base URL: ${base}/v1\nAPI Key: ${key}\nModel: ${model}`;
+  if (tab === "cursor") return `Settings -> Models -> OpenAI API Key\nOverride OpenAI Base URL: ${base}/v1\nAPI Key: ${key}\nModel: ${model}`;
   if (tab === "continue") return `# ~/.continue/config.yaml\nmodels:\n  - name: Apex · ${model}\n    provider: openai\n    model: ${model}\n    apiBase: ${base}/v1\n    apiKey: ${key}`;
   if (tab === "openwebui") return `docker run -d -p 3000:8080 \\\n  -e OLLAMA_BASE_URL=${base} \\\n  -e OPENAI_API_BASE_URL=${base}/v1 \\\n  -e OPENAI_API_KEY=${key} \\\n  ghcr.io/open-webui/open-webui:main`;
   return `curl ${base}/v1/chat/completions \\\n  -H "Authorization: Bearer ${key}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"model":"${model}","stream":true,\n       "messages":[{"role":"user","content":"Hello from my PC"}]}'`;

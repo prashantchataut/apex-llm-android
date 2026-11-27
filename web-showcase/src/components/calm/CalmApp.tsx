@@ -145,7 +145,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
 
   const localModel = choice.kind === "local" ? CATALOG.find((m) => m.id === choice.id) : undefined;
   const keyOk = access.state === "active";
-  const label = choice.kind === "auto" ? "Apex Auto ⚡" : choice.kind === "apex" ? `${apexById(choice.id)?.label ?? "Apex API"} · ${keyOk ? "Apex API" : "Locked"}` : localModel ? `${shortModelName(localModel)} · Local` : "Choose a model";
+  const label = choice.kind === "auto" ? "Apex Auto" : choice.kind === "apex" ? `${apexById(choice.id)?.label ?? "Apex API"} · ${keyOk ? "Apex API" : "Locked"}` : localModel ? `${shortModelName(localModel)} · Local` : "Choose a model";
   const memActive = mems.filter((m) => m.on).length;
   const started = chat.msgs.length > 0;
 
@@ -226,7 +226,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     },
     [dl, say],
   );
-  /** Apex API is gated: fresh vault check (revoked → lock + local fallback) before every cloud request. */
+  /** Apex API is gated: fresh vault check (revoked -> lock + local fallback) before every cloud request. */
   const guardApex = useCallback(
     async (c: Choice): Promise<boolean> => {
       if (c.kind !== "apex" || c.id.startsWith("mesh:")) return true; // keyless mesh models never need the vault

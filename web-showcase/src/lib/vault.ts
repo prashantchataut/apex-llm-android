@@ -8,7 +8,7 @@ import { assetUrl } from "./paths";
  *
  * `public/config/apex-vault.json` is public. It contains NO keys and NO provider URLs, only:
  *   - `salt`                       random hex salt
- *   - `keys[].keyHash`             SHA-256(salt + key)  → lets the app tell a valid, active key from a wrong one
+ *   - `keys[].keyHash`             SHA-256(salt + key)  -> lets the app tell a valid, active key from a wrong one
  *   - `keys[].encryptedCatalogEnvelope`  Envelope A: AES-256-GCM(catalog) under PBKDF2(key, salt, 200 000 × SHA-256)
  *   - `adminEnvelope`              the same catalog under PBKDF2(admin passphrase, salt) so the owner can mint keys
  *

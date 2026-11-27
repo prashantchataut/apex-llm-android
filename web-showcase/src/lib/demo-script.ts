@@ -6,7 +6,7 @@ export interface DemoReply {
 }
 
 const MATH: DemoReply = {
-  steps: ["Parse the request", "Recall the binomial identity", "Sanity-check with a=2, b=3 → 25", "Compose answer + one follow-up question"],
+  steps: ["Parse the request", "Recall the binomial identity", "Sanity-check with a=2, b=3 -> 25", "Compose answer + one follow-up question"],
   thinkMs: 3400,
   answer: `Expanding a square of a sum gives $(a+b)^2 = a^2 + 2ab + b^2$. The cross-term $2ab$ is the one people forget.
 

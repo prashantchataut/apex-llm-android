@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "note": "OTA model registry. Apex merges these entries into the Model Hub when you tap Settings → Sync registry. Add models here — no APK release needed.",
+  "note": "OTA model registry. Apex merges these entries into the Model Hub when you tap Settings -> Sync registry. Add models here — no APK release needed.",
   "models": []
 }

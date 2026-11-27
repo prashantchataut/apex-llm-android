@@ -1,5 +1,8 @@
 # PROGRESS
 
+## Session 17 — Local Runner Studio (v1.4.0 refresh)
+Done (verified in headless Chromium): imported provider/model catalog with live probes, passphrase-only /admin with model explorer, Image Studio upgrade, emoji removal, obsidian UI layer, public 1-tap GitHub connect. Not done: PAT in vault (refused), versionCode 14, device test of the Kotlin updater. See .agent/STATE.md.
+
 ## Session 16 — v1.4.0 release + live-site sync
 **Done (verified in headless Chromium):** per-model admin toggles / rename / live ping and their effect in the app picker + router; pdf.js reader; Copy LaTeX; system-instruction presets; in-app updater progress; version bumped to 1.4.0 with signed-APK release via CI. **Not done:** PAT-in-vault (refused, see STATE), Image Studio redesign, keyless Claude/Gemini/GPT-4.1 (need keys), device test of the Kotlin updater. QA in `docs/qa/session-16/`.
 

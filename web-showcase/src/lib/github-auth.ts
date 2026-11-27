@@ -7,7 +7,7 @@ import { getGithubToken, setGithubToken } from "./skills";
 
 /**
  * "Continue with GitHub" via the official OAuth **Device Flow** (the flow GitHub designs for apps without a server):
- *   1. POST /login/device/code  → 8-char user code + verification URL
+ *   1. POST /login/device/code  -> 8-char user code + verification URL
  *   2. user opens github.com/login/device, types / pastes the code and taps "Authorize Apex"
  *   3. we poll /login/oauth/access_token until GitHub hands back a token.
  * github.com sends no CORS headers, so the Android app relays those two calls through a fixed-URL Rust command
@@ -102,7 +102,22 @@ export async function fetchProfile(token: string): Promise<GhProfile> {
   const j = (await r.json()) as GhProfile;
   return { login: j.login, name: j.name, avatar_url: j.avatar_url };
 }
+export const OWNER_PUBLIC_LOGIN = "prashantchataut";
+const PUBLIC_KEY = "apex.github.public.v1";
+const publicLogin = (): string => {
+  try {
+    return localStorage.getItem(PUBLIC_KEY) ?? "";
+  } catch {
+    return "";
+  }
+};
 export async function fetchRepos(token: string): Promise<GhRepo[]> {
+  const pub = !token ? publicLogin() : "";
+  if (pub) {
+    const r = await fetch(`https://api.github.com/users/${pub}/repos?sort=updated&per_page=30&type=owner`, { headers: { Accept: "application/vnd.github+json" } });
+    if (!r.ok) return [];
+    return ((await r.json()) as GhRepo[]).map((x) => ({ full_name: x.full_name, private: false, description: x.description, updated_at: x.updated_at }));
+  }
   const r = await fetch("https://api.github.com/user/repos?sort=updated&per_page=30&affiliation=owner,collaborator,organization_member", { headers: gh(token) });
   if (!r.ok) return [];
   return ((await r.json()) as GhRepo[]).map((x) => ({ full_name: x.full_name, private: x.private, description: x.description, updated_at: x.updated_at }));
@@ -114,14 +129,16 @@ const REPO_KEY = "apex.github.repo.v1";
 interface Session {
   connected: boolean;
   profile: GhProfile | null;
+  /** Connected to public data only (no token): private repositories need a real sign-in. */
+  publicOnly: boolean;
 }
-const EMPTY: Session = { connected: false, profile: null };
+const EMPTY: Session = { connected: false, profile: null, publicOnly: false };
 let session: Session = EMPTY;
 const subs = new Set<() => void>();
 function read(): Session {
   try {
     const p = JSON.parse(localStorage.getItem(PROFILE_KEY) ?? "null") as GhProfile | null;
-    return { connected: !!getGithubToken(), profile: p };
+    return { connected: !!getGithubToken() || !!publicLogin(), profile: p, publicOnly: !getGithubToken() && !!publicLogin() };
   } catch {
     return EMPTY;
   }
@@ -144,9 +161,25 @@ export async function connectWithToken(token: string): Promise<GhProfile> {
   emit();
   return p;
 }
+/** 1-tap connect to the owner's public GitHub profile and repositories. No token is stored or shipped. */
+export async function connectPublic(login = OWNER_PUBLIC_LOGIN): Promise<GhProfile> {
+  const r = await fetch(`https://api.github.com/users/${login}`, { headers: { Accept: "application/vnd.github+json" } });
+  if (!r.ok) throw new Error(r.status === 403 ? "GitHub rate limit reached for this network. Try again in a few minutes." : `GitHub answered ${r.status}`);
+  const j = (await r.json()) as GhProfile;
+  const p = { login: j.login, name: j.name, avatar_url: j.avatar_url };
+  try {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+    localStorage.setItem(PUBLIC_KEY, login);
+  } catch {
+    /* storage blocked */
+  }
+  emit();
+  return p;
+}
 export function signOutGithub() {
   setGithubToken("");
   try {
+    localStorage.removeItem(PUBLIC_KEY);
     localStorage.removeItem(PROFILE_KEY);
     localStorage.removeItem(REPO_KEY);
   } catch {
