@@ -56,9 +56,9 @@ export function SettingsView({ mode, setMode, onReplay, cart, update, onAccessKe
       <ViewTitle title="Settings" sub="Appearance, voice and updates." />
 
       <h2 className="mb-2 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Theme</h2>
-      <div role="radiogroup" aria-label="Theme" className="seg">
+      <div role="radiogroup" aria-label="Theme" className="seg seg-fit">
         {MODES.map((m) => (
-          <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} onClick={() => setMode(m.id)} className="!inline-flex items-center gap-2">
+          <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} onClick={() => setMode(m.id)} className="!inline-flex min-w-0 items-center justify-center gap-1.5 !px-2.5">
             {mode === m.id && <motion.span layoutId="theme-thumb" className="seg-thumb" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
             <CIcon name={m.icon} size={16} /> {m.label}
           </button>

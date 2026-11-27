@@ -368,7 +368,7 @@ export function LiveVoice({ open, onClose, msgs, busy, modelLabel, onSend, onSto
   return (
     <AnimatePresence>
       {open && (
-        <motion.div role="dialog" aria-modal="true" aria-label="Live voice session" data-testid="live-voice" className="absolute inset-0 z-[55] flex flex-col" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }} transition={{ type: "spring", stiffness: 340, damping: 36 }} style={{ background: "var(--canvas, var(--surface))" }}>
+        <motion.div role="dialog" aria-modal="true" aria-label="Live voice session" data-testid="live-voice" className="absolute inset-0 z-[60] flex flex-col" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }} transition={{ type: "spring", stiffness: 340, damping: 36 }} style={{ background: "var(--canvas, var(--surface))" }}>
           <div className="calm-glow" aria-hidden="true" />
           <header className="relative z-10 flex items-center justify-between px-4 pb-2 pt-safe">
             <span className="flex h-9 items-center gap-2 rounded-full bg-[var(--surface)] px-3.5 text-[12.5px] font-medium shadow-[var(--specular),var(--shadow-card)]" aria-live="polite">

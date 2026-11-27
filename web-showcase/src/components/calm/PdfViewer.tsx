@@ -156,7 +156,7 @@ export function PdfViewer({ file, onClose, onAsk }: { file: File; onClose: () =>
   const tbtn = "grid h-10 min-w-10 place-items-center rounded-full bg-[var(--surface-2)] px-3 text-[13px] font-medium active:scale-[0.96] disabled:opacity-40";
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={`PDF reader: ${file.name}`} data-testid="pdf-viewer" className="fixed inset-0 z-[70] flex flex-col" style={{ background: "var(--bg, #0b0c10)", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <div role="dialog" aria-modal="true" aria-label={`PDF reader: ${file.name}`} data-testid="pdf-viewer" className="fixed inset-0 z-[60] flex flex-col" style={{ background: "var(--bg, #0b0c10)", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       <header className="flex items-center gap-2 px-3 py-2">
         <button type="button" className={tbtn} onClick={onClose} aria-label="Close PDF reader">Close</button>
         <div className="min-w-0 flex-1">

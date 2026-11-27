@@ -102,7 +102,7 @@ function ConnectSheet({ onDone, onCancel }: { onDone: (t: string) => void; onCan
     setBusy(false);
   };
   return (
-    <motion.div className="fixed inset-0 z-50 grid place-items-end bg-black/60 p-3 sm:place-items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} data-testid="repo-connect">
+    <motion.div className="fixed inset-0 z-[60] grid place-items-end bg-black/60 p-3 sm:place-items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} data-testid="repo-connect">
       <motion.form
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

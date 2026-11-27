@@ -8,6 +8,7 @@
  *   encryptedCatalogEnvelope Envelope A: AES-256-GCM(catalog) under PBKDF2(key, salt)       — opened by app users
  *   adminEncryptedKeyString  Envelope B: AES-256-GCM({key, allowed}) under PBKDF2(passphrase) — opened by /admin only
  *   adminEnvelope            AES-256-GCM(catalog) under PBKDF2(passphrase, salt)             — opened by /admin only
+ *   adminAliases[]           AES-256-GCM({pass}) under PBKDF2(alias, salt) for each --alias (extra accepted passphrases)
  */
 import { createCipheriv, createHash, pbkdf2Sync, randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -36,11 +37,14 @@ const seal = (s, data) => {
   const ct = Buffer.concat([c.update(JSON.stringify(data), "utf8"), c.final(), c.getAuthTag()]);
   return Buffer.concat([iv, ct]).toString("base64");
 };
+// Extra accepted passphrases (repeat --alias). Matched trimmed + lower-case in the browser, so they are sealed lower-case here.
+const aliases = process.argv.flatMap((a, i, all) => (a === "--alias" ? [all[i + 1].trim().toLowerCase()] : []));
 const now = new Date().toISOString();
 const mask = (k) => `${k.startsWith("sk-apex-") ? "sk-apex-" : ""}••••${k.slice(k.length >= 20 ? -4 : -2)}`;
 const vault = {
   schema: 3, salt, kdf: { name: "PBKDF2", hash: "SHA-256", iterations: ITER }, enabled: true, updatedAt: now,
   adminEnvelope: seal(pass, catalog),
+  ...(aliases.length ? { adminAliases: aliases.map((a) => seal(a, { pass })) } : {}),
   keys: [{
     id: "key-master", label, prefix: mask(secret),
     keyHash: createHash("sha256").update(salt + secret).digest("hex"),

@@ -88,8 +88,8 @@ export function TelemetryPopover({ m, model, onClose }: { m: ChatMsg | null; mod
     <AnimatePresence>
       {m && (
         <>
-          <motion.button type="button" aria-label="Close telemetry" className="absolute inset-0 z-40 bg-black/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
-          <motion.div role="dialog" aria-label="Message telemetry" className="glass absolute inset-x-5 bottom-28 z-50 rounded-[28px] p-4" initial={{ opacity: 0, y: 18, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.96 }} transition={{ type: "spring", stiffness: 380, damping: 28 }}>
+          <motion.button type="button" aria-label="Close telemetry" className="absolute inset-0 z-[60] bg-black/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+          <motion.div role="dialog" aria-label="Message telemetry" className="glass absolute inset-x-5 bottom-28 z-[60] rounded-[28px] p-4" initial={{ opacity: 0, y: 18, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.96 }} transition={{ type: "spring", stiffness: 380, damping: 28 }}>
             <div className="relative z-[1]">
               <div className="flex items-center gap-2">
                 <span className={`mono text-[10.5px] font-medium tracking-[0.14em] ${real ? "text-ok" : "text-warn"}`}>{real ? "MEASURED ON REAL WEIGHTS" : "SIMULATED — NO MODEL RAN"}</span>
@@ -145,8 +145,8 @@ export function BentoModal({ input, onClose }: { input: BentoInput | null; onClo
     <AnimatePresence>
       {input && (
         <>
-          <motion.button type="button" aria-label="Close preview" className="absolute inset-0 z-40 bg-black/70" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
-          <motion.div role="dialog" aria-label="Bento card" className="absolute inset-x-4 bottom-4 top-12 z-50 flex flex-col items-center gap-3" initial={{ opacity: 0, y: 30, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20 }} transition={{ type: "spring", stiffness: 340, damping: 30 }}>
+          <motion.button type="button" aria-label="Close preview" className="absolute inset-0 z-[60] bg-black/70" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+          <motion.div role="dialog" aria-label="Bento card" className="absolute inset-x-4 bottom-4 top-12 z-[60] flex flex-col items-center gap-3" initial={{ opacity: 0, y: 30, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20 }} transition={{ type: "spring", stiffness: 340, damping: 30 }}>
             <div className="relative min-h-0 w-full flex-1 overflow-hidden rounded-[26px] border border-white/15 bg-black shadow-2xl">
               {url ? (
                 // eslint-disable-next-line @next/next/no-img-element

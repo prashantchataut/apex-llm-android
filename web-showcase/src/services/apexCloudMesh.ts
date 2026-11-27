@@ -302,7 +302,8 @@ export function classify(id: string, r: { reasoning?: boolean; vision?: boolean 
 async function fetchProviderModels(p: MeshProvider): Promise<{ health: Health; models: MeshModel[] }> {
   const t0 = performance.now();
   try {
-    const r = await timed(p.models, 8000, p.auth ? { headers: { Authorization: p.auth } } : undefined);
+    // LLM7's public model list rejects the CORS preflight that an Authorization header forces, and needs no credential.
+    const r = await timed(p.models, 8000, p.auth && p.id !== "llm7" ? { headers: { Authorization: p.auth } } : undefined);
     const ms = Math.round(performance.now() - t0);
     if (!r.ok) return { health: { ok: false, ms, count: 0, at: Date.now(), error: `HTTP ${r.status}` }, models: [] };
     const raw = rawModels(p.id, await r.json()).filter((m) => !NON_CHAT.test(m.id));

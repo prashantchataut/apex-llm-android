@@ -596,7 +596,7 @@ button.calm-chip:active {
 /* ───────── Android-safe system-bar clearance ─────────
    env(safe-area-inset-*) is 0 inside most Android WebViews, so the native shell injects --safe-top / --safe-bottom
    (see MainActivity.kt + lib/insets.ts). html.is-android guarantees a 38px / 14px floor even if the bridge is late. */
-html.is-android { --safe-top-default: 40px; --safe-bottom-default: 16px; }
+html.is-android { --safe-top-default: 38px; --safe-bottom-default: 16px; }
 .pt-safe { padding-top: calc(max(env(safe-area-inset-top, 0px), var(--safe-top, var(--safe-top-default, 0px))) + 10px); }
 .pt-safe-lg { padding-top: calc(max(env(safe-area-inset-top, 0px), var(--safe-top, var(--safe-top-default, 0px))) + 16px); }
 .pb-safe { padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), var(--safe-bottom, var(--safe-bottom-default, 0px))) + 8px); }
@@ -661,3 +661,11 @@ html.is-android { --safe-top-default: 40px; --safe-bottom-default: 16px; }
 .calm-seg > button[aria-pressed="true"], .calm-seg > button[aria-checked="true"] { background: var(--ink-solid); color: var(--canvas); box-shadow: 0 1px 0 rgb(255 255 255 / .22) inset, 0 4px 12px -4px rgb(0 0 0 / .5); }
 .calm .calm-btn:active { transform: scale(.965); transition: transform .12s cubic-bezier(.34,1.56,.64,1); }
 @media (prefers-reduced-motion: reduce) { .calm-card[data-beam="true"]::before { animation: none; } }
+
+/* ── v1.4.1 layout hardening: no overlap at 360-412px ─────────────────────
+   z-index scale: header/composer 20 · popovers 40 · drawer 50 · modals/PDF/studio/settings 60 · toasts 70 */
+.seg.seg-fit { display: grid; grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; max-width: 420px; }
+.seg.seg-fit button { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.calm-card, .calm-sheet { overflow-wrap: anywhere; }
+.nav-row small { flex-shrink: 0; }
+.calm [class*="min-h-"] > *, .calm-card > * { min-width: 0; }

@@ -49,6 +49,8 @@ export interface VaultFile {
   enabled: boolean;
   updatedAt: string;
   adminEnvelope: string;
+  /** Extra accepted passphrases: each is AES-GCM({ pass: <canonical passphrase> }) under PBKDF2(alias, salt). Alias is matched trimmed + lower-case. */
+  adminAliases?: string[];
   keys: VaultKey[];
 }
 
@@ -180,6 +182,34 @@ export async function openAsAdmin(vault: VaultFile, passphrase: string): Promise
   return open<ApexCatalog>(passphrase, vault.salt, vault.adminEnvelope, vault.kdf?.iterations ?? KDF_ITERATIONS);
 }
 
+/** Candidate spellings of what the owner typed: exact, trimmed, trimmed + lower-case (stable order, de-duplicated). */
+export const passphraseCandidates = (input: string): string[] => [...new Set([input, input.trim(), input.trim().toLowerCase()])].filter(Boolean);
+
+/**
+ * Passphrase-only login. Tries the typed text as the canonical passphrase, then as any registered alias (e.g. the master API key
+ * `APEX-PRO-2025`). Case differences and stray whitespace are forgiven. Returns the CANONICAL passphrase (the one every envelope is
+ * sealed under) together with the decrypted catalog, or throws when nothing matches.
+ */
+export async function unlockAdmin(vault: VaultFile, input: string): Promise<{ passphrase: string; catalog: ApexCatalog }> {
+  const iter = vault.kdf?.iterations ?? KDF_ITERATIONS;
+  for (const c of passphraseCandidates(input)) {
+    try {
+      return { passphrase: c, catalog: await open<ApexCatalog>(c, vault.salt, vault.adminEnvelope, iter) };
+    } catch {
+      /* not the canonical passphrase */
+    }
+    for (const env of vault.adminAliases ?? []) {
+      try {
+        const { pass } = await open<{ pass: string }>(c, vault.salt, env, iter);
+        return { passphrase: pass, catalog: await open<ApexCatalog>(pass, vault.salt, vault.adminEnvelope, iter) };
+      } catch {
+        /* not this alias */
+      }
+    }
+  }
+  throw new Error("auth");
+}
+
 const B62 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 export function generateSecretKey(): string {
   const out: string[] = [];
@@ -283,5 +313,6 @@ export async function rekeyAdmin(vault: VaultFile, catalog: ApexCatalog, secrets
     const sec = secrets[k.id];
     keys.push(sec ? { ...k, adminEncryptedKeyString: await sealKeySecret(nextPassphrase, vault, sec) } : k);
   }
-  return { ...vault, adminEnvelope: await seal(nextPassphrase, vault.salt, catalog, vault.kdf?.iterations ?? KDF_ITERATIONS), keys };
+  // Aliases point at the OLD canonical passphrase, so they are retired when the passphrase changes.
+  return { ...vault, adminAliases: undefined, adminEnvelope: await seal(nextPassphrase, vault.salt, catalog, vault.kdf?.iterations ?? KDF_ITERATIONS), keys };
 }

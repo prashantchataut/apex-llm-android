@@ -20,8 +20,8 @@ export type View = "chat" | "hub" | "studio" | "memory" | "vault" | "mcp" | "lan
 
 export function Header({ persistent, onMenu, label, onPill, onNew, children, updateBadge }: { updateBadge?: boolean; persistent: boolean; onMenu: () => void; label: string; onPill: () => void; onNew: () => void; children?: ReactNode }) {
   return (
-    <header className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 pb-2 pt-safe">
-      <div className="flex">
+    <header className="relative z-20 grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 px-3 pb-2 pt-safe">
+      <div className="flex min-w-0">
         <button type="button" onClick={onMenu} aria-label={updateBadge ? "Open sidebar (update available)" : "Open sidebar"} className={`ibtn relative !h-11 !w-11 ${persistent ? "lg:hidden" : ""}`}>
           <CIcon name="sidebar" size={21} />
           {updateBadge && <span className="upd-dot" data-testid="update-badge" aria-hidden="true" />}
@@ -34,13 +34,13 @@ export function Header({ persistent, onMenu, label, onPill, onNew, children, upd
         aria-label={`Model: ${label}. Switch model`}
         whileTap={{ scale: 0.96 }}
         transition={{ type: "spring", stiffness: 500, damping: 28 }}
-        className="flex h-10 max-w-[56vw] items-center gap-2 rounded-full bg-[var(--surface)] px-4 text-[13.5px] font-medium shadow-[var(--specular),var(--shadow-card)] sm:max-w-[420px]"
+        className="mx-auto flex h-10 min-w-0 max-w-full items-center gap-2 rounded-full bg-[var(--surface)] px-4 text-[13.5px] font-medium shadow-[var(--specular),var(--shadow-card)] sm:max-w-[420px]"
       >
         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ok)]" />
         <span className="truncate">{label}</span>
         <CIcon name="chevron" size={13} className="shrink-0 opacity-50" />
       </motion.button>
-      <div className="flex items-center justify-end">
+      <div className="flex min-w-0 items-center justify-end">
         <button type="button" onClick={onNew} aria-label="New chat" className="ibtn !h-11 !w-11">
           <CIcon name="pencil" size={20} />
         </button>
@@ -60,7 +60,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   return (
     <AnimatePresence>
       {open && (
-        <div className="absolute inset-0 z-40 flex items-end justify-center sm:items-start sm:pt-16">
+        <div className="absolute inset-0 z-[60] flex items-end justify-center sm:items-start sm:pt-16">
           <motion.div className="absolute inset-0 bg-black/20 backdrop-blur-[3px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
           <motion.div role="dialog" aria-modal="true" aria-label={title} initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: "spring", stiffness: 380, damping: 36 }} className="calm-card relative max-h-[82%] w-full max-w-[460px] overflow-y-auto rounded-b-none p-3 sm:rounded-[28px]" style={{ borderRadius: undefined }}>
             <div className="mb-1 flex items-center justify-between px-2 pt-1">
@@ -122,7 +122,7 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, 
     <AnimatePresence>
       {open && (
         <>
-          <motion.div className="fixed inset-0 z-30 bg-black/15 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} aria-hidden="true" />
+          <motion.div className="fixed inset-0 z-40 bg-black/15 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} aria-hidden="true" />
           <motion.div role="dialog" aria-label="Choose a model" data-testid="model-popover" initial={{ opacity: 0, y: -8, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ type: "spring", stiffness: 460, damping: 34 }} className="calm-card pop-in absolute left-1/2 top-pop z-40 max-h-[min(70dvh,560px)] w-[min(380px,calc(100vw-24px))] -translate-x-1/2 overflow-y-auto p-2">
             <Row active={choice.kind === "auto"} onClick={() => { onPick({ kind: "auto", id: "auto" }); onClose(); }}>
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[16px]" style={{ background: "var(--halo-a)", color: "var(--halo-ink)" }} aria-hidden="true"><CIcon name="bolt" size={18} /></span>
@@ -314,12 +314,12 @@ export function Drawer({ open, persistent, onClose, convos, activeId, onOpenConv
 
   return (
     <>
-      <div onClick={onClose} aria-hidden="true" className={`absolute inset-0 z-30 bg-black/20 backdrop-blur-[3px] transition-opacity duration-300 ${persistent ? "lg:hidden" : ""} ${open ? "opacity-100" : "pointer-events-none opacity-0"}`} />
+      <div onClick={onClose} aria-hidden="true" className={`absolute inset-0 z-50 bg-black/20 backdrop-blur-[3px] transition-opacity duration-300 ${persistent ? "lg:hidden" : ""} ${open ? "opacity-100" : "pointer-events-none opacity-0"}`} />
       <aside
         aria-label="Navigation"
         aria-hidden={!open && !persistent ? true : undefined}
         {...(!open ? { inert: persistent ? undefined : true } : {})}
-        className={`absolute inset-y-0 left-0 z-40 flex w-[86%] max-w-[340px] flex-col bg-[var(--canvas)] pt-safe-lg ${open ? "shadow-[0_0_70px_-24px_rgb(0_0_0/0.3)]" : ""} transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${open ? "translate-x-0" : "-translate-x-full"} ${persistent ? "lg:static lg:z-10 lg:w-[300px] lg:translate-x-0 lg:shadow-none" : ""}`}
+        className={`absolute inset-y-0 left-0 z-50 flex w-[86%] max-w-[340px] flex-col bg-[var(--canvas)] pt-safe-lg ${open ? "shadow-[0_0_70px_-24px_rgb(0_0_0/0.3)]" : ""} transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${open ? "translate-x-0" : "-translate-x-full"} ${persistent ? "lg:static lg:z-10 lg:w-[300px] lg:translate-x-0 lg:shadow-none" : ""}`}
       >
         <div className="px-3">
           <div className="mb-3 flex items-center justify-between px-1">
@@ -403,7 +403,7 @@ export function Lightbox({ img, onClose }: { img: { url: string; prompt: string 
   return (
     <AnimatePresence>
       {img && (
-        <motion.div role="dialog" aria-modal="true" aria-label="Image preview" className="absolute inset-0 z-50 grid place-items-center bg-black/80 p-4 backdrop-blur-md" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+        <motion.div role="dialog" aria-modal="true" aria-label="Image preview" className="absolute inset-0 z-[60] grid place-items-center bg-black/80 p-4 backdrop-blur-md" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={img.url} alt={img.prompt} className="max-h-[82%] max-w-full rounded-2xl object-contain shadow-2xl" onClick={(e) => e.stopPropagation()} />
           <div className="absolute right-3 top-safe flex gap-2">
@@ -424,7 +424,7 @@ export function Toast({ text }: { text: string | null }) {
   return (
     <AnimatePresence>
       {text && (
-        <motion.div role="status" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="pointer-events-none absolute inset-x-0 top-16 z-50 flex justify-center px-4">
+        <motion.div role="status" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="pointer-events-none absolute inset-x-0 top-16 z-[70] flex justify-center px-4">
           <div className="rounded-full bg-[var(--ink-solid)] px-4 py-2.5 text-[13px] text-[var(--canvas)] shadow-lg">{text}</div>
         </motion.div>
       )}

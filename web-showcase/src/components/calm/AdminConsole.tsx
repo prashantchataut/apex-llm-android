@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadVault, publishVault } from "@/lib/admin";
 import { RepoTokenProvider, useRepoToken } from "./RepoToken";
-import { MIN_KEY_LEN, OWNER_LOGIN, generateSecretKey, hashKey, keyStrength, mintRecord, openAsAdmin, openKeySecrets, randomHex, rekeyAdmin, type ApexCatalog, type KeySecret, type VaultFile, type VaultKey } from "@/lib/vault";
+import { MIN_KEY_LEN, OWNER_LOGIN, generateSecretKey, hashKey, keyStrength, mintRecord, unlockAdmin, openKeySecrets, randomHex, rekeyAdmin, type ApexCatalog, type KeySecret, type VaultFile, type VaultKey } from "@/lib/vault";
 import { REPO, REPO_URL } from "@/lib/site";
 import { CIcon } from "./icons";
 import { AdminCatalog } from "./AdminCatalog";
@@ -88,17 +88,11 @@ function Gate({ onUnlock }: { onUnlock: (s: Session) => void }) {
     setErr("");
     try {
       const { vault, sha } = await loadVault("");
-      let catalog: ApexCatalog;
-      try {
-        catalog = await openAsAdmin(vault, pass);
-      } catch {
-        throw new Error("auth");
-      }
-      const secrets = await openKeySecrets(vault, pass);
+      const { passphrase: canonical, catalog } = await unlockAdmin(vault, pass);
+      const secrets = await openKeySecrets(vault, canonical);
       bfClear();
-      const p = pass;
       setPass("");
-      onUnlock({ vault, sha, catalog, passphrase: p, secrets });
+      onUnlock({ vault, sha, catalog, passphrase: canonical, secrets });
     } catch (e) {
       const m = e instanceof Error ? e.message : "";
       if (m === "auth") {
@@ -135,7 +129,7 @@ function Gate({ onUnlock }: { onUnlock: (s: Session) => void }) {
             </p>
           )}
           {wait > 0 && <p className={`text-[12.5px] ${dim}`}>Too many attempts. Try again in {wait >= 60 ? `${Math.ceil(wait / 60)} min` : `${wait}s`}.</p>}
-          <button type="submit" className="calm-btn !h-12" data-primary="true" disabled={busy || wait > 0 || pass.length < 8}>
+          <button type="submit" className="calm-btn !h-12" data-primary="true" disabled={busy || wait > 0 || pass.trim().length < 8}>
             <CIcon name="unlock" size={16} /> {busy ? "Verifying…" : "Unlock console"}
           </button>
         </form>

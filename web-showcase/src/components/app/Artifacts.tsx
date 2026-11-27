@@ -112,11 +112,11 @@ export function ArtifactDrawer({ artifact, onClose }: { artifact: Artifact | nul
     <AnimatePresence>
       {artifact && (
         <>
-          <motion.button type="button" aria-label="Close artifact" className="absolute inset-0 z-40 bg-black/55" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+          <motion.button type="button" aria-label="Close artifact" className="absolute inset-0 z-[60] bg-black/55" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
           <motion.section
             role="dialog"
             aria-label="Apex Artifact"
-            className="glass-dark absolute inset-x-0 bottom-0 top-[9%] z-50 flex flex-col overflow-hidden rounded-t-[30px]"
+            className="glass-dark absolute inset-x-0 bottom-0 top-[9%] z-[60] flex flex-col overflow-hidden rounded-t-[30px]"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
