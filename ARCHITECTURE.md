@@ -108,3 +108,6 @@ OS+WebView reserve 1.2 GB → model budget `min(0.55·4.6, 0.45·8)=2.5 GB` → 
 
 ### Image / video generation (planned)
 `cortex-hf-hub::media` holds the catalog and scoring. Planned engines: stable-diffusion.cpp (GGUF; SD-Turbo, SD 1.5, SDXL-Turbo, FLUX, Wan 2.1, LTX-Video; CPU/Vulkan), MNN (SD 1.5 CPU zips) and QNN (Snapdragon NPU zips, `needs_npu`). Diffusion runs with the LLM unloaded, hence the larger RAM share in `media_budget_bytes`. Engine trait and `media_generate` command are not written yet.
+
+## Managed Apex API (Session 19)
+`server/apex-api` is the only authority for Apex API keys: every `/v1` request is checked against the server store. Admin = passphrase-only (scrypt hash in env), Bearer session, Origin allow-list. Provider credentials are encrypted at rest and sent only to their validated host (SSRF guard: https, public IPs, pinned connection, no redirects). The web admin (`/admin`) and the app read the server URL from `config/backend.json`. GitHub user tokens: Android Keystore via `SecureStore.kt` (WebMessageListener, main frame only) or sessionStorage on web.

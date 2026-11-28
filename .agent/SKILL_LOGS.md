@@ -126,3 +126,6 @@ here claims a skill ran.
 
 ## Session 18
 - Skill loaders unavailable in this sandbox: rules applied by hand. design-taste-frontend / hallmark-ui: landing hero rewritten (single signature headline, no new hexes), checked in Playwright at 412x915@2x. rea: audited the shipped catalog importer output instead of trusting prior notes (HEAD-checked all 28 model URLs). native-rust-systems: string literals touched, then rustup+rustfmt installed: cargo fmt applied (Rust CI had been red on fmt since v1.0.0) and cargo test on the two touched crates passed (22 tests).
+
+## Session 19
+- design-taste-frontend, hallmark-ui, open-design-skill, rea, native-rust-systems: not discoverable in this environment (searched ~/.claude, ~/.agents, /usr/local/share, find by name). Not used. Rust was not changed.

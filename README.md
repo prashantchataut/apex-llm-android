@@ -1,37 +1,46 @@
-# ⚡ Apex — Ollama for Android, written in Rust
+# Apex: an on-device AI runner for Android
 
-Run GGUF LLMs on your phone. Serve **Ollama- and OpenAI-compatible APIs** to your PC over LAN. Transcribe voice on-device. Native Rust core, Tauri v2 Mobile shell, a deliberately premium UI.
+Apex runs GGUF language models on your phone. A Rust core (llama.cpp via the inference crate) does the work, a Tauri v2 shell
+hosts the interface, and nothing leaves the device unless you choose a cloud model. This README describes what the code does
+today; items that are blocked or unfinished are listed under Status.
 
-**Live UI + landing page:** https://prashantchataut.github.io/apex-llm-android/ *(deployed by `.github/workflows/deploy-pages.yml`)*
+- Live site: https://prashantchataut.github.io/apex-llm-android/
+- Latest published APK (arm64-v8a): https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.4.1
+  (a newer build from this branch exists only as a CI artifact; see Status)
 
-> **Status: alpha foundation (Session 1).** All six Rust crates compile and their 37 unit tests pass on Linux in GitHub Actions (`Rust CI`). They have **not** been built for Android yet. The web UI is real but runs a *scripted* demo model. The Android/NDK build, the llama.cpp backend and the ASR backend are Session 2. See [`.agent/STATE.md`](.agent/STATE.md).
+## Privacy
+- Local models: prompts and replies stay on the device.
+- Cloud models are opt-in. Local-Only mode keeps everything on device.
+- GitHub: every user signs in with their own account (OAuth device flow). Identity is requested by default; private
+  repositories and Gist creation are separate, unticked-by-default permissions. The token is stored in the Android Keystore
+  (app) or the tab's session storage (web) and removed on Disconnect. No shared or owner account exists anywhere.
+- The site, the APK and this repository contain no personal access token and no client secret.
 
-## What's here
+## Local-model harness
+Settings > Local models. Off by default: your message goes straight to the on-device model. On: also runs the skills you
+enabled, allows up to 2 permission-gated tool steps per reply and extracts memories in the background (more work, more latency).
+
+## Managed Apex API (optional cloud tier)
+Keys are checked by a server on every request, so a rotated or revoked key stops working immediately on every device. The server
+lives in `server/apex-api` (passphrase-only admin, rate limiting, short-lived sessions, SSRF-guarded provider endpoints, model
+health tests). It needs to be hosted by the owner: see [docs/SETUP-GITHUB-AND-ADMIN.md](docs/SETUP-GITHUB-AND-ADMIN.md).
+
+## Repository
 | Path | What |
 |---|---|
-| `crates/cortex-hardware` | `/proc` + NDK profiler → `DeviceCapabilityProfile` (RAM, SoC tier, Vulkan, quant + ctx recommendation) |
-| `crates/cortex-hf-hub` | Hugging Face GGUF search, ⚡/⚠️/❌ scoring, resumable segmented downloads + SHA-256 |
-| `crates/cortex-inference` | `Engine` trait, streaming `<think>` parser, GBNF (MCQ/JSON), chat templates |
-| `crates/cortex-voice` | `Transcriber` trait, INT8 model catalog, VAD, 60 fps spectrum bins |
-| `crates/cortex-server` | axum: Ollama + OpenAI endpoints, `sk-apex-…` key vault (hashed), request log |
-| `crates/cortex-integrations` | GitHub REST client + provider router (Local / OpenRouter / Anthropic / OpenAI / Groq) |
-| `app-ui/src-tauri` | Tauri v2 Mobile shell (thin command layer) |
-| `web-showcase` | Next.js static export: landing page **and** the 4 app screens (`/app`) |
-| `packages/design-system` | Canonical design tokens (`tokens.css`) |
-| `.agent/` | Memory brain for stateless AI sessions |
+| `crates/` | Rust crates: hardware profile, Hugging Face hub + downloads, inference, voice, local API server, integrations |
+| `app-ui/src-tauri` | Tauri v2 Android shell, Kotlin bridges (insets, haptics, updater, Keystore SecureStore) |
+| `web-showcase` | Next.js static export: landing page, the app (`/app`) and the admin panel (`/admin`) |
+| `server/apex-api` | Managed Apex API and admin backend (Node, zero dependencies, tested) |
+| `.agent/` | State notes for stateless AI sessions |
 
-## Run it
+## Develop
 ```bash
-# UI + landing
-cd web-showcase && npm install && npm run dev        # http://localhost:3000  (app: /app)
-
-# Rust
+cd web-showcase && npm ci && npm run dev      # http://localhost:3000/app
+node --test server/apex-api/test/             # backend tests
+node scripts/scan-emoji.mjs                   # user-facing text must contain no emoji
 cargo test --workspace
-
 ```
 
-## Design language
-Four archetypes — Obsidian + aurora (A), VisionOS frosted fan-stack (B), Swiss grid + progressive-opacity type (C), reasoning chat (D). Spec in [`.agent/SKILLS_PROTOCOL.md`](.agent/SKILLS_PROTOCOL.md).
-
-## Docs
-[`ARCHITECTURE.md`](ARCHITECTURE.md) · [`RULES.md`](RULES.md) · [`PROGRESS.md`](PROGRESS.md) · [`CLAUDE.md`](CLAUDE.md)
+## Status
+See [.agent/STATE.md](.agent/STATE.md) for the honest, current list of what is verified, blocked and not done.

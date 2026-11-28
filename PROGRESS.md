@@ -1,3 +1,7 @@
+## Session 19 - security, managed backend (partial)
+Done and verified: shared GitHub account removed, per-user device flow (blocked on OAuth App registration), Keystore/session token storage, legacy migration, managed `server/apex-api` with 11 passing tests, admin panel against it, per-request key checks in the app, harness switch, haptics default off, honest onboarding examples, emoji scan, setup docs, README.
+Not done: see .agent/STATE.md (logo, redesign, thinking UI, selection bar, artifact preview, keyboard, perf, provider import, release, screenshots).
+
 # PROGRESS
 
 ## Session 18 - audit, rebrand and wording cleanup (v1.4.0)
