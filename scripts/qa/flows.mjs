@@ -77,7 +77,7 @@ for (const vp of VIEWPORTS) {
   });
   await step("Admin", AND, async p => {
     await p.goto(`${BASE}/admin/`); await sleep(1500); await record(p, vp, "admin-gate");
-    await p.getByLabel("Admin passphrase").fill("apex-admin-2025"); await p.getByRole("button", { name: /Unlock/ }).click();
+    await p.getByLabel("Admin passphrase").fill(process.env.QA_ADMIN_PASS); await p.getByRole("button", { name: /Unlock/ }).click();
     await p.getByText(/Unlocked with the admin passphrase/).waitFor({ timeout: 20000 }); await sleep(6000); await record(p, vp, "admin-dashboard");
   });
 }
