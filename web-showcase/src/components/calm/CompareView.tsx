@@ -5,7 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { resolveFlagships } from "@/data/frontier";
 import { apexById, apexChat } from "@/lib/apex-cloud";
 import { CATALOG } from "@/lib/models";
-import { shortModelName, splitThink, useEngine, wllamaChat, type GenStats } from "@/lib/engine";
+import { splitReasoning } from "@/lib/stream";
+import { shortModelName, useEngine, wllamaChat, type GenStats } from "@/lib/engine";
 import { useBackLayer } from "@/lib/backstack";
 import { syncMesh, useMesh } from "@/services/apexCloudMesh";
 import { CIcon } from "./icons";
@@ -69,7 +70,7 @@ export function CompareView({ open, onClose, defaults }: { open: boolean; onClos
       const signal = ctl.current[i].signal;
       let first = 0;
       const onText = (raw: string) => {
-        const { thought, answer } = splitThink(raw);
+        const { thought, answer } = splitReasoning(raw);
         if (!first) first = performance.now();
         patch(i, { state: "streaming", text: answer, thought, ttft: Math.round(first - t0) });
       };

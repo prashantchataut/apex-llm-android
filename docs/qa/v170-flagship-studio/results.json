@@ -1,0 +1,297 @@
+[
+  {
+    "name": "home shows the 4 starter cards",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "starter pill bar above composer",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "old Prompt templates entry removed",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "no emoji: home",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "no horizontal overflow: home 390",
+    "pass": true,
+    "detail": "0px"
+  },
+  {
+    "name": "user message is exactly what the user asked",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "no raw monologue in the bubble",
+    "pass": true,
+    "detail": "\"Presentation · 6 slides\\nLive preview\\nOpen Preview\\ndigital-education.pptx\\nPowerPo\""
+  },
+  {
+    "name": "no prompt-engineering text echoed",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "reasoning moved into the collapsible Thinking Trace",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "live preview card rendered",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "downloaded a real .pptx (OOXML zip)",
+    "pass": true,
+    "detail": "digital-education.pptx · 6 slides"
+  },
+  {
+    "name": "Virtual Localhost address bar",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "served from an isolated Blob URL",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "iframe is sandboxed without same-origin",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "all 6 slides render interactively",
+    "pass": true,
+    "detail": "6/6"
+  },
+  {
+    "name": "no horizontal overflow: viewer 390",
+    "pass": true,
+    "detail": "0px"
+  },
+  {
+    "name": "no emoji: viewer",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "view source shows the code",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "Live Reload re-serves a fresh Blob URL",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "Download .HTML",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "Download .PPTX from the viewer",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "Read Aloud initialises cleanly (no page errors)",
+    "pass": true,
+    "detail": "states: loading,speaking,idle "
+  },
+  {
+    "name": "Read Aloud reached a speaking/loading state or fell back and finished",
+    "pass": true,
+    "detail": "loading,speaking,idle"
+  },
+  {
+    "name": "truncated raw <!doctype html> is auto-closed and previews",
+    "pass": true,
+    "detail": "4 slides parsed from cut-off output"
+  },
+  {
+    "name": "Voice mic starts (recording UI or a clear notice) with zero errors",
+    "pass": true,
+    "detail": "recording=true errors=0"
+  },
+  {
+    "name": "token tab has the Generate Token on GitHub button",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "invalid token is rejected with a clear message",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "username connect shows the profile",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "repositories load",
+    "pass": true,
+    "detail": "8 repos"
+  },
+  {
+    "name": "repo file tree loads",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "README attached into the chat composer",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "GitHub flows: zero page errors",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "admin gate is passphrase-only (one field)",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "admin lists stormy + zeusdesigns flagship models (search 'claude')",
+    "pass": false,
+    "detail": "0 rows"
+  },
+  {
+    "name": "model renames inline",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "admin: zero page errors",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "free tab lists Apex Auto Free + live free models [390]",
+    "pass": true,
+    "detail": "Apex Auto Free | GPT-4.1 Mini Free | Gemini 2.5 Flash Free | DeepSeek V3 Free | Qwen 3 Coder Free | Llama 3.3 70B Free"
+  },
+  {
+    "name": "switcher 'free' rows single-line, zero overlap [390]",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "no emoji: switcher free 390",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "Apex Auto Pro (Smart Router) is the #1 model in Apex API [390]",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "switcher 'api' rows single-line, zero overlap [390]",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "no emoji: switcher api 390",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "switcher 'local' rows single-line, zero overlap [390]",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "no emoji: switcher local 390",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "switcher 'all' rows single-line, zero overlap [390]",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "no emoji: switcher all 390",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "no horizontal overflow: switcher 390",
+    "pass": true,
+    "detail": "0px"
+  },
+  {
+    "name": "free tab lists Apex Auto Free + live free models [412]",
+    "pass": true,
+    "detail": "Apex Auto Free | GPT-4.1 Mini Free | Gemini 2.5 Flash Free | DeepSeek V3 Free | Qwen 3 Coder Free | Llama 3.3 70B Free"
+  },
+  {
+    "name": "switcher 'free' rows single-line, zero overlap [412]",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "no emoji: switcher free 412",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "Apex Auto Pro (Smart Router) is the #1 model in Apex API [412]",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "switcher 'api' rows single-line, zero overlap [412]",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "no emoji: switcher api 412",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "switcher 'local' rows single-line, zero overlap [412]",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "no emoji: switcher local 412",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "switcher 'all' rows single-line, zero overlap [412]",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "no emoji: switcher all 412",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "no horizontal overflow: switcher 412",
+    "pass": true,
+    "detail": "0px"
+  },
+  {
+    "name": "LIVE Claude 4 Sonnet: deck produced without leaking monologue",
+    "pass": false,
+    "detail": "no deck in 150s (relay slow/down)"
+  }
+]

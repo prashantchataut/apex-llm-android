@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { ApexMark } from "./ApexMark";
 import { setHarness, useHarness } from "@/lib/harness";
+import { VoiceSettings } from "./VoiceSettings";
 import { HapticsControl } from "@/components/theme/HapticsControl";
 import type { useCartridges } from "@/lib/cartridges";
 import { CATALOG, registerModel, type CatalogModel } from "@/lib/models";
@@ -143,6 +144,7 @@ export function SettingsView({ mode, setMode, onReplay, cart, update, onAccessKe
       <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Voice &amp; Haptic Feedback</h2>
       <div className="calm-card p-4">
         <HapticsControl />
+        <div className="mt-5 border-t border-[var(--hairline)] pt-5"><VoiceSettings /></div>
       </div>
 
       <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Version & updates</h2>

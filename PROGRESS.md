@@ -78,3 +78,6 @@ Open: Rust unverified until CI; GitHub OAuth needs a Client ID; APK build/sign/r
 - [x] Onboarding rebrand: Local AI Runner hero + capability cards
 - [x] +8 local models (Qwen3 0.6B/1.7B/4B, Gemma 3 4B, LFM2 350M/1.2B, SmolLM2 360M, Dolphin 3B)
 - [ ] /admin keyless model manager, keyless discovery script, Image Studio, pdfjs, KaTeX, slash commands, export, QA shots, v1.4.0 release
+
+## Session 19 — v1.7.0 flagship studio
+Max-tokens + reasoning separation fix, live flagship probe, 4-tab Model Switcher with Free Cloud Models, real .pptx export, Virtual Localhost preview, instant STT + Read Aloud, GitHub username/token connect with file browser. See `.agent/STATE.md` for what is and is not verified.

@@ -1,15 +1,15 @@
 {
-  "version": "1.6.0",
-  "tag": "v1.6.0",
-  "apkUrl": "https://github.com/prashantchataut/apex-llm-android/releases/download/v1.6.0/Apex-LLM-v1.6.0-arm64-release.apk",
-  "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.6.0",
-  "publishedAt": "2026-11-28T07:38:07Z",
+  "version": "1.7.0",
+  "tag": "v1.7.0",
+  "apkUrl": "https://github.com/prashantchataut/apex-llm-android/releases/download/v1.7.0/Apex-LLM-v1.7.0-arm64-release.apk",
+  "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.7.0",
+  "publishedAt": "2026-11-28T10:00:00Z",
   "changelog": [
-    "Connect your own GitHub account: device login, personal token, or a public username. Nothing is bundled with the app",
-    "Apex API keys are verified live: replacing the key in /admin locks the old one immediately",
-    "Keyboard-safe dialogs: the key field and Unlock button stay above the Android keyboard",
-    "New Home and onboarding built around the Apex mark, with an engine status pill and four creation cards",
-    "Fast Direct Mode for local models; the agent harness is opt-in. Haptics are off by default",
-    "Expandable thinking traces, inline selection rewrite, and a full-screen Live Preview viewer for pages and slide decks"
+    "Cloud replies are no longer cut off mid-output (max_tokens 8192) and reasoning, including plain-text planning, now stays in the collapsible Thinking Trace",
+    "New Model Switcher: Auto & Free, Apex API, On-Device and All, one clean line per model",
+    "Free Cloud Models work out of the box with no key: Apex Auto Free, GPT-4.1 Mini, Gemini 2.5 Flash, DeepSeek V3, Qwen 3 Coder, Llama 3.3 70B",
+    "Real .PPTX export with a one-tap Download card, and a Virtual Localhost live preview with reload, phone/desktop, source and downloads",
+    "Voice: instant streaming speech input, on-device Whisper option, and Read Aloud with play, pause and stop",
+    "GitHub connect by username (no token) with a file browser that attaches files to chat, or by token for private repos and Gists"
   ]
 }
