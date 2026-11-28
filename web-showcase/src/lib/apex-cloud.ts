@@ -244,6 +244,9 @@ interface Step {
   /** Mesh provider id (cooldown bookkeeping). Absent for the vault upstream. */
   provider?: string;
   format?: "openai" | "anthropic";
+  /** Owner override from /admin for this provider. */
+  system?: string;
+  firstTokenMs?: number;
 }
 
 /**
@@ -256,7 +259,9 @@ export async function apexChat(model: ApexModel, messages: ChatTurn[], opts: Gen
   // Keyless mesh models (Apex Auto) never need the vault; vault models still do.
   if (!cat && !isMeshId(model.id)) throw new Error("Apex API is locked. Enter your Apex API key to unlock it.");
   const plan: Step[] = [];
-  const meshStep = (c: { provider: { id: string; chat: string; auth?: string; format?: "openai" | "anthropic" }; api: string }): Step => ({
+  const meshStep = (c: { provider: { id: string; chat: string; auth?: string; format?: "openai" | "anthropic"; systemPrompt?: string; timeoutMs?: number }; api: string }): Step => ({
+    system: c.provider.systemPrompt,
+    firstTokenMs: c.provider.timeoutMs,
     endpoint: c.provider.chat,
     api: c.api,
     headers: c.provider.format === "anthropic" ? { "x-api-key": "free", "anthropic-version": "2023-06-01" } : c.provider.auth ? { Authorization: c.provider.auth } : undefined,
@@ -280,7 +285,8 @@ export async function apexChat(model: ApexModel, messages: ChatTurn[], opts: Gen
     const started = { v: false };
     const last = i === uniq.length - 1;
     try {
-      const st = await attempt(step.endpoint, step.api, messages, opts, onText, started, { headers: step.headers, retry429: last, timeoutMs: last || opts.strict || (i === 0 && !!pref) ? (opts.strict ? 60000 : 25000) : 3500, format: step.format });
+      const sent = step.system ? [{ role: "system" as const, content: step.system }, ...messages.filter((x) => x.role !== "system")] : messages;
+      const st = await attempt(step.endpoint, step.api, sent, opts, onText, started, { headers: step.headers, retry429: last, timeoutMs: step.firstTokenMs ?? (last || opts.strict || (i === 0 && !!pref) ? (opts.strict ? 60000 : 25000) : 3500), format: step.format });
       if (step.provider) markSuccess(step.provider, step.api);
       return { ...st, servedBy: step.api };
     } catch (e) {

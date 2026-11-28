@@ -6,6 +6,7 @@ import { removeKey, useAccess, verifyKey, type AccessState, type Verdict } from 
 import { maskKey } from "@/lib/vault";
 import { CIcon } from "./icons";
 import { Sheet } from "./Chrome";
+import { scrollFieldIntoView } from "@/lib/useKeyboard";
 
 const dim = "text-[rgb(var(--ink-rgb)/var(--ink-3-a))]";
 
@@ -101,7 +102,7 @@ export function AccessKeyModal({ open, onClose, onUnlocked }: { open: boolean; o
               <label className="sr-only" htmlFor="access-key-input">Access key</label>
               <div className="relative">
                 <CIcon name="key" size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 opacity-50" />
-                <input id="access-key-input" className="calm-field !rounded-full !pl-11 !font-mono" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void unlock()} placeholder="Paste your Apex API key" autoComplete="off" autoCapitalize="off" spellCheck={false} />
+                <input id="access-key-input" className="calm-field !rounded-full !pl-11 !font-mono" value={value} onChange={(e) => setValue(e.target.value)} onFocus={scrollFieldIntoView} onKeyDown={(e) => e.key === "Enter" && void unlock()} placeholder="Paste your Apex API key" autoComplete="off" autoCapitalize="off" spellCheck={false} />
               </div>
               <div className="mt-3 min-h-8">
                 {busy && value.trim().length >= 4 ? (

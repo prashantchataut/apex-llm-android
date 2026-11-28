@@ -1,10 +1,20 @@
-# ⚡ Apex — Ollama for Android, written in Rust
+<p align="center"><img src="docs/apex-mark.svg" width="96" alt="Apex logo"></p>
 
-Run GGUF LLMs on your phone. Serve **Ollama- and OpenAI-compatible APIs** to your PC over LAN. Transcribe voice on-device. Native Rust core, Tauri v2 Mobile shell, a deliberately premium UI.
+# Apex: On-Device Local AI Runner and Private Pocket Studio
 
-**Live UI + landing page:** https://prashantchataut.github.io/apex-llm-android/ *(deployed by `.github/workflows/deploy-pages.yml`)*
+Run open-weight GGUF models fully offline on your phone, read PDFs, build presentations and live previews, and generate artwork in one private studio. Native Rust core, Tauri v2 Mobile shell.
 
-> **Status: alpha foundation (Session 1).** All six Rust crates compile and their 37 unit tests pass on Linux in GitHub Actions (`Rust CI`). They have **not** been built for Android yet. The web UI is real but runs a *scripted* demo model. The Android/NDK build, the llama.cpp backend and the ASR backend are Session 2. See [`.agent/STATE.md`](.agent/STATE.md).
+**Website:** https://prashantchataut.github.io/apex-llm-android/ &nbsp;|&nbsp; **Android APK:** [latest release](https://github.com/prashantchataut/apex-llm-android/releases/latest) (arm64)
+
+> **Status.** Source version `1.6.0` (`versionCode 17`). The `v1.6.0` signed APK is published only once it has been compiled, zipaligned and signed on a machine with the Android toolchain; until then the latest release above is the newest installable build. The web UI under `web-showcase/` is the same frontend the APK embeds.
+
+### What's new in 1.6.0
+- **Connect your own GitHub.** No account, token or fallback profile ships with the app. Connect with GitHub device login, a personal token (kept only in this device's `localStorage`), or any public username. One tap to disconnect.
+- **Apex API key is checked live.** Every start and every request re-reads `apex-vault.json` (`no-store`) and the stored key fingerprint (`apex_unlocked_key_hash`) must still match an active key. Edit or replace the key in `/admin` and the old key stops working.
+- **Keyboard-safe dialogs.** Dialogs sit in the upper half of the screen, track `visualViewport`, and scroll the focused field into view.
+- **Fast Direct Mode.** Local models get a minimal prompt and stream immediately. The agent harness (tools, skill pre-runs, memory extraction) is an opt-in setting, off by default. Haptics default to Off.
+- **Signature components.** Expandable `ThinkingTrace`, contextual `SelectionActionsBar`, and the full-screen `LivePreviewViewer` (phone, tablet, code, slide decks, export to PDF).
+- **Home and onboarding redesign** around the Apex mark, an engine status pill and four creation cards. Prompt templates, speed and TTFT pill, in-app PDF viewer and offline KaTeX.
 
 ## What's here
 | Path | What |

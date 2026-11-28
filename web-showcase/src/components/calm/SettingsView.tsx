@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { ApexMark } from "./ApexMark";
+import { setHarness, useHarness } from "@/lib/harness";
 import { HapticsControl } from "@/components/theme/HapticsControl";
 import type { useCartridges } from "@/lib/cartridges";
 import { CATALOG, registerModel, type CatalogModel } from "@/lib/models";
@@ -17,6 +19,7 @@ import { ViewTitle } from "./Chrome";
 const fmtMb = (b: number) => `${(b / 1e6).toFixed(1)} MB`;
 
 export function SettingsView({ mode, setMode, onReplay, cart, update, onAccessKey }: { onReplay?: () => void; onAccessKey?: () => void; mode: CalmMode; setMode: (m: CalmMode) => void; cart: ReturnType<typeof useCartridges>; update: UpdateState }) {
+  const harness = useHarness();
   const access = useAccess();
   const [sync, setSync] = useState<string>("");
   const [syncing, setSyncing] = useState(false);
@@ -124,13 +127,27 @@ export function SettingsView({ mode, setMode, onReplay, cart, update, onAccessKe
         </div>
       </div>
 
-      <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Voice & haptics</h2>
+      <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Local Engine</h2>
+      <div className="calm-card p-4">
+        <div className="flex items-center gap-3">
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14.5px] font-medium">Enable Agent Harness for Local Models</span>
+            <span className="mt-0.5 block text-[12.5px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">
+              Off (default, Fast Direct Mode): a minimal system prompt, and tokens stream into the bubble the moment the on-device engine produces them. On: runs the multi-step tool and thinking harness, skill pre-runs and memory extraction first. That adds work before the first token.
+            </span>
+          </span>
+          <button type="button" role="switch" aria-checked={harness} aria-label="Enable Agent Harness for Local Models" className="switch" data-testid="harness-switch" onClick={() => setHarness(!harness)} />
+        </div>
+      </div>
+
+      <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Voice &amp; Haptic Feedback</h2>
       <div className="calm-card p-4">
         <HapticsControl />
       </div>
 
       <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Version & updates</h2>
       <div className="calm-card p-4">
+        <ApexMark size={30} className="mb-2.5" />
         <p className="text-[14.5px] font-medium">
           {update.s === "available" ? `Update available (${update.latest})` : update.s === "error" ? "Couldn't check for updates" : `Apex v${APP_VERSION} · ${update.s === "checking" ? "Checking…" : "Up to date"}`}
         </p>

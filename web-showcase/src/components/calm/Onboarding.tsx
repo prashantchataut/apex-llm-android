@@ -1,5 +1,6 @@
 "use client";
 
+import { ApexMark } from "./ApexMark";
 import { OnboardingHero } from "./OnboardingHero";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
@@ -160,7 +161,7 @@ export function Onboarding({ theme, onTheme, onDone }: { theme: Theme; onTheme: 
     <motion.div className="absolute inset-0 z-[60] flex flex-col overflow-hidden bg-[var(--canvas)]" initial={false} animate={{ opacity: morph ? 0 : 1 }} transition={{ duration: 0.35, delay: morph ? 0.55 : 0 }} role="dialog" aria-modal="true" aria-label="Welcome to Apex Local AI Studio">
       <div className="calm-glow" aria-hidden="true" />
       <div className="relative z-[1] flex items-center justify-between px-6 pt-safe-lg">
-        <span className="text-[17px] font-medium tracking-[-0.025em]">Apex</span>
+        <span className="flex items-center gap-2.5 text-[17px] font-medium tracking-[-0.025em]"><ApexMark size={26} />Apex</span>
         {!last && (
           <button type="button" onClick={workspace} className={`rounded-full px-3 py-2 text-[13.5px] ${dim}`}>
             Skip

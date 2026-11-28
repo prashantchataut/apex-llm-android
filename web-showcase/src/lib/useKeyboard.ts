@@ -33,3 +33,31 @@ export function useKeyboardInset(): number {
   }, []);
   return kb;
 }
+
+/**
+ * Keep a focused field (and the message + primary button under it) above the Android soft keyboard.
+ * Use as `onFocus={scrollFieldIntoView}`; the 150 ms delay lets the keyboard finish animating first.
+ */
+export function scrollFieldIntoView(e: { target: EventTarget | null }) {
+  const el = e.target as HTMLElement;
+  window.setTimeout(() => el.scrollIntoView?.({ behavior: "smooth", block: "center" }), 150);
+}
+
+/** Global safety net: every text-like field scrolls into view on focus, and again whenever `visualViewport` resizes (keyboard open/close). */
+export function installKeyboardGuards(): () => void {
+  const isField = (t: EventTarget | null): t is HTMLElement => t instanceof HTMLElement && (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t.isContentEditable);
+  const onFocus = (e: FocusEvent) => {
+    if (isField(e.target)) scrollFieldIntoView(e);
+  };
+  const vv = window.visualViewport;
+  const onResize = () => {
+    const a = document.activeElement;
+    if (isField(a)) window.setTimeout(() => a.scrollIntoView?.({ behavior: "smooth", block: "center" }), 100);
+  };
+  document.addEventListener("focusin", onFocus);
+  vv?.addEventListener("resize", onResize);
+  return () => {
+    document.removeEventListener("focusin", onFocus);
+    vv?.removeEventListener("resize", onResize);
+  };
+}

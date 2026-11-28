@@ -5,7 +5,7 @@ import { loadJsonFile, publishJsonFile } from "@/lib/admin";
 import { useRepoToken } from "./RepoToken";
 import { CIcon } from "./icons";
 import { FLAGSHIPS, flagshipOf } from "@/data/frontier";
-import { allProviders, CATALOG_GENERATED_AT, customProvider, EMPTY_CONFIG, MESH_CONFIG_PATH, MESH_GROUP_ORDER, modelKey, pingModel, probeAll, probeOne, setModelEnabled, syncMesh, useMesh, type Health, type MeshConfig, type MeshGroup, type MeshModel, type MeshProvider, type ModelPing } from "@/services/apexCloudMesh";
+import { isImported, allProviders, CATALOG_GENERATED_AT, customProvider, EMPTY_CONFIG, MESH_CONFIG_PATH, MESH_GROUP_ORDER, modelKey, pingModel, probeAll, probeOne, setModelEnabled, syncMesh, useMesh, type Health, type MeshConfig, type MeshGroup, type MeshModel, type MeshProvider, type ModelPing } from "@/services/apexCloudMesh";
 
 const dim = "text-[rgb(var(--ink-rgb)/var(--ink-3-a))]";
 const btn = "rounded-full bg-[var(--surface-2)] px-4 py-2 text-[13px] font-medium transition-transform active:scale-[0.97] disabled:opacity-40";
@@ -95,6 +95,12 @@ export function AdminMesh() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [name, setName] = useState("");
   const [base, setBase] = useState("");
+  const [modelId, setModelId] = useState("");
+  const [category, setCategory] = useState<MeshGroup>("Flagship");
+  const [auth, setAuth] = useState("");
+  const [sysPrompt, setSysPrompt] = useState("");
+  const [timeoutS, setTimeoutS] = useState("");
+  const [provPing, setProvPing] = useState<Record<string, string>>({});
   const [pings, setPings] = useState<Record<string, ModelPing | "running">>({});
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<Tab>("frontier");
@@ -269,15 +275,26 @@ export function AdminMesh() {
 
   const add = async () => {
     try {
-      const p = customProvider(name, base);
+      const p = customProvider(name, base, modelId.trim() || undefined, { auth, systemPrompt: sysPrompt, timeoutMs: Number(timeoutS) > 0 ? Math.round(Number(timeoutS) * 1000) : undefined });
       if (providers.some((x) => x.id === p.id)) return say(false, "That host is already in the mesh.");
       setBusy(true);
       const r = await probeOne({ ...p, builtin: false });
       setBusy(false);
       if (!r.health.ok) return say(false, `Not added: ${r.health.error ?? "no answer"}. The endpoint must accept anonymous requests and send CORS headers.`);
-      setCfg((c) => ({ ...c, custom: [...c.custom, { ...p, fallbackModel: r.models[0]?.api }] }));
+      const first = modelId.trim() || r.models[0]?.api;
+      setCfg((c) => ({
+        ...c,
+        custom: [...c.custom, { ...p, fallbackModel: first }],
+        enabledModels: first ? [...new Set([...(c.enabledModels ?? []), modelKey(p.id, first)])] : c.enabledModels,
+        categories: first ? { ...(c.categories ?? {}), [modelKey(p.id, first)]: category } : c.categories,
+        renames: first && name.trim() ? { ...(c.renames ?? {}), [modelKey(p.id, first)]: name.trim() } : c.renames,
+      }));
       setName("");
       setBase("");
+      setModelId("");
+      setAuth("");
+      setSysPrompt("");
+      setTimeoutS("");
       say(true, `Found ${r.models.length} models in ${r.health.ms}ms. Press Save & Publish to add them.`);
     } catch (e) {
       setBusy(false);
@@ -415,15 +432,41 @@ export function AdminMesh() {
         )}
       </div>
 
+      {/* providers: order, on/off, timeout, ping */}
+      <div className="mt-6 rounded-2xl bg-[var(--surface-2)] p-4" data-testid="provider-order">
+        <p className="text-[14px] font-medium">Providers &amp; failover order</p>
+        <p className={`mt-0.5 text-[12px] ${dim}`}>Lower runs first. Move a provider up or down, switch it on or off, set its first-token timeout, and ping it.</p>
+        <ul className="mt-3 space-y-1.5">
+          {providers.filter((p) => !isImported(p.id)).map((p, idx, arr) => (
+            <li key={p.id} className="flex flex-wrap items-center gap-2 rounded-[16px] bg-[var(--canvas)] px-3 py-2">
+              <span className="min-w-0 flex-1 basis-[120px]"><span className="block truncate text-[13.5px] font-medium">{p.name}</span><span className={`block truncate text-[11.5px] ${dim}`}>{provPing[p.id] ?? (cfg.disabled.includes(p.id) ? "Off" : `Priority ${p.priority}`)}</span></span>
+              <button type="button" className="ibtn !h-9 !w-9" aria-label={`Move ${p.name} up`} disabled={idx === 0} onClick={() => setCfg((c) => ({ ...c, priorities: { ...(c.priorities ?? {}), [p.id]: Math.max(0, arr[idx - 1].priority - 0.5) } }))}><CIcon name="up" size={15} /></button>
+              <button type="button" className="ibtn !h-9 !w-9" aria-label={`Move ${p.name} down`} disabled={idx === arr.length - 1} onClick={() => setCfg((c) => ({ ...c, priorities: { ...(c.priorities ?? {}), [p.id]: arr[idx + 1].priority + 0.5 } }))}><CIcon name="up" size={15} className="rotate-180" /></button>
+              <input type="number" min={1} max={120} className="calm-field !h-9 !w-16 !px-2 text-center" aria-label={`${p.name} timeout seconds`} placeholder="s" value={p.timeoutMs ? p.timeoutMs / 1000 : ""} onChange={(e) => setCfg((c) => { const t = { ...(c.timeouts ?? {}) }; if (Number(e.target.value) > 0) t[p.id] = Math.round(Number(e.target.value) * 1000); else delete t[p.id]; return { ...c, timeouts: t }; })} />
+              <button type="button" className="calm-chip" onClick={async () => { setProvPing((x) => ({ ...x, [p.id]: "Testing…" })); const r = await probeOne(p); setProvPing((x) => ({ ...x, [p.id]: r.health.ok ? `Healthy · ${r.health.ms}ms · ${r.models.length} models` : `Offline · ${r.health.error ?? "no answer"}` })); }}>Ping / Test</button>
+              <button type="button" role="switch" aria-checked={!cfg.disabled.includes(p.id)} aria-label={`${p.name} on or off`} className="switch" onClick={() => setCfg((c) => ({ ...c, disabled: c.disabled.includes(p.id) ? c.disabled.filter((x) => x !== p.id) : [...c.disabled, p.id] }))} />
+            </li>
+          ))}
+        </ul>
+      </div>
+
       {/* add custom */}
-      <div className="mt-6 rounded-2xl bg-[var(--surface-2)] p-4">
-        <p className="text-[14px] font-medium">Add an open endpoint</p>
-        <p className={`mt-0.5 text-[12px] ${dim}`}>OpenAI-compatible base URL (https, CORS enabled, no key). It is probed before it is added.</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <input className="calm-field flex-1 basis-[120px]" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="Provider name" />
-          <input className="calm-field flex-[2] basis-[200px] !font-mono" value={base} onChange={(e) => setBase(e.target.value)} placeholder="https://host/v1" aria-label="Base URL" />
-          <button type="button" className={btn} onClick={add} disabled={busy || !base.trim()}>Test &amp; add</button>
+      <div className="mt-4 rounded-2xl bg-[var(--surface-2)] p-4" data-testid="add-provider">
+        <p className="text-[14px] font-medium">Add a custom provider / model</p>
+        <p className={`mt-0.5 text-[12px] ${dim}`}>OpenAI-compatible base URL (https, CORS enabled). It is probed before it is added.</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <input className="calm-field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Custom name" aria-label="Custom name" />
+          <input className="calm-field !font-mono" value={base} onChange={(e) => setBase(e.target.value)} placeholder="Base URL, https://host/v1" aria-label="Base URL" />
+          <input className="calm-field !font-mono" value={modelId} onChange={(e) => setModelId(e.target.value)} placeholder="Model ID" aria-label="Model ID" />
+          <select className="calm-field" value={category} onChange={(e) => setCategory(e.target.value as MeshGroup)} aria-label="Category">
+            {MESH_GROUP_ORDER.map((g) => <option key={g} value={g}>{g}</option>)}
+          </select>
+          <input className="calm-field !font-mono" value={auth} onChange={(e) => setAuth(e.target.value)} placeholder="Optional header / token" aria-label="Optional header or token" autoComplete="off" />
+          <input className="calm-field" type="number" min={1} max={120} value={timeoutS} onChange={(e) => setTimeoutS(e.target.value)} placeholder="Timeout (seconds)" aria-label="Timeout seconds" />
+          <textarea className="calm-field sm:col-span-2" rows={2} value={sysPrompt} onChange={(e) => setSysPrompt(e.target.value)} placeholder="System prompt override (optional)" aria-label="System prompt override" />
         </div>
+        <p className={`mt-2 text-[11.5px] ${dim}`}>mesh.json is a public file. Only add tokens that are meant to be public.</p>
+        <button type="button" className={`${btn} mt-3`} onClick={add} disabled={busy || !base.trim()}>Test &amp; add</button>
       </div>
 
       {msg && (

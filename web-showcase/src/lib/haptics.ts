@@ -62,7 +62,7 @@ export function hapticsSupported(): boolean {
 
 export function getHapticLevel(): HapticLevel {
   if (level) return level;
-  let v: HapticLevel = "crisp";
+  let v: HapticLevel = "off"; // app-controlled haptics are OFF unless the user opts in
   try {
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
     if (raw === "off" || raw === "subtle" || raw === "crisp") v = raw;
@@ -130,8 +130,9 @@ export function createTokenTicker(): () => void {
   let n = 0;
   return () => {
     n += 1;
-    const every = getHapticLevel() === "subtle" ? TOKEN_TICK_EVERY * 2 : TOKEN_TICK_EVERY;
-    if (n % every === 0) haptic("tokenTick");
+    // Per-token ticks only exist on Normal, and at half density. Off and Subtle never buzz while streaming.
+    if (getHapticLevel() !== "crisp") return;
+    if (n % (TOKEN_TICK_EVERY * 2) === 0) haptic("tokenTick");
   };
 }
 

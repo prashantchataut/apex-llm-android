@@ -47,6 +47,10 @@ export function toModelfile(c: Cartridge, base = "MODEL"): string {
   return `FROM ${base}\nPARAMETER temperature ${c.temperature.toFixed(2)}\nPARAMETER top_p ${c.topP.toFixed(2)}\nPARAMETER num_ctx ${c.ctx}\nSYSTEM """${c.system}"""`;
 }
 
+/** Fast Direct Mode prompt for local models: the persona only (no choice-card hints, memory, tools). Keeps prompt processing minimal. */
+export function minimalSystemFor(c: Cartridge | undefined): string {
+  return c?.system ?? "You are Apex, a helpful assistant running privately on this device. Be accurate and direct.";
+}
 export function systemPromptFor(c: Cartridge | undefined): string {
   return `${c?.system ?? BASE}\n\n${CHOICES_HINT}`;
 }

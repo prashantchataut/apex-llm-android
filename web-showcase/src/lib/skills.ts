@@ -24,7 +24,6 @@ export const SKILLS: Skill[] = [
 ];
 
 const KEY = "apex.skills.v1";
-const PAT_KEY = "apex.github.pat.v1";
 const DEFAULT: SkillId[] = ["web", "github", "image", "sandbox", "memory"];
 const EMPTY: SkillId[] = [];
 let enabled: SkillId[] = DEFAULT;
@@ -57,26 +56,15 @@ export function useSkills(): SkillId[] {
     () => EMPTY,
   );
 }
-export const getGithubToken = (): string => {
-  try {
-    return localStorage.getItem(PAT_KEY) ?? "";
-  } catch {
-    return "";
-  }
-};
-export function setGithubToken(t: string) {
-  try {
-    if (t) localStorage.setItem(PAT_KEY, t.trim());
-    else localStorage.removeItem(PAT_KEY);
-  } catch {
-    /* storage blocked */
-  }
-}
+import { getGithubToken } from "./github-token";
+export { getGithubToken };
 
 export interface ToolNote {
   icon: string;
   label: string;
   ok: boolean;
+  /** Source page for web notes (rendered as a domain pill in the thinking trace). */
+  url?: string;
 }
 export interface ToolResult {
   text: string;
@@ -236,9 +224,9 @@ export async function runTool(call: ToolCall, on: SkillId[]): Promise<ToolResult
   try {
     switch (call.name) {
       case "web_fetch":
-        return { text: await jina(s("url")), note: { icon: "globe", label: `Read ${s("url").slice(0, 40)}`, ok: true } };
+        return { text: await jina(s("url")), note: { icon: "globe", label: `Read ${s("url").slice(0, 40)}`, ok: true, url: s("url") } };
       case "web_search":
-        return { text: await wiki(s("query")), note: { icon: "search", label: `Searched “${s("query").slice(0, 40)}”`, ok: true } };
+        return { text: await wiki(s("query")), note: { icon: "search", label: `Searched “${s("query").slice(0, 40)}”`, ok: true, url: `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(s("query"))}` } };
       case "github_read":
         return { text: await githubRead(s("repo"), a.path ? s("path") : undefined), note: { icon: "branch", label: `GitHub ${s("repo")}`, ok: true } };
       case "github_gist":

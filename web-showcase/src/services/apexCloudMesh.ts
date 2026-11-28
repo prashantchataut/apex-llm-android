@@ -40,6 +40,10 @@ export interface MeshProvider {
   /** Model used when this provider is asked to stand in for another one. */
   fallbackModel?: string;
   note?: string;
+  /** Owner override: replaces the system prompt for requests served by this provider. */
+  systemPrompt?: string;
+  /** Owner override: first-token timeout (ms) before failing over to the next provider. */
+  timeoutMs?: number;
 }
 
 export const BUILTIN_PROVIDERS: MeshProvider[] = [
@@ -132,6 +136,12 @@ export interface MeshConfig {
   enabledModels?: string[];
   /** Owner category overrides, keyed `provider:api`. */
   categories?: Record<string, MeshGroup>;
+  /** Owner failover order overrides (provider id -> priority, lower runs first). */
+  priorities?: Record<string, number>;
+  /** Owner timeout overrides (provider id -> ms). */
+  timeouts?: Record<string, number>;
+  /** Featured models pinned to the top of the picker, keyed `provider:api`. */
+  featured?: string[];
   updatedAt?: string;
 }
 export const MESH_CONFIG_PATH = "web-showcase/public/config/mesh.json";
@@ -222,12 +232,15 @@ const timed = async (url: string, ms: number, init?: RequestInit) => {
 
 export function providersFrom(cfg: MeshConfig): MeshProvider[] {
   const custom: MeshProvider[] = cfg.custom.map((c) => ({ ...c, builtin: false, cors: c.cors !== false }));
-  return [...ALL_BUILTIN, ...custom].filter((p) => !cfg.disabled.includes(p.id)).sort((a, b) => a.priority - b.priority);
+  return withOverrides([...ALL_BUILTIN, ...custom], cfg).filter((p) => !cfg.disabled.includes(p.id)).sort((a, b) => a.priority - b.priority);
 }
 /** Every provider including disabled ones (the /admin table shows them greyed out). */
 export function allProviders(cfg: MeshConfig): MeshProvider[] {
   const custom: MeshProvider[] = cfg.custom.map((c) => ({ ...c, builtin: false, cors: c.cors !== false }));
-  return [...ALL_BUILTIN, ...custom].sort((a, b) => a.priority - b.priority);
+  return withOverrides([...ALL_BUILTIN, ...custom], cfg).sort((a, b) => a.priority - b.priority);
+}
+function withOverrides(list: MeshProvider[], cfg: MeshConfig): MeshProvider[] {
+  return list.map((p) => ({ ...p, priority: cfg.priorities?.[p.id] ?? p.priority, timeoutMs: cfg.timeouts?.[p.id] ?? p.timeoutMs }));
 }
 
 /** Owner config: raw GitHub first (OTA, no rebuild), the bundled copy as fallback. */
@@ -256,12 +269,19 @@ export async function loadMeshConfig(): Promise<MeshConfig> {
 }
 
 /** Turn an OpenAI-style base URL (`https://host/v1`) into a provider record. */
-export function customProvider(name: string, base: string, fallbackModel?: string): Omit<MeshProvider, "builtin"> {
+export interface CustomExtras {
+  /** Optional header value sent as `Authorization` (public config: never put a private secret here). */
+  auth?: string;
+  systemPrompt?: string;
+  timeoutMs?: number;
+}
+export function customProvider(name: string, base: string, fallbackModel?: string, extra: CustomExtras = {}): Omit<MeshProvider, "builtin"> {
   const b = base.trim().replace(/\/+$/, "");
   const u = new URL(b);
   if (u.protocol !== "https:") throw new Error("Use an https:// base URL (WebViews block plain http).");
   const id = `c-${u.hostname.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
-  return { id, name: name.trim() || u.hostname, chat: `${b}/chat/completions`, models: `${b}/models`, auth: "Bearer unused", cors: true, priority: 5, fallbackModel };
+  const a = extra.auth?.trim();
+  return { id, name: name.trim() || u.hostname, chat: `${b}/chat/completions`, models: `${b}/models`, auth: a ? (/^(bearer|basic)\s/i.test(a) ? a : `Bearer ${a}`) : "Bearer unused", cors: true, priority: 5, fallbackModel, ...(extra.systemPrompt?.trim() ? { systemPrompt: extra.systemPrompt.trim() } : {}), ...(extra.timeoutMs ? { timeoutMs: extra.timeoutMs } : {}) };
 }
 
 /* ───────── model discovery ───────── */

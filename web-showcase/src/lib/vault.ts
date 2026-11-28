@@ -186,8 +186,8 @@ export async function openAsAdmin(vault: VaultFile, passphrase: string): Promise
 export const passphraseCandidates = (input: string): string[] => [...new Set([input, input.trim(), input.trim().toLowerCase()])].filter(Boolean);
 
 /**
- * Passphrase-only login. Tries the typed text as the canonical passphrase, then as any registered alias (e.g. the master API key
- * `APEX-PRO-2025`). Case differences and stray whitespace are forgiven. Returns the CANONICAL passphrase (the one every envelope is
+ * Passphrase-only login. Tries the typed text as the canonical passphrase, then as any registered alias (none are registered by default,
+ * so the Apex API key never opens the console). Case differences and stray whitespace are forgiven. Returns the CANONICAL passphrase (the one every envelope is
  * sealed under) together with the decrypted catalog, or throws when nothing matches.
  */
 export async function unlockAdmin(vault: VaultFile, input: string): Promise<{ passphrase: string; catalog: ApexCatalog }> {

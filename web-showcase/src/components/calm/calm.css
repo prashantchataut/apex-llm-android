@@ -669,3 +669,13 @@ html.is-android { --safe-top-default: 38px; --safe-bottom-default: 16px; }
 .calm-card, .calm-sheet { overflow-wrap: anywhere; }
 .nav-row small { flex-shrink: 0; }
 .calm [class*="min-h-"] > *, .calm-card > * { min-width: 0; }
+
+/* ── signature components (ThinkingTrace / SelectionActions / LivePreview) ── */
+.bg-line { background: var(--hairline-strong); }
+@keyframes trace-pop { 0% { transform: scale(.4); opacity: 0 } 60% { transform: scale(1.12); opacity: 1 } 100% { transform: scale(1) } }
+@keyframes sel-in { from { opacity: 0; transform: translateY(-6px) scale(.96); filter: blur(4px) } to { opacity: 1; transform: none; filter: none } }
+.calm button:active:not(:disabled), .calm .ibtn:active { transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
+@media (prefers-reduced-motion: reduce) { .shimmer-text { animation: none } }
+@keyframes msg-in { from { opacity: 0; transform: translateY(10px); filter: blur(4px) } to { opacity: 1; transform: none; filter: none } }
+.msg-in { animation: msg-in .55s cubic-bezier(0.23, 1, 0.32, 1) both; }
+@media (prefers-reduced-motion: reduce) { .msg-in { animation: none } }

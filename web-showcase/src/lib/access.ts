@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { evaluateKey, fetchVault, type AccessState, type ApexCatalog, type Verdict } from "./vault";
+import { evaluateKey, fetchVault, hashKey, type AccessState, type ApexCatalog, type Verdict } from "./vault";
 
 export type { AccessState, Verdict } from "./vault";
 
@@ -19,7 +19,25 @@ export type { AccessState, Verdict } from "./vault";
  */
 
 const STORE = "apex.access.v2";
-const GRACE_MS = 24 * 3600 * 1000;
+/** Fail closed: if the live vault cannot be fetched, a stored key is NOT trusted (no offline grace). */
+const GRACE_MS = 0;
+/** Fingerprint (SHA-256(salt + key)) of the key that unlocked this device. Must match an ACTIVE key in the live vault on every check. */
+export const UNLOCK_HASH_KEY = "apex_unlocked_key_hash";
+const getFp = (): string => {
+  try {
+    return localStorage.getItem(UNLOCK_HASH_KEY) ?? "";
+  } catch {
+    return "";
+  }
+};
+const setFp = (h: string) => {
+  try {
+    if (h) localStorage.setItem(UNLOCK_HASH_KEY, h);
+    else localStorage.removeItem(UNLOCK_HASH_KEY);
+  } catch {
+    /* storage blocked */
+  }
+};
 
 export interface Access {
   key: string | null;
@@ -57,7 +75,10 @@ function commit(next: Access) {
   access = next;
   try {
     if (next.key) localStorage.setItem(STORE, JSON.stringify({ key: next.key, label: next.label, keyId: next.keyId, prefix: next.prefix, verifiedAt: next.verifiedAt }));
-    else localStorage.removeItem(STORE);
+    else {
+      localStorage.removeItem(STORE);
+      localStorage.removeItem(UNLOCK_HASH_KEY);
+    }
   } catch {
     /* storage blocked */
   }
@@ -87,7 +108,10 @@ export async function verifyKey(key: string, save = false): Promise<Verdict> {
   try {
     const { vault } = await fetchVault();
     const v = await evaluateKey(vault, k);
-    if (save && v.state === "active") commit(activeFrom(access, k, v));
+    if (save && v.state === "active") {
+      setFp(v.record?.keyHash ?? (await hashKey(vault.salt, k)));
+      commit(activeFrom(access, k, v));
+    }
     return v.state === "active" ? { state: v.state, message: v.message, record: v.record } : v;
   } catch (e) {
     const m = e instanceof Error ? e.message : "";
@@ -104,7 +128,18 @@ export function revalidate(): Promise<Access> {
     try {
       const { vault } = await fetchVault();
       const v = await evaluateKey(vault, cur.key as string);
-      if (v.state === "active") commit(activeFrom(cur, cur.key as string, v));
+      // The stored fingerprint must still match an ACTIVE key inside the freshly fetched vault. When the admin edits or replaces the key the
+      // old fingerprint disappears and this device locks immediately.
+      const live = await hashKey(vault.salt, cur.key as string);
+      const fp = getFp();
+      const stillListed = vault.keys.some((x) => x.keyHash === live && x.status === "active");
+      if (v.state === "active" && stillListed && (!fp || fp === live)) {
+        if (!fp) setFp(live);
+        commit(activeFrom(cur, cur.key as string, v));
+      } else if (v.state === "active") {
+        commit({ ...NONE, state: "invalid", checkedAt: Date.now(), message: "This key was replaced by the admin. Enter the new key." });
+        setFp("");
+      } else if (v.state === "invalid") commit({ ...NONE, state: "invalid", checkedAt: Date.now(), message: "This key is no longer valid. Enter the current Apex API key." });
       else commit({ ...cur, state: v.state, catalog: null, allowedModels: [], checkedAt: Date.now(), message: v.message });
     } catch {
       const fresh = cur.verifiedAt && Date.now() - cur.verifiedAt < GRACE_MS;

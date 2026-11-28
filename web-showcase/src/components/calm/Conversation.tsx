@@ -6,7 +6,10 @@ import { AssistantBody } from "@/components/app/Rich";
 import { BranchPager } from "@/components/app/MessageTools";
 import type { BranchInfo, ChatMsg } from "@/components/app/useChat";
 import { downloadImage, fetchImage } from "@/lib/images";
-import { CIcon, KeyIcon } from "./icons";
+import { CIcon } from "./icons";
+import { ThinkingTrace } from "@/components/chat/ThinkingTrace";
+import { SelectionActionsBar, type RewriteFn } from "@/components/chat/SelectionActionsBar";
+import { LivePreviewViewer, type PreviewArtifact } from "@/components/chat/LivePreviewViewer";
 
 function useNow(active: boolean) {
   const [now, setNow] = useState(() => performance.now());
@@ -60,35 +63,6 @@ export function VoiceBubble({ ms, text }: { ms: number; text: string }) {
       </span>
       <span className="tnum text-[12px]">{mmss(ms)}</span>
     </button>
-  );
-}
-
-function ThinkPill({ m }: { m: ChatMsg }) {
-  const thinking = m.thinkEnd === null || (m.thinkEnd === undefined && !!m.streaming);
-  const now = useNow(thinking);
-  const [open, setOpen] = useState<boolean | null>(null);
-  const secs = Math.max(0, ((m.thinkEnd ?? now) - (m.thinkStart ?? now)) / 1000);
-  const isOpen = open ?? false;
-  return (
-    <div>
-      <button type="button" onClick={() => setOpen(!isOpen)} aria-expanded={isOpen} className="group inline-flex min-h-9 items-center gap-1.5 text-[14px]">
-        <span className={thinking ? "shimmer-text" : "text-[rgb(var(--ink-rgb)/var(--ink-3-a))]"}>{thinking ? "Thinking through this…" : `Thought for ${secs.toFixed(1)}s`}</span>
-        <CIcon name="chevron" size={14} className="text-[rgb(var(--ink-rgb)/var(--ink-3-a))]" style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .35s cubic-bezier(.22,1.2,.36,1)" }} />
-      </button>
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div initial={{ height: 0, opacity: 0, filter: "blur(4px)" }} animate={{ height: "auto", opacity: 1, filter: "blur(0px)" }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="overflow-hidden">
-            <div className="think-trace mt-1 max-h-56 overflow-y-auto py-1">
-              {(m.steps ?? []).map((st, i) => (
-                <p key={i} className="mb-1.5 last:mb-0">
-                  {st}
-                </p>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
   );
 }
 
@@ -191,12 +165,24 @@ export interface ConversationProps {
   onRegenerate: (id: number) => void;
   onSend: (text: string) => void;
   onLightbox: (url: string, prompt: string) => void;
+  rewrite: RewriteFn;
 }
 
-export function Conversation({ msgs, busy, title, modelLabel, memCount, branchInfo, onSwitch, onEdit, onRegenerate, onSend, onLightbox }: ConversationProps) {
+export function Conversation({ msgs, busy, title, modelLabel, memCount, branchInfo, onSwitch, onEdit, onRegenerate, onSend, onLightbox, rewrite }: ConversationProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState<{ id: number; draft: string } | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
+  const [preview, setPreview] = useState<PreviewArtifact | null>(null);
+  const [edited, setEdited] = useState<Record<number, string>>({});
+  const refine = (id: number) => {
+    const el = scroller.current?.querySelector(`[data-sel-msg="${id}"]`);
+    const sel = window.getSelection();
+    if (!el || !sel) return;
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    sel.removeAllRanges();
+    sel.addRange(r);
+  };
   const last = msgs[msgs.length - 1];
   const branches = msgs.filter((m) => branchInfo(m.id)).length;
 
@@ -253,29 +239,14 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
                 </div>
               );
             }
-            const wait = m.streaming && !m.text && !(m.steps && m.steps.length) && !m.images?.length;
-            return (
+                        return (
               <div key={m.id} className="space-y-3">
                 {m.memory && m.memory.length > 0 && (
                   <div className="calm-chip" style={{ background: "var(--halo-a)", color: "var(--halo-ink)", height: "auto", padding: "6px 12px", whiteSpace: "normal" }}>
                     <CIcon name="tree" size={13} /> Remembered “{m.memory[0]}”{m.memory.length > 1 ? ` +${m.memory.length - 1}` : ""}
                   </div>
                 )}
-                {m.tools && m.tools.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {m.tools.map((t, i) => (
-                      <span key={i} className="calm-chip" style={t.ok ? undefined : { color: "var(--bad)" }}>
-                        <KeyIcon k={t.icon} size={13} /> <span className="max-w-[240px] truncate">{t.label}</span>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {m.steps && m.steps.length > 0 && m.thinkStart !== undefined && <ThinkPill m={m} />}
-                {wait && (
-                  <p className="py-1 text-[15px]" role="status" aria-label="Apex is thinking">
-                    <span className="shimmer-text">Thinking through this…</span>
-                  </p>
-                )}
+                {(m.streaming || (m.tools && m.tools.length > 0) || (m.steps && m.steps.length > 0)) && !m.notice && <ThinkingTrace m={m} />}
                 {m.images && m.images.length > 0 && (
                   <div className="flex flex-wrap gap-3">
                     {m.images.map((im) => (
@@ -284,8 +255,8 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
                   </div>
                 )}
                 {m.text && (
-                  <div className="text-[15.5px] leading-[1.65] text-[rgb(var(--ink-rgb)/0.9)]">
-                    <AssistantBody text={m.text} streaming={!!m.streaming} onChoice={(a) => onSend(a)} />
+                  <div className="msg-in text-[15.5px] leading-[1.65] text-[rgb(var(--ink-rgb)/0.9)]" data-sel-msg={m.id}>
+                    <AssistantBody text={edited[m.id] ?? m.text} streaming={!!m.streaming} onChoice={(a) => onSend(a)} onOpenArtifact={setPreview} />
                   </div>
                 )}
                 {!m.streaming && m.engine?.route && (
@@ -293,11 +264,15 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
                 )}
                 {!m.streaming && (m.text || m.images?.length) && (
                   <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[12px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">
-                    <span className="mr-1.5 max-w-[220px] truncate">{m.engine?.label}{m.stats && m.stats.tps > 0 && m.engine?.backend !== "apex" ? ` · ${m.stats.tps.toFixed(0)} tok/s` : ""}</span>
+                    <span className="mr-1.5 max-w-[220px] truncate">{m.engine?.label}</span>
+                    {m.stats && (m.stats.tps > 0 || m.stats.ttftMs) ? <span className="tnum mr-1.5 inline-flex h-6 items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-2.5 text-[11.5px]" data-testid="speed-pill"><CIcon name="bolt" size={12} />{m.stats.tps > 0 ? `${m.stats.tps.toFixed(m.stats.tps < 10 ? 1 : 0)} tok/s` : ""}{m.stats.tps > 0 && m.stats.ttftMs ? " · " : ""}{m.stats.ttftMs ? `TTFT ${m.stats.ttftMs >= 1000 ? `${(m.stats.ttftMs / 1000).toFixed(1)}s` : `${m.stats.ttftMs}ms`}` : ""}</span> : null}
                     {m.text && (
                       <>
                         <button type="button" aria-label="Copy reply" className="ibtn !h-9 !w-9" onClick={() => { void navigator.clipboard?.writeText(m.text); setCopied(m.id); window.setTimeout(() => setCopied(null), 1400); }}>
                           <CIcon name={copied === m.id ? "check" : "copy"} size={15} />
+                        </button>
+                        <button type="button" aria-label="Refine passage" className="ibtn !h-9 !w-9" onClick={() => refine(m.id)}>
+                          <CIcon name="wand" size={15} />
                         </button>
                         <button type="button" aria-label="Read aloud" className="ibtn !h-9 !w-9" onClick={() => speak(m.text, true)}>
                           <CIcon name="speaker" size={15} />
@@ -317,6 +292,8 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
           })}
         </div>
       </div>
+      <SelectionActionsBar scope={scroller} rewrite={rewrite} onKeep={(id, original, replacement, action) => { const key = Number(id); const base = edited[key] ?? msgs.find((x) => x.id === key)?.text ?? ""; setEdited((e) => ({ ...e, [key]: base.includes(original) ? base.replace(original, action === "explain" ? `${original}\n\n> ${replacement}` : replacement) : base })); }} />
+      <LivePreviewViewer artifact={preview} onClose={() => setPreview(null)} />
     </div>
   );
 }

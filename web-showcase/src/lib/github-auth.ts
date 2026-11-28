@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { assetUrl } from "./paths";
 import { invokeNative, isNative } from "./native";
-import { getGithubToken, setGithubToken } from "./skills";
+import { getGithubToken, setGithubToken, USER_PUBLIC_KEY } from "./github-token";
 
 /**
  * "Continue with GitHub" via the official OAuth **Device Flow** (the flow GitHub designs for apps without a server):
@@ -102,8 +102,7 @@ export async function fetchProfile(token: string): Promise<GhProfile> {
   const j = (await r.json()) as GhProfile;
   return { login: j.login, name: j.name, avatar_url: j.avatar_url };
 }
-export const OWNER_PUBLIC_LOGIN = "prashantchataut";
-const PUBLIC_KEY = "apex.github.public.v1";
+const PUBLIC_KEY = USER_PUBLIC_KEY;
 const publicLogin = (): string => {
   try {
     return localStorage.getItem(PUBLIC_KEY) ?? "";
@@ -124,8 +123,8 @@ export async function fetchRepos(token: string): Promise<GhRepo[]> {
 }
 
 /* ───────── session store (token lives in the existing skills slot so every GitHub tool keeps working) ───────── */
-const PROFILE_KEY = "apex.github.profile.v1";
-const REPO_KEY = "apex.github.repo.v1";
+const PROFILE_KEY = "apex_user_github_profile";
+const REPO_KEY = "apex_user_github_repo";
 interface Session {
   connected: boolean;
   profile: GhProfile | null;
@@ -154,6 +153,11 @@ export async function connectWithToken(token: string): Promise<GhProfile> {
   const p = await fetchProfile(token.trim());
   setGithubToken(token.trim());
   try {
+    localStorage.removeItem(PUBLIC_KEY);
+  } catch {
+    /* storage blocked */
+  }
+  try {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
   } catch {
     /* storage blocked */
@@ -161,21 +165,26 @@ export async function connectWithToken(token: string): Promise<GhProfile> {
   emit();
   return p;
 }
-/** 1-tap connect to the owner's public GitHub profile and repositories. No token is stored or shipped. */
-export async function connectPublic(login = OWNER_PUBLIC_LOGIN): Promise<GhProfile> {
-  const r = await fetch(`https://api.github.com/users/${login}`, { headers: { Accept: "application/vnd.github+json" } });
+/** Connect a PUBLIC GitHub username the user typed. No token needed; only public repositories are listed. */
+export async function connectPublic(login: string): Promise<GhProfile> {
+  const u = login.trim().replace(/^@/, "");
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(u)) throw new Error("That does not look like a GitHub username.");
+  const r = await fetch(`https://api.github.com/users/${encodeURIComponent(u)}`, { headers: { Accept: "application/vnd.github+json" } });
+  if (r.status === 404) throw new Error(`No GitHub user called @${u}.`);
   if (!r.ok) throw new Error(r.status === 403 ? "GitHub rate limit reached for this network. Try again in a few minutes." : `GitHub answered ${r.status}`);
   const j = (await r.json()) as GhProfile;
   const p = { login: j.login, name: j.name, avatar_url: j.avatar_url };
+  setGithubToken("");
   try {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
-    localStorage.setItem(PUBLIC_KEY, login);
+    localStorage.setItem(PUBLIC_KEY, j.login);
   } catch {
     /* storage blocked */
   }
   emit();
   return p;
 }
+/** 1-tap Disconnect: clears the token, profile, public username and selected repo from this device. */
 export function signOutGithub() {
   setGithubToken("");
   try {
@@ -206,4 +215,17 @@ export function openExternal(url: string) {
   const b = (window as unknown as { ApexOpen?: { url: (u: string) => boolean } }).ApexOpen;
   if (b?.url?.(url)) return;
   window.open(url, "_blank", "noopener,noreferrer");
+}
+
+/** Re-read the signed-in user's profile from https://api.github.com/user (a rejected token disconnects). */
+export async function refreshSession(): Promise<void> {
+  const t = getGithubToken();
+  if (!t) return;
+  try {
+    const p = await fetchProfile(t);
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+    emit();
+  } catch (e) {
+    if (e instanceof Error && /not valid/.test(e.message)) signOutGithub();
+  }
 }

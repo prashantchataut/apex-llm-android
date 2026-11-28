@@ -1,3 +1,4 @@
+import { ApexMark } from "./ApexMark";
 import { REPO_URL, RELEASES_URL } from "@/lib/site";
 import { BASE_PATH } from "@/lib/paths";
 import { APP_VERSION } from "@/lib/version";
@@ -25,7 +26,7 @@ export function CalmLanding() {
     <div className="calm relative min-h-dvh overflow-x-clip" data-cmode="dark">
       <div className="calm-glow" style={{ height: 720 }} aria-hidden="true" />
       <header className="relative z-10 mx-auto flex w-[min(1080px,calc(100%-40px))] items-center justify-between py-6">
-        <span className="text-[19px] font-medium tracking-[-0.03em]">Apex</span>
+        <span className="flex items-center gap-2.5 text-[19px] font-medium tracking-[-0.03em]"><ApexMark size={30} />Apex</span>
         <nav aria-label="Site" className="flex items-center gap-1 text-[14px]">
           <a href="#try" className="hidden rounded-full px-4 py-2 text-[rgb(var(--ink-rgb)/var(--ink-2-a))] sm:block">Try it</a>
           <a href={REPO_URL} className="hidden rounded-full px-4 py-2 text-[rgb(var(--ink-rgb)/var(--ink-2-a))] sm:block">GitHub</a>

@@ -6,7 +6,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useChat } from "@/components/app/useChat";
 import { ServerScreen, type KeyRec } from "@/components/app/ServerScreen";
 import type { Attachment } from "@/lib/attachments";
-import { systemPromptFor, useCartridges } from "@/lib/cartridges";
+import { minimalSystemFor, systemPromptFor, useCartridges } from "@/lib/cartridges";
+import { fastComplete } from "@/lib/fast-ai";
+import { activeBackend, wllamaChat, type ChatTurn } from "@/lib/engine";
+import { getHarness, useHarness } from "@/lib/harness";
+import { PAGE_HINT, PRESENTATION_HINT, type PromptTemplate } from "@/lib/templates";
+import { installKeyboardGuards } from "@/lib/useKeyboard";
 import { getLocalOnly, imagePromptOf, routeAuto, routeBadge } from "@/lib/router";
 import { generateTitle } from "@/lib/titles";
 import { distillMemory, looksPersonal } from "@/lib/memory";
@@ -83,6 +88,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   const update = useUpdater();
   const kb = useKeyboardInset();
   const access = useAccess();
+  const harnessOn = useHarness();
   const vault = useVault();
   const composer = useRef<ComposerHandle>(null);
   const [pdf, setPdf] = useState<File | null>(null);
@@ -105,6 +111,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     }
     setMode(!embedded && !stored ? "dark" : readMode());
     startAccessWatch();
+    const stopKb = installKeyboardGuards();
     try {
       setVaultOn(localStorage.getItem("apex.vault.on") !== "0");
     } catch {
@@ -128,6 +135,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     mq.addEventListener("change", f);
     void checkForUpdate();
     return () => {
+      stopKb();
       mq.removeEventListener("change", f);
       window.removeEventListener("apex:cite", onCite);
       window.removeEventListener("apex:goto", onGoto);
@@ -319,15 +327,17 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     if (!(await guardApex(eff))) return;
     if (eff.kind === "local" && effLocal && !(await activate(effLocal))) return;
     const added = learnFrom(t);
-    if (looksPersonal(t) && skills.includes("memory")) void distillMemory(t); // background AI extraction, never blocks the reply
+    /* Fast Direct Mode (harness OFF, the default): local models get a minimal prompt and stream immediately: no memory pass, no skill pre-runs, no tool loop. */
+    const fast = eff.kind === "local" && !getHarness();
+    if (!fast && looksPersonal(t) && skills.includes("memory")) void distillMemory(t); // background AI extraction, never blocks the reply
     const tools = eff.kind === "apex" && !eff.id.startsWith("mesh:");
     let rag: { block: string; tags: string[] } = { block: "", tags: [] };
     if (vaultOn && t) {
       await loadVault();
       if (hasVault()) rag = buildRagContext(vaultSearch(t, 4));
     }
-    const system = systemPromptFor(cart.selected) + memoryBlock(t) + rag.block + (effLocal?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (tools ? toolsHint(skills) : "");
-    chat.send(t || "Summarize the attached file.", { attachments: atts, cartridge: cart.selected, ctx: cart.selected.ctx, system, choice: eff, ...extra, skills, tools, memNote: added.map((m) => m.text), voiceMs, sources: rag.tags });
+    const system = (fast ? minimalSystemFor(cart.selected) : systemPromptFor(cart.selected) + memoryBlock(t)) + rag.block + (effLocal?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (tools ? toolsHint(skills) : "");
+    chat.send(t || "Summarize the attached file.", { attachments: atts, cartridge: cart.selected, ctx: cart.selected.ctx, system, choice: eff, ...extra, skills: fast ? [] : skills, tools, memNote: fast ? [] : added.map((m) => m.text), voiceMs, sources: rag.tags });
   };
   const opts = () => {
     let eff: Choice = choice;
@@ -342,18 +352,40 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
         extra = r.extra ?? {};
       }
     }
-    return { cartridge: cart.selected, ctx: cart.selected.ctx, system: systemPromptFor(cart.selected) + memoryBlock(lastUser) + (effLocal?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (eff.kind === "apex" && !eff.id.startsWith("mesh:") ? toolsHint(skills) : ""), choice: eff, ...extra, skills, tools: eff.kind === "apex" && !eff.id.startsWith("mesh:") };
+    const fast = eff.kind === "local" && !getHarness();
+    return { cartridge: cart.selected, ctx: cart.selected.ctx, system: (fast ? minimalSystemFor(cart.selected) : systemPromptFor(cart.selected) + memoryBlock(lastUser)) + (effLocal?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (eff.kind === "apex" && !eff.id.startsWith("mesh:") ? toolsHint(skills) : ""), choice: eff, ...extra, skills: fast ? [] : skills, tools: eff.kind === "apex" && !eff.id.startsWith("mesh:") };
   };
 
-  const suggest = (t: Suggestion) => {
-    if (t === "illustrate") {
-      setImageMode(true);
-      setDraft("");
-    } else if (t === "summarize") {
-      setDraft("Summarize this for me: ");
-    } else {
-      setDraft("Brainstorm with me, no filters. Start with ");
+  /** Selection rewrite: stream from the on-device engine when one is loaded, otherwise a short cloud completion revealed progressively. */
+  const rewrite = useCallback(async (instruction: string, text: string, onText: (full: string) => void, signal: AbortSignal) => {
+    const messages: ChatTurn[] = [
+      { role: "system", content: "You edit text. Follow the instruction exactly and output only the result, with no preface." },
+      { role: "user", content: `${instruction}\n\nPassage:\n${text}` },
+    ];
+    if (activeBackend() === "wllama") {
+      await wllamaChat("a", messages, { maxTokens: 700, temperature: 0.4, signal }, (full) => onText(full));
+      return;
     }
+    const r = await fastComplete(messages, { maxTokens: 700, timeoutMs: 25000, temperature: 0.4, signal });
+    for (let i = 0; i < r.text.length; i += 6) {
+      if (signal.aborted) return;
+      onText(r.text.slice(0, i + 6));
+      await new Promise((res) => setTimeout(res, 16));
+    }
+    onText(r.text);
+  }, []);
+
+  const suggest = (t: Suggestion) => {
+    if (t === "artwork") {
+      goView("studio");
+      return;
+    }
+    if (t === "presentation") setDraft(`Create a presentation about: \n\n${PRESENTATION_HINT}`);
+    else setDraft(`Build an interactive page or diagram: \n\n${PAGE_HINT}`);
+    composer.current?.focus();
+  };
+  const useTemplate = (tpl: PromptTemplate) => {
+    setDraft(tpl.prompt);
     composer.current?.focus();
   };
 
@@ -415,9 +447,10 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
                     onRegenerate={(id) => void guardApex(choice).then((ok) => ok && chat.regenerate(id, opts()))}
                     onSend={(t) => void send(t)}
                     onLightbox={(url, prompt) => setZoom({ url, prompt })}
+                    rewrite={rewrite}
                   />
                 ) : (
-                  <Home onPick={suggest} />
+                  <Home onPick={suggest} onPdf={(f) => setPdf(f)} onTemplate={useTemplate} engine={label} mode={choice.kind === "local" ? (harnessOn ? "Agent harness" : "Fast mode") : "Fast mode"} onEngine={() => setSheet(true)} />
                 ))}
               {view === "hub" && <ModelHub key={hubTab} initialTab={hubTab} dl={dl} choice={choice} onUse={useLocal} loadingId={loadingId} />}
               {view === "studio" && <ImageStudio onUseInChat={useImageInChat} onZoom={(url, prompt) => setZoom({ url, prompt })} />}

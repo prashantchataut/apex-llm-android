@@ -6,9 +6,9 @@ import { hapticsSupported, setHapticLevel, type HapticLevel } from "@/lib/haptic
 import { useHapticLevel } from "@/lib/useHaptics";
 
 const LEVELS: { id: HapticLevel; label: string; note: string }[] = [
-  { id: "off", label: "Off", note: "No vibration" },
-  { id: "subtle", label: "Subtle", note: "Softer, fewer token ticks" },
-  { id: "crisp", label: "Crisp", note: "Full-strength detents and ticks" },
+  { id: "off", label: "Off", note: "No vibration (default)" },
+  { id: "subtle", label: "Subtle", note: "Soft taps on buttons only. No buzzing while typing or streaming" },
+  { id: "crisp", label: "Normal", note: "Full-strength taps plus light ticks while a reply streams" },
 ];
 
 /** Settings: haptic intensity (Off / Subtle / Crisp). Selecting a level plays a detent so you can feel it. */

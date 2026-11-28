@@ -13,6 +13,7 @@ import { downloadImage } from "@/lib/images";
 import { ago, openUpdateModal, type UpdateState } from "@/lib/updater";
 import { APP_VERSION } from "@/lib/version";
 import type { Choice, Convo } from "@/lib/store";
+import { ApexMark } from "./ApexMark";
 import { CIcon, type CIconName } from "./icons";
 import { ModelSwitcher } from "./ModelSwitcher";
 import type { DlItem } from "@/lib/downloader";
@@ -37,7 +38,7 @@ export function Header({ persistent, onMenu, label, onPill, onNew, onCompare, ch
         transition={{ type: "spring", stiffness: 500, damping: 28 }}
         className="mx-auto flex h-10 min-w-0 max-w-full items-center gap-2 rounded-full bg-[var(--surface)] px-4 text-[13.5px] font-medium shadow-[var(--specular),var(--shadow-card)] sm:max-w-[420px]"
       >
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ok)]" />
+        <ApexMark size={20} className="shrink-0" />
         <span className="truncate">{label}</span>
         <CIcon name="chevron" size={13} className="shrink-0 opacity-50" />
       </motion.button>
@@ -57,21 +58,35 @@ export function Header({ persistent, onMenu, label, onPill, onNew, onCompare, ch
 }
 
 export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+  const [vh, setVh] = useState<number | null>(null);
   useEffect(() => {
     if (!open) return;
     const f = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
   }, [open, onClose]);
+  /* Android soft keyboard: track the visual viewport so the dialog (input, message, Unlock button) always fits above the keyboard. */
+  useEffect(() => {
+    if (!open) return;
+    const vv = window.visualViewport;
+    const read = () => setVh(vv ? Math.round(vv.height) : null);
+    read();
+    vv?.addEventListener("resize", read);
+    vv?.addEventListener("scroll", read);
+    return () => {
+      vv?.removeEventListener("resize", read);
+      vv?.removeEventListener("scroll", read);
+    };
+  }, [open]);
   return (
     <AnimatePresence>
       {open && (
-        <div className="absolute inset-0 z-[60] flex items-end justify-center sm:items-start sm:pt-16">
-          <motion.div className="absolute inset-0 bg-black/20 backdrop-blur-[3px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
-          <motion.div role="dialog" aria-modal="true" aria-label={title} initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: "spring", stiffness: 380, damping: 36 }} className="calm-card relative max-h-[82%] w-full max-w-[460px] overflow-y-auto rounded-b-none p-3 sm:rounded-[28px]" style={{ borderRadius: undefined }}>
+        <div className="absolute inset-0 z-[60] flex items-start justify-center px-3 pt-14 sm:items-center sm:pt-0" style={vh ? { height: vh } : undefined}>
+          <motion.div className="absolute inset-0 bg-black/30 backdrop-blur-[3px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }} onClick={onClose} />
+          <motion.div role="dialog" aria-modal="true" aria-label={title} initial={{ y: -18, opacity: 0, scale: 0.97 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -12, opacity: 0, scale: 0.98 }} transition={{ duration: 0.42, ease: [0.23, 1, 0.32, 1] }} className="calm-card relative w-full max-w-[460px] overflow-y-auto rounded-[28px] p-3" style={{ borderRadius: undefined, maxHeight: vh ? Math.max(240, vh - 72) : "calc(100% - 72px)" }}>
             <div className="mb-1 flex items-center justify-between px-2 pt-1">
               <h2 className="text-[16px] font-medium tracking-[-0.02em]">{title}</h2>
-              <button type="button" className="ibtn" aria-label="Close" onClick={onClose}>
+              <button type="button" className="ibtn active:scale-[0.97]" aria-label="Close" onClick={onClose}>
                 <CIcon name="x" size={18} />
               </button>
             </div>
@@ -314,7 +329,7 @@ export function Drawer({ open, persistent, onClose, convos, activeId, onOpenConv
       >
         <div className="px-3">
           <div className="mb-3 flex items-center justify-between px-1">
-            <span className="text-[17px] font-medium tracking-[-0.025em]">Apex</span>
+            <span className="flex items-center gap-2.5 text-[17px] font-medium tracking-[-0.025em]"><ApexMark size={26} />Apex</span>
             <button type="button" onClick={onClose} aria-label="Close menu" className={`ibtn ${persistent ? "lg:hidden" : ""}`}>
               <CIcon name="x" size={18} />
             </button>

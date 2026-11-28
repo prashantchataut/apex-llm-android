@@ -4,7 +4,8 @@ import katex from "katex";
 import "katex/dist/katex.min.css";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { parseAssistant, safePrefix, type Seg } from "@/lib/richtext";
-import { splitFences } from "@/lib/artifacts";
+import { artifactKind, splitFences } from "@/lib/artifacts";
+import { LivePreviewCard } from "@/components/chat/LivePreviewViewer";
 import { ChoiceCards } from "./ChoiceCards";
 import { CodeBlock, type Artifact } from "./Artifacts";
 
@@ -114,6 +115,8 @@ export function AssistantBody({ text, streaming, onChoice, onOpenArtifact }: { t
       {parts.map((p, i) =>
         p.kind === "md" ? (
           p.value.trim() ? <AssistantProse key={i} text={p.value} streaming={streaming && i === parts.length - 1} onChoice={onChoice} /> : null
+        ) : onOpenArtifact && p.closed && !(streaming && i === parts.length - 1) && artifactKind(p.lang, p.code) ? (
+          <LivePreviewCard key={i} artifact={{ kind: artifactKind(p.lang, p.code)!, lang: p.lang, code: p.code }} onOpen={onOpenArtifact} />
         ) : (
           <CodeBlock key={i} lang={p.lang} code={p.code} closed={p.closed && !(streaming && i === parts.length - 1)} onOpen={onOpenArtifact} />
         ),
