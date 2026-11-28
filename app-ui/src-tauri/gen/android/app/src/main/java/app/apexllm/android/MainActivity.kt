@@ -44,6 +44,8 @@ class MainActivity : TauriActivity() {
     webView.addJavascriptInterface(Haptics(this), "ApexHaptics")
     webView.addJavascriptInterface(Opener(this), "ApexOpen")
     webView.addJavascriptInterface(ApexUpdater(this) { this.webView }, "ApexUpdater")
+    // Per-user token storage: Keystore-backed, main-frame/own-origin only (see SecureStore.kt).
+    SecureStore.install(webView, SecureStore(this))
     val listener = androidx.core.view.OnApplyWindowInsetsListener { v, insets ->
       Insets.capture(insets, v.resources.displayMetrics.density)
       pushInsets()

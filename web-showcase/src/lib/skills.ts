@@ -24,7 +24,6 @@ export const SKILLS: Skill[] = [
 ];
 
 const KEY = "apex.skills.v1";
-const PAT_KEY = "apex.github.pat.v1";
 const DEFAULT: SkillId[] = ["web", "github", "image", "sandbox", "memory"];
 const EMPTY: SkillId[] = [];
 let enabled: SkillId[] = DEFAULT;
@@ -57,21 +56,8 @@ export function useSkills(): SkillId[] {
     () => EMPTY,
   );
 }
-export const getGithubToken = (): string => {
-  try {
-    return localStorage.getItem(PAT_KEY) ?? "";
-  } catch {
-    return "";
-  }
-};
-export function setGithubToken(t: string) {
-  try {
-    if (t) localStorage.setItem(PAT_KEY, t.trim());
-    else localStorage.removeItem(PAT_KEY);
-  } catch {
-    /* storage blocked */
-  }
-}
+import { getGithubToken } from "./github-token";
+export { getGithubToken };
 
 export interface ToolNote {
   icon: string;
