@@ -63,6 +63,8 @@ export interface GenOpts {
   temperature?: number;
   topP?: number;
   signal?: AbortSignal;
+  /** Cloud only: never fall back to an unrelated model. Only routes of the same flagship are tried, with a long first-token wait. */
+  strict?: boolean;
 }
 
 const ROUTER_KEY = "apex.router.v1";

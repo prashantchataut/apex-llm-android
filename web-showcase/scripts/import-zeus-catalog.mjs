@@ -35,13 +35,15 @@ const { resolveBrowserGatewayConfig } = load("src/lib/browserProviders.ts");
 const PLACEHOLDER = /^(|free|public|anonymous|unused|none|no-key|sk-antigravity)$/i;
 const SKIP_ID = /embed|whisper|tts|guard|rerank|moderation|image|flux|video|audio|music|seedance|banana|para-|dall|imagen|sora|veo/i;
 
+// Frontier flagship families the owner wants surfaced first (also probed first so the per-gateway cap never hides them).
+const FRONTIER = /opus|sonnet-?[345]|claude-3-?7|claude-3-?5|haiku|gpt-?4\.?[15]|gpt-?5|gpt-4o|(^|[^a-z])o[134](-|$)|gemini-?[23]\.?[05]-(pro|flash)|grok|deepseek-?(r1|v3)|qwen-?3-?235|qwq|qwen-?2\.?5-(max|coder)|llama-?4|llama-?3\.?[13]|mistral-large|codestral|pixtral|sonar|abliterat|uncensor|dolphin/i;
 const gateways = new Map(); // base -> gw
 const skipped = [];
-const gw = (base, auth, name) => {
+const gw = (base, auth, name, format) => {
   const key = base.replace(/\/+$/, "");
   if (!gateways.has(key)) {
     const host = new URL(key).hostname;
-    gateways.set(key, { id: "z-" + host.replace(/\.hf\.space$/, "").replace(/[^a-z0-9]+/gi, "-").toLowerCase().slice(0, 40), name: name || host, base: key, auth: auth || "", models: new Map(), zeusProviders: new Set() });
+    gateways.set(key, { id: "z-" + host.replace(/\.hf\.space$/, "").replace(/[^a-z0-9]+/gi, "-").toLowerCase().slice(0, 40), name: name || host, base: key, auth: auth || "", format: format || "openai", models: new Map(), zeusProviders: new Set() });
   }
   return gateways.get(key);
 };
@@ -54,16 +56,14 @@ for (const p of PROVIDERS) {
     } catch {
       continue;
     }
-    if (!cfg?.baseUrl || cfg.format === "anthropic") {
-      if (cfg?.format === "anthropic") skipped.push({ provider: p.id, model: m.id, why: "Anthropic wire format (not OpenAI-compatible)" });
-      continue;
-    }
+    if (!cfg?.baseUrl) continue;
     if (!PLACEHOLDER.test(cfg.apiKey || "")) {
       skipped.push({ provider: p.id, model: m.id, why: "needs an embedded API key in the reference repo (not copied)" });
       continue;
     }
     if (SKIP_ID.test(m.id)) continue;
-    const g = gw(cfg.baseUrl, cfg.apiKey && cfg.apiKey !== "" ? `Bearer ${cfg.apiKey}` : "", p.name);
+    const anth = cfg.format === "anthropic";
+    const g = anth ? gw(cfg.baseUrl.replace(/\/+$/, "") + "/v1", "", p.name, "anthropic") : gw(cfg.baseUrl, cfg.apiKey && cfg.apiKey !== "" ? `Bearer ${cfg.apiKey}` : "", p.name);
     g.zeusProviders.add(p.name);
     g.models.set(m.id, { id: m.id, label: m.label || m.id, note: m.note, reasoning: !!m.reasoning, vision: !!m.vision, ctx: m.contextWindow, src: "zeusdesigns" });
   }
@@ -88,11 +88,12 @@ const timed = async (url, ms, init) => {
 await Promise.all(
   [...gateways.values()].map(async (g) => {
     try {
-      const r = await timed(`${g.base}/models`, 15000, { headers: { Origin: "https://prashantchataut.github.io", ...(g.auth ? { Authorization: g.auth } : {}) } });
+      const r = await timed(`${g.base}/models`, 25000, { headers: { Origin: "https://prashantchataut.github.io", ...(g.format === "anthropic" ? { "x-api-key": "free", "anthropic-version": "2023-06-01" } : g.auth ? { Authorization: g.auth } : {}) } });
       g.cors = r.headers.get("access-control-allow-origin") ? true : false;
       g.listStatus = r.status;
       if (!r.ok) return;
       const j = await r.json();
+      g.liveCount = Array.isArray(j?.data) ? j.data.length : Array.isArray(j) ? j.length : 0;
       const arr = Array.isArray(j?.data) ? j.data : Array.isArray(j) ? j : [];
       for (const m of arr) {
         const id = typeof m === "string" ? m : m?.id;
@@ -100,7 +101,8 @@ await Promise.all(
         if (g.base.includes("api.kilo.ai") && m?.isFree !== true) continue; // paid routes
         if (g.base.includes("blockrun.ai") && !/^(nvidia|cohere|poolside)\//.test(id)) continue; // the rest is pay-per-call
         if (g.base.includes("llm7.io") && !(m.model_type === "chat" && ["turbo", "free"].includes(String(m.tier)))) continue;
-        if (!g.models.has(id)) g.models.set(id, { id, label: id.replace(/^.*\//, "").replace(/:free$/, ""), reasoning: !!m?.capabilities?.reasoning || /r1|think|reason/i.test(id), vision: !!m?.capabilities?.vision, src: "live" });
+        if (g.format === "anthropic" && /:batch$/.test(id)) continue; // batch-queue duplicates of the same route
+        if (!g.models.has(id)) g.models.set(id, { id, label: (m?.display_name || id.replace(/^.*\//, "")).replace(/:free$/, ""), reasoning: !!m?.capabilities?.reasoning || /r1|think|reason/i.test(id), vision: !!m?.capabilities?.vision, src: "live" });
       }
     } catch (e) {
       g.listStatus = 0;
@@ -113,16 +115,17 @@ await Promise.all(
 const probe = async (g, id) => {
   const t0 = Date.now();
   try {
-    const r = await timed(`${g.base}/chat/completions`, 15000, {
+    const anth = g.format === "anthropic";
+    const r = await timed(anth ? `${g.base}/messages` : `${g.base}/chat/completions`, anth ? 40000 : 15000, {
       method: "POST",
-      headers: { "content-type": "application/json", ...(g.auth ? { Authorization: g.auth } : {}) },
-      body: JSON.stringify({ model: id, messages: [{ role: "user", content: "Reply with OK" }], max_tokens: 24, stream: false }),
+      headers: { "content-type": "application/json", ...(anth ? { "x-api-key": "free", "anthropic-version": "2023-06-01", Origin: "https://prashantchataut.github.io" } : g.auth ? { Authorization: g.auth } : {}) },
+      body: JSON.stringify(anth ? { model: id, messages: [{ role: "user", content: "Reply with OK" }], max_tokens: 64 } : { model: id, messages: [{ role: "user", content: "Reply with OK" }], max_tokens: 24, stream: false }),
     });
     const ms = Date.now() - t0;
     if (!r.ok) return { ok: false, ms, status: r.status };
     const j = await r.json().catch(() => null);
     const m = j?.choices?.[0]?.message;
-    const text = String(m?.content ?? m?.reasoning_content ?? "");
+    const text = anth ? (j?.content || []).map((c) => c.text || c.thinking || "").join("") : String(m?.content ?? m?.reasoning_content ?? "");
     return { ok: text.trim().length > 0, ms, status: 200 };
   } catch {
     return { ok: false, ms: Date.now() - t0, status: 0 };
@@ -131,27 +134,30 @@ const probe = async (g, id) => {
 if (PROBE) {
   await Promise.all(
     [...gateways.values()].map(async (g) => {
+      const anth = g.format === "anthropic";
+      const CAP = anth ? 140 : 60;
+      const order = [...g.models.values()].sort((a, b) => (FRONTIER.test(b.id) ? 1 : 0) - (FRONTIER.test(a.id) ? 1 : 0) || (a.src === "zeusdesigns" ? 0 : 1) - (b.src === "zeusdesigns" ? 0 : 1));
+      const todo = order.slice(0, CAP);
+      for (const m of order.slice(CAP)) m.why = "not probed (use Test Live in /admin)";
       let streak = 0;
-      let n = 0;
-      // Curated (zeusdesigns) models first, then live-discovered ones; cap per gateway so the run stays bounded.
-      const order = [...g.models.values()].sort((a, b) => (a.src === "zeusdesigns" ? 0 : 1) - (b.src === "zeusdesigns" ? 0 : 1));
-      for (const m of order) {
-        if (n++ >= 60) {
-          m.why = "not probed (per-gateway cap)";
-          continue;
+      let idx = 0;
+      const worker = async () => {
+        while (idx < todo.length) {
+          const m = todo[idx++];
+          if (streak >= (anth ? 40 : 6)) {
+            m.verified = false;
+            m.why = "gateway not answering";
+            continue;
+          }
+          const r = await probe(g, m.id);
+          m.verified = r.ok;
+          m.ms = r.ms;
+          m.status = r.status;
+          streak = r.ok ? 0 : streak + 1;
+          await new Promise((res) => setTimeout(res, anth ? 100 : 250));
         }
-        if (streak >= 6) {
-          m.verified = false;
-          m.why = "gateway not answering";
-          continue;
-        }
-        const r = await probe(g, m.id);
-        m.verified = r.ok;
-        m.ms = r.ms;
-        m.status = r.status;
-        streak = r.ok ? 0 : streak + 1;
-        await new Promise((res) => setTimeout(res, 250));
-      }
+      };
+      await Promise.all(Array.from({ length: anth ? 6 : 1 }, worker));
     }),
   );
 }
@@ -161,12 +167,15 @@ const out = {
   generatedAt: new Date().toISOString(),
   source: "NikitHamal/zeusdesigns (read-only) + live /models discovery",
   probed: PROBE,
+  stats: { zeusProviders: PROVIDERS.length, zeusDeclaredModels: PROVIDERS.reduce((a, p) => a + p.models.length, 0), skippedEmbeddedKeyModels: skipped.length },
   gateways: [...gateways.values()]
     .map((g) => ({
       id: g.id,
       name: g.name,
       base: g.base,
       auth: g.auth || undefined,
+      format: g.format,
+      liveCount: g.liveCount ?? 0,
       cors: !!g.cors,
       listStatus: g.listStatus ?? 0,
       zeusProviders: [...g.zeusProviders],

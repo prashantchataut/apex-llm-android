@@ -28,6 +28,7 @@ import { useKeyboardInset } from "@/lib/useKeyboard";
 import { initInsets } from "@/lib/insets";
 import { Composer, type ComposerHandle } from "./Composer";
 import { Conversation } from "./Conversation";
+import { CompareView } from "./CompareView";
 import { Drawer, Header, Lightbox, ModelSheet, Toast, ViewTitle, type View } from "./Chrome";
 import { Home, type Suggestion } from "./Home";
 import { ImageStudio } from "./ImageStudio";
@@ -56,6 +57,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   const [view, setView] = useState<View>("chat");
   const [drawer, setDrawer] = useState(false);
   const [sheet, setSheet] = useState(false);
+  const [compare, setCompare] = useState(false);
   const [convoId, setConvoId] = useState(newId);
   const [draft, setDraft] = useState("");
   const [imageMode, setImageMode] = useState(false);
@@ -392,7 +394,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
 
       <motion.div className="relative flex min-w-0 flex-1 flex-col" initial={false} animate={{ paddingBottom: kb }} transition={{ type: "spring", stiffness: 520, damping: 46, mass: 0.6 }}>
         <div className="calm-glow" aria-hidden="true" />
-        <Header persistent={persistent} onMenu={() => setDrawer(true)} label={label} onPill={() => setSheet((o) => !o)} onNew={newChat} updateBadge={update.s === "available"}>
+        <Header persistent={persistent} onMenu={() => setDrawer(true)} label={label} onPill={() => setSheet((o) => !o)} onNew={newChat} onCompare={() => setCompare(true)} updateBadge={update.s === "available"}>
             </Header>
         <UpdateBanner />
 
@@ -455,6 +457,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
           </div>
         )}
 
+        <CompareView open={compare} onClose={() => setCompare(false)} />
         <ModelSheet open={sheet} onClose={() => setSheet(false)} choice={choice} onPick={pick} dl={dl} onHub={(t) => { setHubTab(t); goView("hub"); }} loading={loadingId} access={access} onKey={() => setKeyModal(true)} />
       </motion.div>
 

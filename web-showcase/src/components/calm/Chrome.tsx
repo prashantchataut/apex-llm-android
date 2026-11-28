@@ -14,13 +14,14 @@ import { ago, openUpdateModal, type UpdateState } from "@/lib/updater";
 import { APP_VERSION } from "@/lib/version";
 import type { Choice, Convo } from "@/lib/store";
 import { CIcon, type CIconName } from "./icons";
+import { ModelSwitcher } from "./ModelSwitcher";
 import type { DlItem } from "@/lib/downloader";
 
 export type View = "chat" | "hub" | "studio" | "memory" | "vault" | "mcp" | "lan" | "settings";
 
-export function Header({ persistent, onMenu, label, onPill, onNew, children, updateBadge }: { updateBadge?: boolean; persistent: boolean; onMenu: () => void; label: string; onPill: () => void; onNew: () => void; children?: ReactNode }) {
+export function Header({ persistent, onMenu, label, onPill, onNew, onCompare, children, updateBadge }: { onCompare?: () => void; updateBadge?: boolean; persistent: boolean; onMenu: () => void; label: string; onPill: () => void; onNew: () => void; children?: ReactNode }) {
   return (
-    <header className="relative z-20 grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 px-3 pb-2 pt-safe">
+    <header className="relative z-20 grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-2 px-3 pb-2 pt-safe">
       <div className="flex min-w-0">
         <button type="button" onClick={onMenu} aria-label={updateBadge ? "Open sidebar (update available)" : "Open sidebar"} className={`ibtn relative !h-11 !w-11 ${persistent ? "lg:hidden" : ""}`}>
           <CIcon name="sidebar" size={21} />
@@ -40,7 +41,12 @@ export function Header({ persistent, onMenu, label, onPill, onNew, children, upd
         <span className="truncate">{label}</span>
         <CIcon name="chevron" size={13} className="shrink-0 opacity-50" />
       </motion.button>
-      <div className="flex min-w-0 items-center justify-end">
+      <div className="flex shrink-0 items-center justify-end gap-0.5">
+        {onCompare && (
+          <button type="button" onClick={onCompare} aria-label="Compare 2 models" data-testid="compare-toggle" className="ibtn !h-11 !w-11">
+            <CIcon name="compare" size={20} />
+          </button>
+        )}
         <button type="button" onClick={onNew} aria-label="New chat" className="ibtn !h-11 !w-11">
           <CIcon name="pencil" size={20} />
         </button>
@@ -89,7 +95,7 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, 
   const [tab, setTab] = useState<PopTab>("local");
   useBackLayer(open, onClose);
   useEffect(() => {
-    if (open) setTab(choice.kind === "apex" ? "cloud" : localChoice?.uncensored ? "uncensored" : "local");
+    if (open) setTab(choice.kind === "local" ? (localChoice?.uncensored ? "uncensored" : "local") : "cloud");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
   useEffect(() => {
@@ -122,8 +128,8 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, 
     <AnimatePresence>
       {open && (
         <>
-          <motion.div className="fixed inset-0 z-40 bg-black/15 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} aria-hidden="true" />
-          <motion.div role="dialog" aria-label="Choose a model" data-testid="model-popover" initial={{ opacity: 0, y: -8, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ type: "spring", stiffness: 460, damping: 34 }} className="calm-card pop-in absolute left-1/2 top-pop z-40 max-h-[min(70dvh,560px)] w-[min(380px,calc(100vw-24px))] -translate-x-1/2 overflow-y-auto p-2">
+          <motion.div className="fixed inset-0 z-40 bg-zinc-950/70 backdrop-blur-xl" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} aria-hidden="true" />
+          <motion.div role="dialog" aria-label="Choose a model" data-testid="model-popover" initial={{ opacity: 0, y: -8, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ type: "spring", stiffness: 460, damping: 34 }} className="calm-card pop-in absolute left-1/2 top-pop z-40 max-h-[min(80dvh,720px)] w-[min(460px,calc(100vw-24px))] -translate-x-1/2 overflow-y-auto p-2">
             <Row active={choice.kind === "auto"} onClick={() => { onPick({ kind: "auto", id: "auto" }); onClose(); }}>
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[16px]" style={{ background: "var(--halo-a)", color: "var(--halo-ink)" }} aria-hidden="true"><CIcon name="bolt" size={18} /></span>
               <span className="min-w-0">
@@ -148,7 +154,7 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, 
             </div>
 
             <div className="seg mt-2 w-full" style={{ gridAutoColumns: "1fr" }} role="tablist" aria-label="Model source">
-              {([["local", "Local"], ["uncensored", "Uncensored"], ["cloud", "Apex API"]] as const).map(([id, l]) => (
+              {([["cloud", "Frontier & Cloud"], ["local", "Local"], ["uncensored", "Uncensored"]] as const).map(([id, l]) => (
                 <button key={id} type="button" role="tab" aria-selected={tab === id} aria-pressed={tab === id} onClick={() => setTab(id)}>
                   {l}
                 </button>
@@ -177,34 +183,19 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, 
                   </Row>
                 </>
               )}
-              {tab === "cloud" && !apex.unlocked && (
-                <button type="button" data-testid="apex-locked-card" onClick={() => { onClose(); onKey(); }} className="group relative mt-1 flex w-full flex-col items-start gap-2 overflow-hidden rounded-[22px] bg-[var(--surface-2)] p-4 text-left transition-transform active:scale-[0.985]">
-                  <span className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full opacity-60 blur-2xl" style={{ background: "var(--halo-a)" }} aria-hidden="true" />
-                  <span className="relative grid h-10 w-10 place-items-center rounded-full" style={{ background: "var(--halo-a)", color: "var(--halo-ink)" }}>
-                    <CIcon name="lock" size={18} />
-                  </span>
-                  <span className="relative text-[15px] font-medium leading-snug tracking-[-0.01em]">Connect Apex API Key</span>
-                  <span className="relative text-[12.5px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Unlock cloud models · live Apex Mesh</span>
-                  <span className="relative mt-1 inline-flex items-center gap-1.5 text-[12.5px] font-medium" style={{ color: "var(--halo-ink)" }}>
-                    <CIcon name="key" size={13} /> Enter Apex API key
-                  </span>
-                </button>
-              )}
               {tab === "cloud" && (
-                <div data-testid="verified-models">
-                  <p className="px-3 pb-0.5 pt-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Live-verified · no key · {VERIFIED_COUNT} of {VERIFIED_TESTED} tested</p>
-                  {VERIFIED_MODELS.filter((v) => !isModelDisabled(v.provider, v.id)).map((v) => {
-                    const id = `mesh:${v.provider}:${v.id}`;
-                    return (
-                      <Row key={id} active={choice.kind === "apex" && choice.id === id} onClick={() => { onPick({ kind: "apex", id }); onClose(); }}>
-                        <span className="min-w-0">
-                          <span className="block truncate text-[14px]">{modelDisplayName(v.provider, v.id, v.id)}</span>
-                          <span className={sub}>{v.provider} · {v.ms} ms answer · verified {VERIFIED_AT.slice(0, 10)}</span>
-                        </span>
-                      </Row>
-                    );
-                  })}
-                </div>
+                <>
+                  <ModelSwitcher choice={choice} onPick={(c) => { onPick(c); onClose(); }} locals={installed.map((m) => ({ id: m.id, label: shortModelName(m), sub: `${(m.sizeGB * 1000).toFixed(0)} MB · ${eng.loaded.a === m.id ? "In memory" : "On device"}` }))} onPickLocal={(id) => { onPick({ kind: "local", id }); onClose(); }} />
+                  {!apex.unlocked && (
+                    <button type="button" data-testid="apex-locked-card" onClick={() => { onClose(); onKey(); }} className="mt-3 flex min-h-[48px] w-full items-center gap-3 rounded-2xl bg-[var(--surface-2)] px-3 text-left">
+                      <CIcon name="key" size={16} className="shrink-0" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13.5px] font-medium">Connect an Apex API key</span>
+                        <span className={sub}>Unlocks the private vault catalog on top of the live mesh</span>
+                      </span>
+                    </button>
+                  )}
+                </>
               )}
               {tab === "cloud" && apex.unlocked && (
                 <>

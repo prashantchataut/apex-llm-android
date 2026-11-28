@@ -207,7 +207,7 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
 
   return (
     <div ref={scroller} className="scroll-quiet h-full overflow-y-auto sm:px-4">
-      <div className="calm-sheet mx-auto mt-2 min-h-[calc(100%-8px)] max-w-[740px] px-5 pb-[140px] pt-7 sm:px-8">
+      <div className="calm-sheet mx-auto mt-2 min-h-[calc(100%-8px)] max-w-[740px] px-5 pb-36 pt-7 sm:px-8">
         {(msgs.filter((m) => m.role === "user").length > 1 || branches > 0) && <ContextTree msgs={msgs} title={title} modelLabel={modelLabel} memCount={memCount} branches={branches} />}
         <div className="space-y-8">
           {msgs.map((m) => {

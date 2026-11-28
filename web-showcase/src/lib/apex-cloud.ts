@@ -5,7 +5,8 @@ import type { ChatTurn, GenOpts, GenStats } from "./engine";
 import { getAccess, useAccess } from "./access";
 import type { ApexCatalog, ApexModel } from "./vault";
 import { verifiedChain } from "./verified";
-import { candidatesFor, isMeshId, markFailure, markSuccess, meshAsApexModels, parseMeshId, syncMesh } from "@/services/apexCloudMesh";
+import { flagshipOf, tailOf } from "@/data/frontier";
+import { candidatesFor, getMesh, isMeshId, markFailure, markSuccess, meshAsApexModels, parseMeshId, syncMesh } from "@/services/apexCloudMesh";
 
 /**
  * Apex Cloud Engine client. Nothing here names a provider, an endpoint or a model: the catalog (including the
@@ -97,7 +98,13 @@ export function useApexModels(): { models: ApexModel[]; text: ApexModel[]; image
 }
 export function apexById(id: string): ApexModel | undefined {
   const a = getAccess();
-  return modelsOf(a.catalog, live).find((m) => m.id === id);
+  const hit = modelsOf(a.catalog, live).find((m) => m.id === id);
+  if (hit || !isMeshId(id)) return hit;
+  // Keyless mesh models are usable without the vault: build the descriptor straight from the mesh registry.
+  const p = parseMeshId(id);
+  if (!p) return undefined;
+  const mm = getMesh().allModels.find((m) => m.id === id);
+  return { id, label: mm?.label ?? p.api, tag: "Apex Mesh", group: "Apex Mesh", kind: "text", api: p.api, reasoning: mm?.reasoning, vision: mm?.vision, uncensored: mm?.uncensored, provider: p.provider };
 }
 
 /** True if this model is currently served upstream (optimistic until the first check finishes). */
@@ -121,6 +128,8 @@ interface AttemptExtra {
   retry429?: boolean;
   /** Abort if no token arrived in this time, so a hung free tier hands over to the next provider. */
   timeoutMs?: number;
+  /** Wire format of the endpoint: OpenAI chat-completions (default) or Anthropic Messages (`/v1/messages`). */
+  format?: "openai" | "anthropic";
 }
 class HttpError extends Error {
   constructor(message: string, readonly status: number) {
@@ -150,7 +159,11 @@ async function attemptCore(endpoint: string, api: string, messages: ChatTurn[], 
       method: "POST",
       signal: opts.signal,
       headers: { "Content-Type": "application/json", ...extra.headers },
-      body: JSON.stringify({ model: api, messages, stream: true, temperature: opts.temperature ?? 0.7 }),
+      body: JSON.stringify(
+        extra.format === "anthropic"
+          ? { model: api, max_tokens: opts.maxTokens ?? 4096, stream: true, temperature: opts.temperature ?? 0.7, system: messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n") || undefined, messages: messages.filter((m) => m.role !== "system") }
+          : { model: api, messages, stream: true, temperature: opts.temperature ?? 0.7 },
+      ),
     });
     if (res.status !== 429 || !extra.retry429) break;
     await new Promise((r) => setTimeout(r, 2500));
@@ -178,6 +191,23 @@ async function attemptCore(endpoint: string, api: string, messages: ChatTurn[], 
       const data = l.slice(5).trim();
       if (data === "[DONE]") continue;
       try {
+        if (extra.format === "anthropic") {
+          const ev = JSON.parse(data) as { type?: string; delta?: { type?: string; text?: string; thinking?: string } };
+          if (ev.type === "content_block_delta") {
+            if (ev.delta?.thinking) thought += ev.delta.thinking;
+            if (ev.delta?.text) text += ev.delta.text;
+            if (ev.delta?.thinking || ev.delta?.text) {
+              if (!first) {
+                first = performance.now();
+                firstToken();
+              }
+              started.v = true;
+              tokens += 1;
+              onText(thought ? `<think>${thought}${text ? "</think>" : ""}${text}` : text);
+            }
+          }
+          continue;
+        }
         const d = (JSON.parse(data) as Delta).choices?.[0]?.delta;
         const th = d?.reasoning ?? d?.reasoning_content;
         if (th) thought += th;
@@ -213,6 +243,7 @@ interface Step {
   headers?: Record<string, string>;
   /** Mesh provider id (cooldown bookkeeping). Absent for the vault upstream. */
   provider?: string;
+  format?: "openai" | "anthropic";
 }
 
 /**
@@ -225,20 +256,31 @@ export async function apexChat(model: ApexModel, messages: ChatTurn[], opts: Gen
   // Keyless mesh models (Apex Auto) never need the vault; vault models still do.
   if (!cat && !isMeshId(model.id)) throw new Error("Apex API is locked. Enter your Apex API key to unlock it.");
   const plan: Step[] = [];
-  const meshStep = (c: { provider: { id: string; chat: string; auth?: string }; api: string }): Step => ({ endpoint: c.provider.chat, api: c.api, headers: c.provider.auth ? { Authorization: c.provider.auth } : undefined, provider: c.provider.id });
+  const meshStep = (c: { provider: { id: string; chat: string; auth?: string; format?: "openai" | "anthropic" }; api: string }): Step => ({
+    endpoint: c.provider.chat,
+    api: c.api,
+    headers: c.provider.format === "anthropic" ? { "x-api-key": "free", "anthropic-version": "2023-06-01" } : c.provider.auth ? { Authorization: c.provider.auth } : undefined,
+    provider: c.provider.id,
+    format: c.provider.format,
+  });
   const pref = isMeshId(model.id) ? parseMeshId(model.id) : null;
   if (!pref && cat) for (const api of [...new Set([model.api, cat.fallbackApi])]) plan.push({ endpoint: cat.endpoints.text, api });
   for (const c of candidatesFor(pref ?? undefined)) plan.push(meshStep(c));
   // Self-healing: the live-verified models (fastest first) are the last-resort backups so a prompt never dead-ends.
   for (const v of verifiedChain({ preferred: pref ?? undefined })) plan.push(meshStep({ provider: v.provider, api: v.api }));
-  const uniq = plan.filter((s, i) => plan.findIndex((x) => x.endpoint === s.endpoint && x.api === s.api) === i);
+  let uniq = plan.filter((s, i) => plan.findIndex((x) => x.endpoint === s.endpoint && x.api === s.api) === i);
+  if (opts.strict && pref) {
+    // Honest comparison: the chosen model, or other routes of the same flagship. Never a stand-in.
+    const fl = flagshipOf(pref.api);
+    uniq = uniq.filter((s) => s.api === pref.api || (!!fl && fl.rx.test(tailOf(s.api))));
+  }
   let lastErr: unknown = new Error("No Apex API model answered");
   for (let i = 0; i < uniq.length; i++) {
     const step = uniq[i];
     const started = { v: false };
     const last = i === uniq.length - 1;
     try {
-      const st = await attempt(step.endpoint, step.api, messages, opts, onText, started, { headers: step.headers, retry429: last, timeoutMs: last ? 30000 : 3500 });
+      const st = await attempt(step.endpoint, step.api, messages, opts, onText, started, { headers: step.headers, retry429: last, timeoutMs: last || opts.strict || (i === 0 && !!pref) ? (opts.strict ? 60000 : 25000) : 3500, format: step.format });
       if (step.provider) markSuccess(step.provider, step.api);
       return { ...st, servedBy: step.api };
     } catch (e) {

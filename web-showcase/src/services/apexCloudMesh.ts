@@ -5,6 +5,7 @@ import { assetUrl } from "@/lib/paths";
 import { REPO } from "@/lib/site";
 import type { ApexModel } from "@/lib/vault";
 import ZEUS from "@/data/zeus-catalog.json";
+import { familyOf, flagshipOf, isFrontier, tailOf, FLAGSHIPS, type Family } from "@/data/frontier";
 
 /**
  * Apex Cloud Mesh — a multi-provider router for FREE, KEYLESS, browser-callable (CORS) OpenAI-compatible endpoints.
@@ -17,8 +18,8 @@ import ZEUS from "@/data/zeus-catalog.json";
  * cooldown and the very next candidate is tried immediately (no waiting), so one flaky free tier does not surface as an error.
  */
 
-export type MeshGroup = "Flagship" | "Reasoning" | "Coding" | "Uncensored" | "Live Web Search" | "Vision & Image";
-export const MESH_GROUP_ORDER: MeshGroup[] = ["Flagship", "Reasoning", "Coding", "Uncensored", "Live Web Search", "Vision & Image"];
+export type MeshGroup = "Frontier Flagships" | "Flagship" | "Reasoning" | "Coding" | "Uncensored" | "Live Web Search" | "Vision & Image";
+export const MESH_GROUP_ORDER: MeshGroup[] = ["Frontier Flagships", "Flagship", "Reasoning", "Coding", "Uncensored", "Live Web Search", "Vision & Image"];
 
 export interface MeshProvider {
   id: string;
@@ -34,6 +35,8 @@ export interface MeshProvider {
   builtin: boolean;
   /** Lower runs first in the fallback chain. */
   priority: number;
+  /** Wire format. Default OpenAI chat-completions; `anthropic` = Messages API (`/v1/messages`, x-api-key header). */
+  format?: "openai" | "anthropic";
   /** Model used when this provider is asked to stand in for another one. */
   fallbackModel?: string;
   note?: string;
@@ -90,11 +93,12 @@ export const BUILTIN_PROVIDERS: MeshProvider[] = [
 
 /* ───────── imported catalog (NikitHamal/zeusdesigns + live /models discovery, probed with real completions) ───────── */
 interface ZeusModel { id: string; label: string; note?: string; reasoning?: boolean; vision?: boolean; ctx?: number; src: string; verified?: boolean; ms?: number }
-interface ZeusGateway { id: string; name: string; base: string; auth?: string; cors: boolean; zeusProviders: string[]; models: ZeusModel[] }
+interface ZeusGateway { id: string; name: string; base: string; auth?: string; format?: "openai" | "anthropic"; liveCount?: number; cors: boolean; zeusProviders: string[]; models: ZeusModel[] }
 const ZEUS_DATA = ZEUS as unknown as { generatedAt: string; gateways: ZeusGateway[] };
 const covered = (g: ZeusGateway) => BUILTIN_PROVIDERS.some((b) => b.chat.startsWith(g.base));
 const ZEUS_GATEWAYS = ZEUS_DATA.gateways.filter((g) => g.models.length > 0 && !covered(g));
 const bestOf = (g: ZeusGateway) => g.models.filter((m) => m.verified).sort((a, b) => (a.ms ?? 1e9) - (b.ms ?? 1e9))[0];
+export { FLAGSHIPS };
 export const isImported = (providerId: string) => providerId.startsWith("z-");
 export const CATALOG_GENERATED_AT = ZEUS_DATA.generatedAt;
 export const IMPORTED_PROVIDERS: MeshProvider[] = ZEUS_GATEWAYS.map((g) => {
@@ -102,8 +106,9 @@ export const IMPORTED_PROVIDERS: MeshProvider[] = ZEUS_GATEWAYS.map((g) => {
   return {
     id: g.id,
     name: g.zeusProviders[0] ?? g.name,
-    chat: `${g.base}/chat/completions`,
+    chat: g.format === "anthropic" ? `${g.base}/messages` : `${g.base}/chat/completions`,
     models: `${g.base}/models`,
+    format: g.format,
     auth: g.auth,
     cors: g.cors,
     builtin: true,
@@ -145,6 +150,10 @@ export interface MeshModel {
   reasoning: boolean;
   vision: boolean;
   uncensored: boolean;
+  /** Provider family (Anthropic, OpenAI, ...) derived from the model id. */
+  family: Family;
+  /** Matches one of the Frontier Flagships patterns. */
+  frontier: boolean;
   /** True when the owner renamed it in /admin: `label` is then shown verbatim (no `Apex-` prefix). */
   renamed?: boolean;
   disabled?: boolean;
@@ -290,13 +299,14 @@ function rawModels(providerId: string, json: unknown): Raw[] {
   return out;
 }
 
-export function classify(id: string, r: { reasoning?: boolean; vision?: boolean }): { group: MeshGroup; reasoning: boolean; vision: boolean; uncensored: boolean } {
+export function classify(id: string, r: { reasoning?: boolean; vision?: boolean }): { group: MeshGroup; reasoning: boolean; vision: boolean; uncensored: boolean; family: Family; frontier: boolean } {
   const n = id.toLowerCase();
   const uncensored = /uncensor|abliterat|dolphin|\bevil\b|unity|hermes/.test(n);
-  const reasoning = !!r.reasoning || /r1|reason|think|gpt-oss|nemotron|qwen3/.test(n);
+  const reasoning = !!r.reasoning || /r1|reason|think|gpt-oss|nemotron|qwen3|opus|\bo[134](-|$)|qwq/.test(n);
   const vision = !!r.vision || /(^|[-_.])(vl|vision|omni)|pixtral/.test(n);
-  const group: MeshGroup = uncensored ? "Uncensored" : /search/.test(n) ? "Live Web Search" : /coder|code|codestral/.test(n) ? "Coding" : vision ? "Vision & Image" : reasoning ? "Reasoning" : "Flagship";
-  return { group, reasoning, vision, uncensored };
+  const frontier = !uncensored && isFrontier(id);
+  const group: MeshGroup = uncensored ? "Uncensored" : frontier ? "Frontier Flagships" : /search/.test(n) ? "Live Web Search" : /coder|code|codestral/.test(n) ? "Coding" : vision ? "Vision & Image" : reasoning ? "Reasoning" : "Flagship";
+  return { group, reasoning, vision, uncensored, family: familyOf(id), frontier };
 }
 
 async function fetchProviderModels(p: MeshProvider): Promise<{ health: Health; models: MeshModel[] }> {
@@ -335,17 +345,18 @@ export interface ModelPing {
 /** A real chat completion ("Reply with OK") against one model: the same request the app sends, not a /models listing. */
 export async function pingModel(p: MeshProvider, api: string, timeoutMs = 12_000): Promise<ModelPing> {
   const t0 = performance.now();
+  const anth = p.format === "anthropic";
   try {
     const r = await timed(p.chat, timeoutMs, {
       method: "POST",
-      headers: { "content-type": "application/json", ...(p.auth ? { Authorization: p.auth } : {}) },
-      body: JSON.stringify({ model: api, messages: [{ role: "user", content: "Reply with OK" }], max_tokens: 48, stream: false }),
+      headers: { "content-type": "application/json", ...(anth ? { "x-api-key": "free", "anthropic-version": "2023-06-01" } : p.auth ? { Authorization: p.auth } : {}) },
+      body: JSON.stringify(anth ? { model: api, messages: [{ role: "user", content: "Reply with OK" }], max_tokens: 64 } : { model: api, messages: [{ role: "user", content: "Reply with OK" }], max_tokens: 48, stream: false }),
     });
     const ms = Math.round(performance.now() - t0);
     if (!r.ok) return { ok: false, ms, status: r.status, error: `HTTP ${r.status}`, at: Date.now() };
-    const j = (await r.json().catch(() => null)) as { choices?: { message?: { content?: string; reasoning_content?: string } }[] } | null;
+    const j = (await r.json().catch(() => null)) as { choices?: { message?: { content?: string; reasoning_content?: string } }[]; content?: { text?: string; thinking?: string }[] } | null;
     const m = j?.choices?.[0]?.message;
-    const text = (m?.content ?? m?.reasoning_content ?? "").trim();
+    const text = (anth ? (j?.content ?? []).map((c) => c.text || c.thinking || "").join("") : (m?.content ?? m?.reasoning_content ?? "")).trim();
     return text ? { ok: true, ms, status: 200, text: text.slice(0, 40), at: Date.now() } : { ok: false, ms, status: 200, error: "empty reply", at: Date.now() };
   } catch (e) {
     return { ok: false, ms: Math.round(performance.now() - t0), error: e instanceof Error && e.name === "AbortError" ? "timeout" : "unreachable (CORS or network)", at: Date.now() };
@@ -465,6 +476,18 @@ export function candidatesFor(preferred?: { provider: string; api: string }): Ca
   const out: Candidate[] = [];
   const pref = preferred && usable.find((p) => p.id === preferred.provider);
   if (pref && preferred && !off.has(modelKey(pref.id, preferred.api))) out.push({ provider: pref, api: preferred.api });
+  // Frontier failover: the same flagship served by other providers is tried before any generic stand-in.
+  const fl = preferred ? flagshipOf(preferred.api) : undefined;
+  if (fl && preferred) {
+    const alts = models
+      .filter((m) => !m.nativeOnly && fl.rx.test(tailOf(m.api)) && !(m.provider === preferred.provider && m.api === preferred.api) && usable.some((u) => u.id === m.provider))
+      .sort((a, b) => Number(!!b.verified) - Number(!!a.verified) || (a.ms ?? 1e9) - (b.ms ?? 1e9))
+      .slice(0, 3);
+    for (const m of alts) {
+      const prov = usable.find((u) => u.id === m.provider);
+      if (prov && !off.has(modelKey(prov.id, m.api))) out.push({ provider: prov, api: m.api });
+    }
+  }
   let importedUsed = 0;
   for (const p of usable) {
     if (isImported(p.id)) {

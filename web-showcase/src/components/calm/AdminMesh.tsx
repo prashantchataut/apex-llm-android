@@ -4,13 +4,28 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadJsonFile, publishJsonFile } from "@/lib/admin";
 import { useRepoToken } from "./RepoToken";
 import { CIcon } from "./icons";
+import { FLAGSHIPS, flagshipOf } from "@/data/frontier";
 import { allProviders, CATALOG_GENERATED_AT, customProvider, EMPTY_CONFIG, MESH_CONFIG_PATH, MESH_GROUP_ORDER, modelKey, pingModel, probeAll, probeOne, setModelEnabled, syncMesh, useMesh, type Health, type MeshConfig, type MeshGroup, type MeshModel, type MeshProvider, type ModelPing } from "@/services/apexCloudMesh";
 
 const dim = "text-[rgb(var(--ink-rgb)/var(--ink-3-a))]";
 const btn = "rounded-full bg-[var(--surface-2)] px-4 py-2 text-[13px] font-medium transition-transform active:scale-[0.97] disabled:opacity-40";
 const PAGE = 60;
 
-type Tab = "all" | "working" | "enabled" | "failed";
+type Tab = "frontier" | "all" | "working" | "enabled" | "anthropic" | "openai" | "google" | "deepseek-qwen" | "llama-mistral" | "uncensored" | "untested";
+const TAB_LABELS: [Tab, string][] = [
+  ["frontier", "Frontier Flagships"],
+  ["all", "All Models"],
+  ["working", "Verified Working"],
+  ["enabled", "Enabled in App"],
+  ["anthropic", "Anthropic"],
+  ["openai", "OpenAI"],
+  ["google", "Google"],
+  ["deepseek-qwen", "DeepSeek & Qwen"],
+  ["llama-mistral", "Llama & Mistral"],
+  ["uncensored", "Uncensored"],
+  ["untested", "Offline / Untested"],
+];
+const FAMILY_TABS = new Set<Tab>(["anthropic", "openai", "google", "deepseek-qwen", "llama-mistral", "uncensored"]);
 interface St {
   kind: "working" | "offline" | "testing" | "untested";
   ms?: number;
@@ -82,7 +97,7 @@ export function AdminMesh() {
   const [base, setBase] = useState("");
   const [pings, setPings] = useState<Record<string, ModelPing | "running">>({});
   const [q, setQ] = useState("");
-  const [tab, setTab] = useState<Tab>("all");
+  const [tab, setTab] = useState<Tab>("frontier");
   const [prov, setProv] = useState("");
   const [limit, setLimit] = useState(PAGE);
   const [showProv, setShowProv] = useState(false);
@@ -127,30 +142,43 @@ export function AdminMesh() {
     [pings],
   );
 
-  const counts = useMemo(() => {
-    let working = 0, enabled = 0, failed = 0;
-    for (const m of mesh.allModels) {
+  const inTab = useCallback(
+    (m: MeshModel, t: Tab): boolean => {
       const s = statusOf(m).kind;
-      if (s === "working") working++;
-      if (s === "offline") failed++;
-      if (isOn(m)) enabled++;
-    }
-    return { all: mesh.allModels.length, working, enabled, failed };
-  }, [mesh.allModels, statusOf, isOn]);
+      switch (t) {
+        case "all": return true;
+        case "frontier": return m.frontier && !m.uncensored;
+        case "working": return s === "working";
+        case "enabled": return isOn(m);
+        case "untested": return s === "offline" || s === "untested";
+        default: return m.family === t;
+      }
+    },
+    [statusOf, isOn],
+  );
+  const counts = useMemo(() => {
+    const c = {} as Record<Tab, number>;
+    for (const [t] of TAB_LABELS) c[t] = mesh.allModels.filter((m) => inTab(m, t)).length;
+    return c;
+  }, [mesh.allModels, inTab]);
+  const failedCount = useMemo(() => mesh.allModels.filter((m) => statusOf(m).kind === "offline" && isOn(m)).length, [mesh.allModels, statusOf, isOn]);
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return mesh.allModels.filter((m) => {
+    const list = mesh.allModels.filter((m) => {
       if (prov && m.provider !== prov) return false;
-      const s = statusOf(m).kind;
-      if (tab === "working" && s !== "working") return false;
-      if (tab === "failed" && s !== "offline") return false;
-      if (tab === "enabled" && !isOn(m)) return false;
+      if (!inTab(m, tab)) return false;
       if (!needle) return true;
-      return `${labelOf(m)} ${m.api} ${groupOf(m)} ${provName.get(m.provider) ?? ""}`.toLowerCase().includes(needle);
+      return `${labelOf(m)} ${m.api} ${groupOf(m)} ${m.family} ${provName.get(m.provider) ?? ""}`.toLowerCase().includes(needle);
     });
+    if (tab === "frontier") {
+      const idx = (m: MeshModel) => { const f = flagshipOf(m.api); return f ? FLAGSHIPS.indexOf(f) : 999; };
+      const st = (m: MeshModel) => (statusOf(m).kind === "working" ? 0 : 1);
+      list.sort((a, b) => idx(a) - idx(b) || st(a) - st(b) || (a.ms ?? 1e9) - (b.ms ?? 1e9));
+    }
+    return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mesh.allModels, q, tab, prov, statusOf, isOn, cfg, provName]);
+  }, [mesh.allModels, q, tab, prov, statusOf, inTab, cfg, provName]);
   useEffect(() => setLimit(PAGE), [q, tab, prov]);
 
   /* ───── actions ───── */
@@ -223,6 +251,11 @@ export function AdminMesh() {
     setProgress(null);
     say(true, `Verified ${queue.length} models with a real completion.`);
   };
+  /** Flip every model of the active family tab (or the whole visible list) ON or OFF in one go. */
+  const setAll = (list: MeshModel[], enabled: boolean) => {
+    setCfg((c) => list.reduce((acc, m) => setModelEnabled(acc, m, enabled), c));
+    say(true, `${enabled ? "Enabled" : "Disabled"} ${list.length} models. Press Save & Publish to apply.`);
+  };
   const disableOffline = () => {
     setCfg((c) => {
       let next = c;
@@ -268,7 +301,7 @@ export function AdminMesh() {
     setBusy(false);
   };
 
-  const tabs: [Tab, string][] = [["all", "All"], ["working", "Working"], ["enabled", "Enabled"], ["failed", "Failed"]];
+  const tabs = TAB_LABELS;
   const shown = rows.slice(0, limit);
   const healthyProviders = providers.filter((p) => mesh.health[p.id]?.ok).length;
 
@@ -324,19 +357,28 @@ export function AdminMesh() {
           <button type="button" className={btn} onClick={() => batchVerify(rows.filter((m) => isOn(m) || statusOf(m).kind === "working"))} disabled={busy || rows.length === 0} data-testid="batch-verify">
             {progress ? `Verifying ${progress.done}/${progress.total}` : "Batch Verify Working Models"}
           </button>
+          <button type="button" className={btn} style={{ background: "var(--halo-a)", color: "var(--halo-ink)" }} onClick={() => batchVerify(mesh.allModels.filter((m) => m.frontier && !m.uncensored && !m.nativeOnly))} disabled={busy} data-testid="batch-verify-frontier">
+            Batch Verify Frontier Models
+          </button>
         </div>
 
-        <div role="tablist" aria-label="Filter models" className="mt-3 inline-flex rounded-full bg-[var(--surface-2)] p-1">
+        <div role="tablist" aria-label="Filter models" className="mt-3 flex max-w-full gap-1 overflow-x-auto rounded-full bg-[var(--surface-2)] p-1 [scrollbar-width:none]">
           {tabs.map(([id, label]) => (
-            <button key={id} role="tab" aria-selected={tab === id} data-testid={`tab-${id}`} onClick={() => setTab(id)} className={`h-8 rounded-full px-3.5 text-[12.5px] font-medium transition-colors ${tab === id ? "bg-[var(--halo-a)] text-[var(--halo-ink)]" : dim}`}>
+            <button key={id} role="tab" aria-selected={tab === id} data-testid={`tab-${id}`} onClick={() => setTab(id)} className={`h-8 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-medium transition-colors ${tab === id ? "bg-[var(--halo-a)] text-[var(--halo-ink)]" : dim}`}>
               {label} <span className="opacity-60">{counts[id]}</span>
             </button>
           ))}
         </div>
         {prov && <p className={`mt-2 text-[12px] ${dim}`}>Provider: {provName.get(prov) ?? prov}</p>}
-        {counts.failed > 0 && (
-          <button type="button" className={`${btn} ml-2`} onClick={disableOffline}>Turn off {counts.failed} offline</button>
-        )}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {FAMILY_TABS.has(tab) && (
+            <>
+              <button type="button" className={btn} onClick={() => setAll(rows, true)} data-testid="family-on">Turn all {rows.length} ON</button>
+              <button type="button" className={btn} onClick={() => setAll(rows, false)} data-testid="family-off">Turn all {rows.length} OFF</button>
+            </>
+          )}
+          {failedCount > 0 && <button type="button" className={btn} onClick={disableOffline}>Turn off {failedCount} offline</button>}
+        </div>
 
         <ul className="mt-3 space-y-1.5">
           {shown.map((m) => {
@@ -364,7 +406,7 @@ export function AdminMesh() {
               </li>
             );
           })}
-          {rows.length === 0 && <li className={`rounded-2xl bg-[var(--surface-2)] px-4 py-6 text-center text-[13px] ${dim}`}>No models match. {tab === "working" || tab === "failed" ? "Run Batch Verify to fill this tab." : ""}</li>}
+          {rows.length === 0 && <li className={`rounded-2xl bg-[var(--surface-2)] px-4 py-6 text-center text-[13px] ${dim}`}>No models match. {tab === "working" ? "Run Batch Verify to fill this tab." : ""}</li>}
         </ul>
         {rows.length > limit && (
           <button type="button" className={`${btn} mt-3 w-full`} onClick={() => setLimit((l) => l + PAGE)}>

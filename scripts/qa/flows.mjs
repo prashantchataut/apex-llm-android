@@ -41,8 +41,28 @@ for (const vp of VIEWPORTS) {
     await p.getByText("Gradient descent and LaTeX").first().click(); await sleep(1500);
     await record(p, vp, "chat-latex");
     // model selector popover
-    await p.getByRole("button", { name: /Switch model/ }).click(); await sleep(700); await record(p, vp, "model-popover");
+    await p.getByRole("button", { name: /Switch model/ }).click(); await sleep(2500); await record(p, vp, "model-popover");
     await p.keyboard.press("Escape");
+  });
+  await step("Model Switcher Frontier", seed, async p => {
+    await p.goto(`${BASE}/app/`); await sleep(2000);
+    await p.getByRole("button", { name: /Switch model/ }).click(); await p.getByTestId("switcher-frontier").waitFor({ timeout: 20000 }); await sleep(600);
+    const txt = await p.getByTestId("switcher-frontier").innerText();
+    console.log(`  frontier rows: ${(txt.match(/with failover/g) || []).length}; opus listed: ${/opus/i.test(txt)}`);
+    await record(p, vp, "model-switcher-frontier");
+    await p.getByTestId("switcher-search").fill("opus"); await sleep(500); await record(p, vp, "model-switcher-opus");
+  });
+  await step("Compare Mode", seed, async p => {
+    await p.goto(`${BASE}/app/`); await sleep(2000);
+    await p.getByTestId("compare-toggle").click(); await sleep(2500);
+    await p.getByTestId("compare-prompt").fill("In one sentence, what is gradient descent?");
+    await record(p, vp, "compare-ready");
+    await p.getByTestId("compare-run").click();
+    await p.waitForFunction(() => document.querySelector('[data-testid="compare-stats-0"]')?.textContent?.match(/\d+(\.\d+)? (ms|s)/), null, { timeout: 60000 }).catch(() => {});
+    await p.waitForFunction(() => [...document.querySelectorAll('[data-testid^="compare-card-"]')].every(c => /DONE|ERROR/.test(c.textContent || "")), null, { timeout: 90000 }).catch(() => {});
+    await sleep(500); await record(p, vp, "compare-running");
+    for (const i of [0, 1]) console.log(`  compare card ${i}:`, (await p.getByTestId(`compare-card-${i}`).innerText()).replace(/\s+/g, " ").slice(0, 230));
+    if (vp.w < 768) { await p.getByRole("tab", { name: /DeepSeek/ }).click(); await sleep(400); await record(p, vp, "compare-b"); }
   });
   await step("Local Model Hub", seed, async p => { await p.goto(`${BASE}/app/`); await sleep(2000); await nav(p, vp, "Models"); await record(p, vp, "model-hub"); });
   await step("Image Generation Studio", seed, async p => { await p.goto(`${BASE}/app/`); await sleep(2000); await nav(p, vp, "Image Studio"); await record(p, vp, "image-studio"); });

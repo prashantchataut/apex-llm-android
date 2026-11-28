@@ -211,3 +211,11 @@ The shell was `gh`-less / `cargo`-less: PR + release were driven through the Git
 3. Verify MCP against a real server; add GitHub commit tool.
 4. Persist conversations in SQLite; on-device diffusion engine for the SDXS slot.
 5. **Rotate the GitHub PAT** (pasted in chat again).
+
+## Session 19 (v1.5.0)
+- zeusdesigns (read-only clone): 1 branch, 1 commit, 59 providers / 338 declared models. Embedded third-party API keys (zhipu, longcat, agnes, volc, aihorde, clinebot: 24 models) are still NOT copied. No `claude-opus-4` exists there; its Opus is `claude-opus-5-5` on Anthropic-format relays. Those relays (dherain24-claude-proxy, calkotter-free-claude-code) list 600+ and 108 routes, incl. `claude-opus-4-20250514`, `claude-3-opus-20240229`, `claude-sonnet-4-20250514`; they are relay aliases, the real backend model is not verifiable.
+- Importer now includes Anthropic-format relays (`format: "anthropic"`) and probes frontier names first: 1,198 models / 65 gateways / 234 verified at import time.
+- `src/data/frontier.ts` maps the requested flagship names to live routes; missing ones show as no route.
+- versionCode: NOT set to 16. Tauri derives 1005000 from 1.5.0; 16 would be a downgrade and Android would reject the update.
+- Native updater is Kotlin (`ApexUpdater.kt`, `MainActivity.kt`), not Java; REQUEST_INSTALL_PACKAGES and FileProvider are in the manifest. Not exercised on a device.
+- APK is built, aligned, signed (v1+v2+v3) and published by `.github/workflows/android-apk.yml` on the `v1.5.0` tag; the sandbox has no Android SDK / JDK.

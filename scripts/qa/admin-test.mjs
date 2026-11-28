@@ -22,7 +22,13 @@ for (const pass of ["apex-admin-2025", "APEX-PRO-2025", "  Apex-Admin-2025 ", "a
     const total = await p.locator('[data-testid="mesh-models"]').innerText();
     console.log("  models header:", total.split("\n").slice(0, 3).join(" | "));
     ok(await p.locator('[data-testid="mesh-model-row"]').count() > 0, "model management table renders rows");
-    for (const t of ["all", "working", "enabled", "failed"]) { await p.getByTestId(`tab-${t}`).click(); await sleep(300); console.log(`  tab ${t}:`, (await p.getByTestId(`tab-${t}`).innerText()).replace(/\s+/g, " ")); }
+    for (const t of ["frontier", "all", "working", "enabled", "anthropic", "openai", "google", "deepseek-qwen", "llama-mistral", "uncensored", "untested"]) { await p.getByTestId(`tab-${t}`).click(); await sleep(300); console.log(`  tab ${t}:`, (await p.getByTestId(`tab-${t}`).innerText()).replace(/\s+/g, " ")); }
+    await p.getByTestId("tab-frontier").click(); await sleep(400);
+    const fr = await p.locator('[data-testid="mesh-model-row"]').allInnerTexts();
+    ok(fr.length > 0 && fr.some(t => /claude.*opus|opus/i.test(t)), `Frontier tab lists Claude Opus routes (${fr.length} frontier rows)`);
+    await p.getByTestId("tab-anthropic").click(); await sleep(300);
+    const total600 = parseInt((await p.getByTestId("tab-all").innerText()).replace(/\D+/g, ""), 10);
+    ok(total600 >= 600, `All Models tab shows 600+ models (${total600})`);
     await p.getByTestId("tab-all").click();
     await p.getByLabel("Search models").fill("llama"); await sleep(400); ok(await p.locator('[data-testid="mesh-model-row"]').count() > 0, "search filters models");
     const sw = p.locator('[data-testid="mesh-model-row"] [role=switch]').first(); const before = await sw.getAttribute("aria-checked"); await sw.click(); await sleep(300);

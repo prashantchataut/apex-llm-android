@@ -1,11 +1,12 @@
 import { REPO_URL, RELEASES_URL } from "@/lib/site";
+import { BASE_PATH } from "@/lib/paths";
 import { APP_VERSION } from "@/lib/version";
 import { CalmApp } from "./CalmApp";
 import { CIcon, type CIconName } from "./icons";
 import { PromptDemo, Reveal, WaysTabs } from "./LandingDemo";
 import "./calm.css";
 
-export const APK_URL = `${REPO_URL}/releases/download/v${APP_VERSION}/apex-llm-v${APP_VERSION}-arm64-v8a.apk`;
+export const APK_URL = `${REPO_URL}/releases/download/v${APP_VERSION}/Apex-LLM-v${APP_VERSION}-arm64-release.apk`;
 
 const LINES: { i: CIconName; t: string; d: string }[] = [
   { i: "cube", t: "Local GGUF, uncensored if you want", d: "Run GGUF models fully on-device, import your own .gguf files, and keep Dolphin, Hermes and abliterated builds private." },
@@ -21,7 +22,7 @@ const LINES: { i: CIconName; t: string; d: string }[] = [
 /** Grid-free editorial landing in the spirit of cuedesign.space / beautifului.dev: one centred column, open canvas, blur-to-sharp reveals. */
 export function CalmLanding() {
   return (
-    <div className="calm relative min-h-dvh overflow-x-clip" data-cmode="light">
+    <div className="calm relative min-h-dvh overflow-x-clip" data-cmode="dark">
       <div className="calm-glow" style={{ height: 720 }} aria-hidden="true" />
       <header className="relative z-10 mx-auto flex w-[min(1080px,calc(100%-40px))] items-center justify-between py-6">
         <span className="text-[19px] font-medium tracking-[-0.03em]">Apex</span>
@@ -59,6 +60,32 @@ export function CalmLanding() {
           </div>
           <p className="mt-6 text-center text-[13px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">The real app, running in your browser.</p>
         </Reveal>
+
+
+        <section id="download" aria-labelledby="dl-h" className="mx-auto w-[min(920px,calc(100%-32px))] pb-28" data-testid="apk-card">
+          <div className="rounded-[28px] bg-[var(--surface)] p-6 shadow-[var(--specular),var(--shadow-card)] sm:p-9">
+            <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+              <div className="min-w-0">
+                <p className="calm-chip">v{APP_VERSION} · arm64-v8a · Android 8 and up</p>
+                <h2 id="dl-h" className="mt-4 text-[clamp(24px,4vw,34px)] font-normal leading-[1.1] tracking-[-0.03em]">Apex LLM for Android</h2>
+                <p className="mt-2 max-w-[48ch] text-[15.5px] leading-relaxed text-[rgb(var(--ink-rgb)/var(--ink-2-a))]">Signed release APK built for the Nothing Phone 4a and any Android 15 phone. Updates arrive inside the app, with a live progress bar and the system installer.</p>
+              </div>
+              <div className="flex w-full flex-wrap gap-2.5 sm:w-auto">
+                <a href={APK_URL} className="calm-btn !h-[52px] !px-7 !text-[15px]" data-primary="true" data-testid="apk-download"><CIcon name="download" size={17} /> Download APK</a>
+                <a href={`${BASE_PATH}/app/`} className="calm-btn !h-[52px] !px-6 !text-[15px]">Web Studio</a>
+                <a href={`${BASE_PATH}/admin/`} className="calm-btn !h-[52px] !px-6 !text-[15px]">Admin</a>
+              </div>
+            </div>
+            <ul className="mt-7 grid gap-3 sm:grid-cols-2">
+              {["Frontier Flagships tier: Claude, GPT, Gemini, Grok, DeepSeek, Qwen and Llama routes with automatic failover", "Compare 2 Models: one prompt, two cards, live latency and tokens per second", "Searchable model switcher with pinned models, provider filters and capability tags", "Offline GGUF models for phones: Qwen 3, Gemma 3, LFM2, Phi-4 mini, Llama 3.2"].map((t) => (
+                <li key={t} className="flex min-w-0 items-start gap-3 rounded-2xl bg-[var(--surface-2)] p-4 text-[14px] leading-snug">
+                  <CIcon name="check" size={16} className="mt-0.5 shrink-0" />
+                  <span className="min-w-0">{t}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
 
         <section id="try" className="mx-auto w-[min(760px,calc(100%-40px))] pb-36 text-center">
           <Reveal>
