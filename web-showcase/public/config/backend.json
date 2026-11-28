@@ -1,0 +1,4 @@
+{
+  "_readme": "Public URL of the managed Apex API server (server/apex-api), e.g. https://apex-api.example.com. Empty = the managed Apex API tier is unavailable and clients say so. Never put a secret here.",
+  "url": ""
+}

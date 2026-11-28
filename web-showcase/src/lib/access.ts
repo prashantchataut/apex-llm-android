@@ -1,7 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { evaluateKey, fetchVault, type AccessState, type ApexCatalog, type Verdict } from "./vault";
+import type { AccessState, ApexCatalog, Verdict } from "./vault";
+import { catalogFrom, checkKeyOnServer } from "./managed-api";
 
 export type { AccessState, Verdict } from "./vault";
 
@@ -19,7 +20,6 @@ export type { AccessState, Verdict } from "./vault";
  */
 
 const STORE = "apex.access.v2";
-const GRACE_MS = 24 * 3600 * 1000;
 
 export interface Access {
   key: string | null;
@@ -80,36 +80,34 @@ function activeFrom(cur: Access, key: string, v: Verdict): Access {
   return { ...cur, key, state: "active", label: v.record?.label ?? cur.label, keyId: v.record?.id ?? null, prefix: v.record?.prefix ?? null, catalog: v.catalog ?? cur.catalog, allowedModels: ["*"], verifiedAt: Date.now(), checkedAt: Date.now(), message: v.message };
 }
 
-/** Verify a candidate key against the live vault; with `save` an active key is stored and unlocks the Apex API. */
+const verdictOf = (c: Awaited<ReturnType<typeof checkKeyOnServer>>): Verdict => ({
+  state: c.state,
+  message: c.message,
+  record: c.state === "active" ? { label: c.label ?? "Apex API key", prefix: c.masked ?? "" } : undefined,
+  catalog: c.models ? catalogFrom(c.models) : undefined,
+});
+
+/** Verify a candidate key against the managed server; with `save` an active key is stored and unlocks the Apex API. */
 export async function verifyKey(key: string, save = false): Promise<Verdict> {
   const k = key.trim();
   if (!k) return { state: "none", message: "Enter your Apex API key." };
-  try {
-    const { vault } = await fetchVault();
-    const v = await evaluateKey(vault, k);
-    if (save && v.state === "active") commit(activeFrom(access, k, v));
-    return v.state === "active" ? { state: v.state, message: v.message, record: v.record } : v;
-  } catch (e) {
-    const m = e instanceof Error ? e.message : "";
-    return { state: "offline", message: m.includes("WebCrypto") ? m : "Couldn't reach the vault. Check your connection and try again." };
-  }
+  const v = verdictOf(await checkKeyOnServer(k));
+  if (save && v.state === "active") commit(activeFrom(access, k, v));
+  return v;
 }
 
 let inflight: Promise<Access> | null = null;
-/** Re-check the stored key. A network failure keeps a recently-verified key (grace); otherwise it stays locked. */
+/**
+ * Re-check the stored key on the server. There is NO offline grace and no cached verdict: if the server cannot confirm the
+ * key right now, the Apex API tier stays locked and the app uses local models.
+ */
 export function revalidate(): Promise<Access> {
   if (!access.key) return Promise.resolve(access);
   inflight ??= (async () => {
     const cur = access;
-    try {
-      const { vault } = await fetchVault();
-      const v = await evaluateKey(vault, cur.key as string);
-      if (v.state === "active") commit(activeFrom(cur, cur.key as string, v));
-      else commit({ ...cur, state: v.state, catalog: null, allowedModels: [], checkedAt: Date.now(), message: v.message });
-    } catch {
-      const fresh = cur.verifiedAt && Date.now() - cur.verifiedAt < GRACE_MS;
-      commit({ ...cur, state: fresh && cur.catalog ? "active" : "offline", checkedAt: Date.now(), message: fresh && cur.catalog ? "Active · verified earlier (offline)" : "Offline · can't verify key" });
-    }
+    const v = verdictOf(await checkKeyOnServer(cur.key as string));
+    if (v.state === "active") commit(activeFrom(cur, cur.key as string, v));
+    else commit({ ...cur, state: v.state, catalog: null, allowedModels: [], checkedAt: Date.now(), message: v.message });
     return access;
   })().finally(() => {
     inflight = null;

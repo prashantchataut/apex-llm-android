@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { setHarness, useHarness } from "@/lib/harness";
 import { HapticsControl } from "@/components/theme/HapticsControl";
 import type { useCartridges } from "@/lib/cartridges";
 import { CATALOG, registerModel, type CatalogModel } from "@/lib/models";
@@ -17,6 +18,7 @@ import { ViewTitle } from "./Chrome";
 const fmtMb = (b: number) => `${(b / 1e6).toFixed(1)} MB`;
 
 export function SettingsView({ mode, setMode, onReplay, cart, update, onAccessKey }: { onReplay?: () => void; onAccessKey?: () => void; mode: CalmMode; setMode: (m: CalmMode) => void; cart: ReturnType<typeof useCartridges>; update: UpdateState }) {
+  const harness = useHarness();
   const access = useAccess();
   const [sync, setSync] = useState<string>("");
   const [syncing, setSyncing] = useState(false);
@@ -121,6 +123,19 @@ export function SettingsView({ mode, setMode, onReplay, cart, update, onAccessKe
             <span className="mt-0.5 block text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Apex Auto always uses your on-device model and never touches the network.</span>
           </span>
           <button type="button" role="switch" aria-checked={localOnly} aria-label="Local-Only mode" className="switch" onClick={() => { setLocalOnly(!localOnly); setLocalOnlyState(!localOnly); }} />
+        </div>
+      </div>
+
+      <h2 className="mb-2 mt-8 text-[13px] font-medium text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Local models</h2>
+      <div className="calm-card p-4">
+        <div className="flex items-center gap-3">
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14.5px] font-medium">Local-model harness</span>
+            <span className="mt-0.5 block text-[12.5px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">
+              Off: your message goes straight to the on-device model, fastest first token. On: also runs the skills you enabled before answering, lets the model request tools (up to 2 steps per reply, each one asks your permission, Stop cancels) and extracts memories in the background. This adds work and can increase latency.
+            </span>
+          </span>
+          <button type="button" role="switch" aria-checked={harness} aria-label="Local-model harness" className="switch" data-testid="harness-switch" onClick={() => setHarness(!harness)} />
         </div>
       </div>
 

@@ -2,7 +2,8 @@
 
 import { useMemo, useSyncExternalStore } from "react";
 import type { ChatTurn, GenOpts, GenStats } from "./engine";
-import { getAccess, useAccess } from "./access";
+import { getAccess, revalidate, useAccess } from "./access";
+import { backendUrl, backendUrlSync } from "./managed-api";
 import type { ApexCatalog, ApexModel } from "./vault";
 import { verifiedChain } from "./verified";
 import { flagshipOf, tailOf } from "@/data/frontier";
@@ -42,7 +43,7 @@ export async function refreshLive(): Promise<void> {
     return;
   }
   try {
-    const [t, i] = await Promise.allSettled([fetch(cat.endpoints.models, { cache: "no-store" }).then((r) => r.json()), fetch(cat.endpoints.imageModels, { cache: "no-store" }).then((r) => r.json())]);
+    const [t, i] = cat.endpoints.models ? await Promise.allSettled([fetch(cat.endpoints.models, { cache: "no-store" }).then((r) => r.json()), fetch(cat.endpoints.imageModels, { cache: "no-store" }).then((r) => r.json())]) : ([{ status: "rejected" }, { status: "rejected" }] as PromiseSettledResult<unknown>[]);
     const labels: Record<string, string> = {};
     const names: string[] = [];
     const extra: ApexModel[] = [];
@@ -255,6 +256,21 @@ export async function apexChat(model: ApexModel, messages: ChatTurn[], opts: Gen
   const cat = getAccess().catalog;
   // Keyless mesh models (Apex Auto) never need the vault; vault models still do.
   if (!cat && !isMeshId(model.id)) throw new Error("Apex API is locked. Enter your Apex API key to unlock it.");
+  if (!isMeshId(model.id) && cat) {
+    // Managed Apex API model: ONE request to the managed server, authorised with the user's key on every call. The server
+    // validates the key each time and applies same-model fallbacks itself. The client never switches to another model or
+    // provider on its own, so private content is not sent anywhere the user did not choose.
+    const base = backendUrlSync() || (await backendUrl());
+    const key = getAccess().key;
+    if (!base || !key) throw new Error("Apex API is locked. Enter your Apex API key to unlock it.");
+    try {
+      const st = await attempt(`${base}/v1/chat/completions`, model.api, messages, opts, onText, { v: false }, { headers: { Authorization: `Bearer ${key}` }, timeoutMs: opts.strict ? 90_000 : 60_000 });
+      return { ...st, servedBy: model.api };
+    } catch (e) {
+      if (e instanceof HttpError && (e.status === 401 || e.status === 503)) void revalidate(); // key rotated/revoked/disabled: lock now
+      throw e;
+    }
+  }
   const plan: Step[] = [];
   const meshStep = (c: { provider: { id: string; chat: string; auth?: string; format?: "openai" | "anthropic" }; api: string }): Step => ({
     endpoint: c.provider.chat,

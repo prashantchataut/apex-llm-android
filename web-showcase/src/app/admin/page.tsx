@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { AdminConsole } from "@/components/calm/AdminConsole";
+import { AdminPanel } from "@/components/calm/AdminPanel";
 
-export const metadata: Metadata = { title: "Apex Admin — API Vault", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Apex Admin", robots: { index: false, follow: false } };
 
 export default function AdminPage() {
-  return <AdminConsole />;
+  return <AdminPanel />;
 }

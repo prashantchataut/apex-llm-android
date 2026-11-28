@@ -19,7 +19,10 @@ import { learnFrom, memoryBlock, useMemories } from "@/lib/memory";
 import { useMcp } from "@/lib/mcp";
 import { CATALOG, UNCENSORED_PROMPT, type CatalogModel } from "@/lib/models";
 import { isNative } from "@/lib/native";
-import { getGithubToken, toolsHint, useSkills } from "@/lib/skills";
+import { toolsHint, useSkills } from "@/lib/skills";
+import { getHarness } from "@/lib/harness";
+import { getGithubToken } from "@/lib/github-token";
+import { initGithubSession } from "@/lib/github-auth";
 import { deleteConvo, getConvo, pinConvo, readMode, renameConvo, saveConvo, setChoice, useChoice, useConvos, writeMode, type Choice, type CalmMode } from "@/lib/store";
 import { checkForUpdate, openUpdateModal, useUpdater } from "@/lib/updater";
 import { UpdateBanner, UpdateModal } from "./UpdateUI";
@@ -76,6 +79,9 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
   const cart = useCartridges();
   const choice = useChoice();
   const skills = useSkills();
+  useEffect(() => {
+    void initGithubSession(); // restores THIS user's own token (Keystore/session) and clears legacy shared credentials
+  }, []);
   const mems = useMemories();
   const dl = useDownloadStore();
   const convos = useConvos();
@@ -319,15 +325,18 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     if (!(await guardApex(eff))) return;
     if (eff.kind === "local" && effLocal && !(await activate(effLocal))) return;
     const added = learnFrom(t);
-    if (looksPersonal(t) && skills.includes("memory")) void distillMemory(t); // background AI extraction, never blocks the reply
-    const tools = eff.kind === "apex" && !eff.id.startsWith("mesh:");
+    // Harness OFF (default): a local turn is a direct on-device request, with no skill pre-runs, tool loop or extra model calls.
+    const direct = eff.kind === "local" && !getHarness();
+    const turnSkills = direct ? [] : skills;
+    if (!direct && looksPersonal(t) && skills.includes("memory")) void distillMemory(t); // background AI extraction, never blocks the reply
+    const tools = (eff.kind === "apex" && !eff.id.startsWith("mesh:")) || (eff.kind === "local" && !direct);
     let rag: { block: string; tags: string[] } = { block: "", tags: [] };
     if (vaultOn && t) {
       await loadVault();
       if (hasVault()) rag = buildRagContext(vaultSearch(t, 4));
     }
-    const system = systemPromptFor(cart.selected) + memoryBlock(t) + rag.block + (effLocal?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (tools ? toolsHint(skills) : "");
-    chat.send(t || "Summarize the attached file.", { attachments: atts, cartridge: cart.selected, ctx: cart.selected.ctx, system, choice: eff, ...extra, skills, tools, memNote: added.map((m) => m.text), voiceMs, sources: rag.tags });
+    const system = systemPromptFor(cart.selected) + memoryBlock(t) + rag.block + (effLocal?.uncensored ? `\n\n${UNCENSORED_PROMPT}` : "") + (tools ? toolsHint(turnSkills) : "");
+    chat.send(t || "Summarize the attached file.", { attachments: atts, cartridge: cart.selected, ctx: cart.selected.ctx, system, choice: eff, ...extra, skills: turnSkills, tools, confirmTool: eff.kind === "local" ? (name: string) => window.confirm(`Allow the model to run the "${name}" tool? It runs on your request only.`) : undefined, memNote: added.map((m) => m.text), voiceMs, sources: rag.tags });
   };
   const opts = () => {
     let eff: Choice = choice;

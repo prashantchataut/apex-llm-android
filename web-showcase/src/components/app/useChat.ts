@@ -109,6 +109,8 @@ export interface SendOpts {
   skills?: SkillId[];
   /** Allow the model to call tools via <tool_call>. */
   tools?: boolean;
+  /** Asks the user before a tool runs (local harness). Returning false skips the tool. */
+  confirmTool?: (name: string) => boolean | Promise<boolean>;
   memNote?: string[];
   voiceMs?: number;
   /** Knowledge Vault citation tags retrieved for this turn; appended to the reply when the model forgot to cite. */
@@ -332,6 +334,10 @@ export function useChat() {
             for (let i = 0; i < 2 && opts.tools; i++) {
               const call = parseToolCall(res.raw);
               if (!call) break;
+              if (opts.confirmTool && !(await opts.confirmTool(call.name))) {
+                patch((m) => ({ text: stripToolCall(m.text) }));
+                break;
+              }
               const tr = await runTool(call, opts.skills ?? []);
               patch((m) => ({ tools: [...(m.tools ?? []), tr.note], images: [...(m.images ?? []), ...(tr.images ?? [])] }));
               msgs = [...msgs, { role: "assistant", content: `<tool_call>${JSON.stringify(call)}</tool_call>` }, { role: "user", content: `Tool result for ${call.name}:\n${tr.text}\n\nNow answer the user.` }];

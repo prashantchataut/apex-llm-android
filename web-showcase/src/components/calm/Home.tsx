@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 export type Suggestion = "summarize" | "illustrate" | "brainstorm";
 const PILLS: { id: Suggestion; text: string; rot: number; dy: number; align: string }[] = [
-  { id: "summarize", text: "Summarize a document or codebase", rot: -1.5, dy: 0, align: "self-start" },
+  { id: "summarize", text: "Summarize a PDF or a long document", rot: -1.5, dy: 0, align: "self-start" },
   { id: "illustrate", text: "Generate an illustration", rot: 1, dy: 3, align: "self-end" },
   { id: "brainstorm", text: "Brainstorm without restrictions", rot: -0.8, dy: -2, align: "self-start" },
 ];

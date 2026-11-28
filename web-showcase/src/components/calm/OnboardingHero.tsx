@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { routeAuto } from "@/lib/router";
 
 const SAMPLES = [
-  { prompt: "Fix this borrow checker error in main.rs", offline: false },
+  { prompt: "Draft a five-slide outline for a team presentation", offline: false },
   { prompt: "Why is the sky blue at noon?", offline: false },
   { prompt: "Prove that the square root of 2 is irrational", offline: false },
   { prompt: "No signal on the train, summarize my notes", offline: true },
