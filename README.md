@@ -36,7 +36,7 @@ Run open-weight GGUF models fully offline on your phone, read PDFs, build presen
 | Path | What |
 |---|---|
 | `crates/cortex-hardware` | `/proc` + NDK profiler → `DeviceCapabilityProfile` (RAM, SoC tier, Vulkan, quant + ctx recommendation) |
-| `crates/cortex-hf-hub` | Hugging Face GGUF search, ⚡/⚠️/❌ scoring, resumable segmented downloads + SHA-256 |
+| `crates/cortex-hf-hub` | Hugging Face GGUF search, fit scoring (fast / borderline / too heavy), resumable segmented downloads + SHA-256 |
 | `crates/cortex-inference` | `Engine` trait, streaming `<think>` parser, GBNF (MCQ/JSON), chat templates |
 | `crates/cortex-voice` | `Transcriber` trait, INT8 model catalog, VAD, 60 fps spectrum bins |
 | `crates/cortex-server` | axum: Ollama + OpenAI endpoints, `sk-apex-…` key vault (hashed), request log |
