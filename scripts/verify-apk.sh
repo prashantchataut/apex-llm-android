@@ -13,8 +13,8 @@ ok() { echo "  ok  $*"; }
 echo "== apksigner verify (min SDK 26)"
 SIG="$(apksigner verify --verbose --print-certs --min-sdk-version 26 "$APK")" || fail "apksigner verify rejected the APK"
 echo "$SIG" | head -14
-echo "$SIG" | grep -q "v2 scheme (APK Signature Scheme v2): true" || fail "v2 signature missing"
-echo "$SIG" | grep -q "v3 scheme (APK Signature Scheme v3): true" || fail "v3 signature missing"
+grep -q "v2 scheme (APK Signature Scheme v2): true" <<<"$SIG" || fail "v2 signature missing"
+grep -q "v3 scheme (APK Signature Scheme v3): true" <<<"$SIG" || fail "v3 signature missing"
 ok "v2 + v3 signatures verified (v1 is not evaluated for minSdk >= 24)"
 # v1 (JAR) is only needed below API 24; report it, never fail on it (verify with --min-sdk-version 26 skips it by design)
 if apksigner verify --verbose "$APK" 2>/dev/null | grep -q "v1 scheme (JAR signing): true"; then ok "v1 (JAR) signature also present"; else echo "  info v1 (JAR) signature absent: fine for minSdk 26"; fi
@@ -26,9 +26,9 @@ ok "4-byte / 16 KB page alignment"
 echo "== manifest (apkanalyzer)"
 MAN="$(apkanalyzer manifest print "$APK")"
 echo "$MAN" | grep -E "versionName|minSdkVersion|targetSdkVersion|compileSdkVersion|<service|<receiver" || true
-echo "$MAN" | grep -q 'android:targetSdkVersion="34"' || fail "targetSdkVersion is not 34"
-echo "$MAN" | grep -q 'android:minSdkVersion="26"' || fail "minSdkVersion is not 26"
-echo "$MAN" | grep -q 'MainActivity' || fail "MainActivity missing from manifest"
+grep -q 'android:targetSdkVersion="34"' <<<"$MAN" || fail "targetSdkVersion is not 34"
+grep -q 'android:minSdkVersion="26"' <<<"$MAN" || fail "minSdkVersion is not 26"
+grep -q 'MainActivity' <<<"$MAN" || fail "MainActivity missing from manifest"
 MANFILE="$(mktemp)"
 printf '%s' "$MAN" > "$MANFILE"
 cat > "$MANFILE.py" <<'PYEOF'
@@ -51,13 +51,15 @@ python3 "$MANFILE.py" "$MANFILE" || fail "manifest component check"
 rm -f "$MANFILE" "$MANFILE.py"
 
 echo "== contents"
-LIST="$(unzip -l "$APK")"
-echo "$LIST" | grep -E "classes[0-9]*\.dex|resources\.arsc|AndroidManifest\.xml|lib/" || true
-echo "$LIST" | grep -q " classes.dex$" || fail "classes.dex missing"
-echo "$LIST" | grep -q " resources.arsc$" || fail "resources.arsc missing"
-BAD_ABI="$(echo "$LIST" | grep -oE "lib/[^/]+/[^ ]+\.so" | grep -v "^lib/arm64-v8a/" || true)"
+LISTF="$(mktemp)"
+unzip -l "$APK" > "$LISTF"
+LIST="$(cat "$LISTF")"
+grep -E "classes[0-9]*\.dex|resources\.arsc|AndroidManifest\.xml|lib/" "$LISTF" || true
+grep -q " classes.dex$" "$LISTF" || fail "classes.dex missing"
+grep -q " resources.arsc$" "$LISTF" || fail "resources.arsc missing"
+BAD_ABI="$(grep -oE "lib/[^/]+/[^ ]+\.so" "$LISTF" | grep -v "^lib/arm64-v8a/" || true)"
 [ -z "$BAD_ABI" ] || fail "non-arm64 native libraries present: $BAD_ABI"
-SOS="$(echo "$LIST" | grep -oE "lib/arm64-v8a/[^ ]+\.so" || true)"
+SOS="$(grep -oE "lib/arm64-v8a/[^ ]+\.so" "$LISTF" || true)"
 [ -n "$SOS" ] || fail "no lib/arm64-v8a/*.so (the Rust engine is missing)"
 ok "only lib/arm64-v8a/*.so present"
 
@@ -67,7 +69,7 @@ for so in $SOS; do
   unzip -o -q "$APK" "$so" -d "$TMP"
   f="$TMP/$so"
   [ "$(stat -c %s "$f")" -gt 102400 ] || fail "$so is a stub (<100 KB)"
-  readelf -h "$f" | grep -q "Machine:.*AArch64" || fail "$so is not AArch64"
+  grep -q "Machine:.*AArch64" <<<"$(readelf -h "$f")" || fail "$so is not AArch64"
   for a in $(readelf -lW "$f" | awk '/ LOAD /{print $NF}'); do
     [ "$((a))" -ge 16384 ] || fail "$so LOAD segment align $a < 0x4000 (not linked with -z max-page-size=16384)"
   done
