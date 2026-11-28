@@ -1,13 +1,15 @@
 {
-  "version": "1.4.1",
-  "tag": "v1.4.1",
-  "apkUrl": "https://github.com/prashantchataut/apex-llm-android/releases/download/v1.4.1/Apex-LLM-v1.4.1-arm64-release.apk",
-  "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.4.1",
-  "publishedAt": "2026-11-27T17:55:39Z",
+  "version": "1.7.0",
+  "tag": "v1.7.0",
+  "apkUrl": "https://github.com/prashantchataut/apex-llm-android/releases/download/v1.7.0/Apex-LLM-v1.7.0-arm64-release.apk",
+  "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.7.0",
+  "publishedAt": "2026-11-28T10:00:00Z",
   "changelog": [
-    "No more overlapping controls on 360 to 412 px phones: the header model pill truncates, the composer and last message never collide",
-    "One z-index scale: header and composer 20, popovers 40, side drawer 50, modals and readers 60, toasts 70",
-    "/admin sign-in is passphrase-only: apex-admin-2025 and the master key APEX-PRO-2025 both unlock the console",
-    "Native in-app updater downloads the APK inside the app with live progress and opens the system installer"
+    "Cloud replies are no longer cut off mid-output (max_tokens 8192) and reasoning, including plain-text planning, now stays in the collapsible Thinking Trace",
+    "New Model Switcher: Auto & Free, Apex API, On-Device and All, one clean line per model",
+    "Free Cloud Models work out of the box with no key: Apex Auto Free, GPT-4.1 Mini, Gemini 2.5 Flash, DeepSeek V3, Qwen 3 Coder, Llama 3.3 70B",
+    "Real .PPTX export with a one-tap Download card, and a Virtual Localhost live preview with reload, phone/desktop, source and downloads",
+    "Voice: instant streaming speech input, on-device Whisper option, and Read Aloud with play, pause and stop",
+    "GitHub connect by username (no token) with a file browser that attaches files to chat, or by token for private repos and Gists"
   ]
 }
