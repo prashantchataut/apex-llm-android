@@ -113,6 +113,6 @@ export function pickReply(prompt: string): DemoReply {
 export const SUGGESTIONS = [
   { id: "quant", title: "Explain Q4_K_M vs Q5_K_M for my phone", tag: "Hardware", tall: true },
   { id: "math", title: "Expand (a+b)² step by step", tag: "Math · LaTeX" },
-  { id: "rust", title: "Debug my Rust lifetimes", tag: "Code" },
-  { id: "repo", title: "Summarise my GitHub repo into context", tag: "GitHub", wide: true },
+  { id: "pdf", title: "Summarise a PDF into key points", tag: "PDF" },
+  { id: "slides", title: "Create a 6-slide presentation on offline AI", tag: "Presentation", wide: true },
 ] as const;

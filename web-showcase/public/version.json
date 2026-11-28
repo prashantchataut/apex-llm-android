@@ -1,13 +1,15 @@
 {
-  "version": "1.4.1",
-  "tag": "v1.4.1",
-  "apkUrl": "https://github.com/prashantchataut/apex-llm-android/releases/download/v1.4.1/Apex-LLM-v1.4.1-arm64-release.apk",
-  "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.4.1",
-  "publishedAt": "2026-11-27T17:55:39Z",
+  "version": "1.6.0",
+  "tag": "v1.6.0",
+  "apkUrl": "https://github.com/prashantchataut/apex-llm-android/releases/download/v1.6.0/Apex-LLM-v1.6.0-arm64-release.apk",
+  "releaseUrl": "https://github.com/prashantchataut/apex-llm-android/releases/tag/v1.6.0",
+  "publishedAt": "2026-11-28T07:38:07Z",
   "changelog": [
-    "No more overlapping controls on 360 to 412 px phones: the header model pill truncates, the composer and last message never collide",
-    "One z-index scale: header and composer 20, popovers 40, side drawer 50, modals and readers 60, toasts 70",
-    "/admin sign-in is passphrase-only",
-    "Native in-app updater downloads the APK inside the app with live progress and opens the system installer"
+    "Connect your own GitHub account: device login, personal token, or a public username. Nothing is bundled with the app",
+    "Apex API keys are verified live: replacing the key in /admin locks the old one immediately",
+    "Keyboard-safe dialogs: the key field and Unlock button stay above the Android keyboard",
+    "New Home and onboarding built around the Apex mark, with an engine status pill and four creation cards",
+    "Fast Direct Mode for local models; the agent harness is opt-in. Haptics are off by default",
+    "Expandable thinking traces, inline selection rewrite, and a full-screen Live Preview viewer for pages and slide decks"
   ]
 }

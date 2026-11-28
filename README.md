@@ -6,7 +6,14 @@ Run open-weight GGUF models fully offline on your phone, read PDFs, build presen
 
 **Website:** https://prashantchataut.github.io/apex-llm-android/ &nbsp;|&nbsp; **Android APK:** [latest release](https://github.com/prashantchataut/apex-llm-android/releases/latest) (arm64)
 
-> **Status.** Source version `1.6.0` (`versionCode 17`). The `v1.6.0` signed APK is published only once it has been compiled, zipaligned and signed on a machine with the Android toolchain; until then the latest release above is the newest installable build. The web UI under `web-showcase/` is the same frontend the APK embeds.
+**Download:** [Apex-LLM-v1.6.0-arm64-release.apk](https://github.com/prashantchataut/apex-llm-android/releases/download/v1.6.0/Apex-LLM-v1.6.0-arm64-release.apk) (signed, arm64). Source version `1.6.0`, `versionCode 17`. The web UI under `web-showcase/` is the same frontend the APK embeds.
+
+<table><tr>
+<td align="center"><img src="docs/qa/v160/01-onboarding.png" width="200" alt="Onboarding"><br><sub>Onboarding</sub></td>
+<td align="center"><img src="docs/qa/v160/03-home.png" width="200" alt="Home"><br><sub>Home</sub></td>
+<td align="center"><img src="docs/qa/v160/06-api-key-dialog-top-aligned.png" width="200" alt="API key dialog"><br><sub>Keyboard-safe key dialog</sub></td>
+<td align="center"><img src="docs/qa/v160/09-live-preview-card.png" width="200" alt="Live preview"><br><sub>Live Preview</sub></td>
+</tr></table>
 
 ### What's new in 1.6.0
 - **Connect your own GitHub.** No account, token or fallback profile ships with the app. Connect with GitHub device login, a personal token (kept only in this device's `localStorage`), or any public username. One tap to disconnect.
