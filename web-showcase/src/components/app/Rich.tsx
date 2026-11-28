@@ -6,6 +6,8 @@ import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { parseAssistant, safePrefix, type Seg } from "@/lib/richtext";
 import { artifactKind, splitFences } from "@/lib/artifacts";
 import { LivePreviewCard } from "@/components/chat/LivePreviewViewer";
+import { PptxCard } from "@/components/chat/PptxCard";
+import { looksLikeDeck } from "@/services/pptxGenerator";
 import { ChoiceCards } from "./ChoiceCards";
 import { CodeBlock, type Artifact } from "./Artifacts";
 
@@ -115,8 +117,11 @@ export function AssistantBody({ text, streaming, onChoice, onOpenArtifact }: { t
       {parts.map((p, i) =>
         p.kind === "md" ? (
           p.value.trim() ? <AssistantProse key={i} text={p.value} streaming={streaming && i === parts.length - 1} onChoice={onChoice} /> : null
-        ) : onOpenArtifact && p.closed && !(streaming && i === parts.length - 1) && artifactKind(p.lang, p.code) ? (
-          <LivePreviewCard key={i} artifact={{ kind: artifactKind(p.lang, p.code)!, lang: p.lang, code: p.code }} onOpen={onOpenArtifact} />
+        ) : onOpenArtifact && (p.closed || !streaming) && !(streaming && i === parts.length - 1) && artifactKind(p.lang, p.code) ? (
+          <div key={i} className="space-y-2.5">
+            <LivePreviewCard artifact={{ kind: artifactKind(p.lang, p.code)!, lang: p.lang, code: p.code }} onOpen={onOpenArtifact} />
+            {artifactKind(p.lang, p.code) === "html" && looksLikeDeck(p.code) && <PptxCard code={p.code} />}
+          </div>
         ) : (
           <CodeBlock key={i} lang={p.lang} code={p.code} closed={p.closed && !(streaming && i === parts.length - 1)} onOpen={onOpenArtifact} />
         ),

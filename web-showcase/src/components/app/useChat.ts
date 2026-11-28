@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildContext, estimateTokens, type Attachment } from "@/lib/attachments";
 import { systemPromptFor, type Cartridge } from "@/lib/cartridges";
 import { contextBudget, estTokens, trimHistory } from "@/lib/context";
+import { splitReasoning } from "@/lib/stream";
+import { studioSystem } from "@/lib/templates";
 import { activeBackend, estimateRamMb, getEngineSnapshot, routerChat, setNativeModel, shortModelName, splitThink, wllamaChat, type Backend, type ChatTurn } from "@/lib/engine";
 import { createTokenTicker, haptic } from "@/lib/haptics";
 import { invokeNative, isNative, streamNative } from "@/lib/native";
@@ -221,7 +223,8 @@ export function useChat() {
       const ctx = opts.ctx ?? 4096;
       const context = buildContext(atts, Math.floor(ctx * 0.5));
       const content = context.text ? `${context.text}\n\n${prompt}` : prompt;
-      const sysText = opts.system ?? systemPromptFor(opts.cartridge);
+      const studio = studioSystem(prompt);
+      const sysText = [opts.system ?? systemPromptFor(opts.cartridge), studio].filter(Boolean).join("\n\n");
       const temperature = opts.cartridge?.temperature ?? 0.7;
       const topP = opts.cartridge?.topP ?? 0.9;
       const messages: ChatTurn[] = [{ role: "system", content: sysText }, ...history, { role: "user", content }];
@@ -301,7 +304,7 @@ export function useChat() {
           let thinkSeen = false;
           const onText = (raw: string) => {
             tick();
-            const { thought, answer, open } = splitThink(stripToolCall(raw));
+            const { thought, answer, open } = splitReasoning(stripToolCall(raw));
             if (thought) {
               if (!thinkSeen) {
                 thinkSeen = true;
@@ -317,7 +320,7 @@ export function useChat() {
               raw = r;
               onText(r);
             };
-            const opt = { maxTokens: 900, temperature, topP, signal: ctl.signal };
+            const opt = { maxTokens: backend === "wllama" ? 900 : 8192, temperature, topP, signal: ctl.signal };
             if (backend === "apex") {
               const st = await apexChat(kl, msgs, opt, cb);
               served = st.servedBy;

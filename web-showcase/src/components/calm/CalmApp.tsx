@@ -10,7 +10,9 @@ import { minimalSystemFor, systemPromptFor, useCartridges } from "@/lib/cartridg
 import { fastComplete } from "@/lib/fast-ai";
 import { activeBackend, wllamaChat, type ChatTurn } from "@/lib/engine";
 import { getHarness, useHarness } from "@/lib/harness";
-import { PAGE_HINT, PRESENTATION_HINT, type PromptTemplate } from "@/lib/templates";
+import { type Starter } from "@/lib/templates";
+import { StarterBar } from "./StarterBar";
+import { TopicSheet } from "./TopicSheet";
 import { installKeyboardGuards } from "@/lib/useKeyboard";
 import { getLocalOnly, imagePromptOf, routeAuto, routeBadge } from "@/lib/router";
 import { generateTitle } from "@/lib/titles";
@@ -35,7 +37,7 @@ import { Composer, type ComposerHandle } from "./Composer";
 import { Conversation } from "./Conversation";
 import { CompareView } from "./CompareView";
 import { Drawer, Header, Lightbox, ModelSheet, Toast, ViewTitle, type View } from "./Chrome";
-import { Home, type Suggestion } from "./Home";
+import { Home } from "./Home";
 import { ImageStudio } from "./ImageStudio";
 import { McpView } from "./McpView";
 import { MemoryView } from "./MemoryView";
@@ -122,6 +124,8 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     window.addEventListener("apex:cite", onCite);
     const onGoto = (e: Event) => goView(String((e as CustomEvent).detail) as View);
     window.addEventListener("apex:goto", onGoto);
+    const onAttached = () => goView("chat");
+    window.addEventListener("apex:attached", onAttached);
     if (!embedded && !new URLSearchParams(window.location.search).has("skip-intro")) {
       try {
         if (!localStorage.getItem("apex.onboarded")) setOnboard(true);
@@ -139,6 +143,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
       mq.removeEventListener("change", f);
       window.removeEventListener("apex:cite", onCite);
       window.removeEventListener("apex:goto", onGoto);
+      window.removeEventListener("apex:attached", onAttached);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -375,18 +380,15 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
     onText(r.text);
   }, []);
 
-  const suggest = (t: Suggestion) => {
-    if (t === "artwork") {
-      goView("studio");
-      return;
-    }
-    if (t === "presentation") setDraft(`Create a presentation about: \n\n${PRESENTATION_HINT}`);
-    else setDraft(`Build an interactive page or diagram: \n\n${PAGE_HINT}`);
-    composer.current?.focus();
+  const pdfInput = useRef<HTMLInputElement>(null);
+  const [starter, setStarter] = useState<Starter | null>(null);
+  const pickStarter = (st: Starter) => {
+    if (st.id === "pdf") pdfInput.current?.click();
+    else setStarter(st);
   };
-  const useTemplate = (tpl: PromptTemplate) => {
-    setDraft(tpl.prompt);
-    composer.current?.focus();
+  const runStarter = (st: Starter, topic: string) => {
+    setStarter(null);
+    if (st.build) void send(st.build(topic));
   };
 
   const useImageInChat = (url: string, prompt: string, src: string) => {
@@ -450,7 +452,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
                     rewrite={rewrite}
                   />
                 ) : (
-                  <Home onPick={suggest} onPdf={(f) => setPdf(f)} onTemplate={useTemplate} engine={label} mode={choice.kind === "local" ? (harnessOn ? "Agent harness" : "Fast mode") : "Fast mode"} onEngine={() => setSheet(true)} />
+                  <Home onStarter={pickStarter} engine={label} mode={choice.kind === "local" ? (harnessOn ? "Agent harness" : "Fast mode") : "Fast mode"} onEngine={() => setSheet(true)} />
                 ))}
               {view === "hub" && <ModelHub key={hubTab} initialTab={hubTab} dl={dl} choice={choice} onUse={useLocal} loadingId={loadingId} />}
               {view === "studio" && <ImageStudio onUseInChat={useImageInChat} onZoom={(url, prompt) => setZoom({ url, prompt })} />}
@@ -472,6 +474,7 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
 
         {view === "chat" && (
           <div className="relative z-[2] mx-auto w-full max-w-[740px] px-3 pb-safe pt-2">
+            {!draft.trim() && !chat.busy && <StarterBar onPick={pickStarter} />}
             <Composer
               ref={composer}
               compact={started}
@@ -490,6 +493,8 @@ export function CalmApp({ embedded = false }: { embedded?: boolean }) {
           </div>
         )}
 
+        <input ref={pdfInput} type="file" accept="application/pdf,.pdf" className="hidden" aria-label="Choose a PDF" data-testid="pdf-input" onChange={(e) => { const f = e.target.files?.[0]; if (f) setPdf(f); e.target.value = ""; }} />
+        <TopicSheet starter={starter} onClose={() => setStarter(null)} onRun={runStarter} />
         <CompareView open={compare} onClose={() => setCompare(false)} />
         <ModelSheet open={sheet} onClose={() => setSheet(false)} choice={choice} onPick={pick} dl={dl} onHub={(t) => { setHubTab(t); goView("hub"); }} loading={loadingId} access={access} onKey={() => setKeyModal(true)} />
       </motion.div>

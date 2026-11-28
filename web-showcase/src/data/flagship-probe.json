@@ -1,0 +1,231 @@
+{
+  "schema": 1,
+  "probedAt": "2026-11-28T09:35:53.082Z",
+  "method": "POST chat completion, max_tokens 64, non-empty reply required",
+  "targets": {
+    "claude-4-opus": {
+      "label": "Claude 4 Opus",
+      "tested": 3,
+      "live": 1,
+      "best": {
+        "gateway": "z-dherain24-claude-proxy",
+        "model": "claude-opus-4-20250514",
+        "src": "zeusdesigns",
+        "ok": true,
+        "ms": 3512,
+        "status": 200
+      },
+      "status": "live"
+    },
+    "claude-4-sonnet": {
+      "label": "Claude 4 Sonnet",
+      "tested": 1,
+      "live": 1,
+      "best": {
+        "gateway": "z-dherain24-claude-proxy",
+        "model": "claude-sonnet-4-20250514",
+        "src": "zeusdesigns",
+        "ok": true,
+        "ms": 2598,
+        "status": 200
+      },
+      "status": "live"
+    },
+    "claude-3-7-sonnet": {
+      "label": "Claude 3.7 Sonnet",
+      "tested": 0,
+      "live": 0,
+      "best": null,
+      "status": "no-route-in-any-source"
+    },
+    "gpt-4-5": {
+      "label": "GPT-4.5",
+      "tested": 0,
+      "live": 0,
+      "best": null,
+      "status": "no-route-in-any-source"
+    },
+    "gpt-4-1": {
+      "label": "GPT-4.1",
+      "tested": 3,
+      "live": 1,
+      "best": {
+        "gateway": "z-w902287-ai-bridge",
+        "model": "gpt-4.1",
+        "src": "zeusdesigns",
+        "ok": true,
+        "ms": 1110,
+        "status": 200
+      },
+      "status": "live"
+    },
+    "o3": {
+      "label": "o3",
+      "tested": 5,
+      "live": 0,
+      "best": null,
+      "status": "all-routes-failed"
+    },
+    "o4-mini": {
+      "label": "o4-mini",
+      "tested": 1,
+      "live": 0,
+      "best": null,
+      "status": "all-routes-failed"
+    },
+    "gemini-2-5-pro": {
+      "label": "Gemini 2.5 Pro",
+      "tested": 6,
+      "live": 0,
+      "best": null,
+      "status": "all-routes-failed"
+    },
+    "gemini-2-5-flash": {
+      "label": "Gemini 2.5 Flash",
+      "tested": 6,
+      "live": 1,
+      "best": {
+        "gateway": "z-alchoholpad-litellm",
+        "model": "gemini-2.5-flash",
+        "src": "zeusdesigns",
+        "ok": true,
+        "ms": 3749,
+        "status": 200
+      },
+      "status": "live"
+    },
+    "grok-3": {
+      "label": "Grok 3",
+      "tested": 0,
+      "live": 0,
+      "best": null,
+      "status": "no-route-in-any-source"
+    },
+    "deepseek-r1": {
+      "label": "DeepSeek R1 671B",
+      "tested": 5,
+      "live": 1,
+      "best": {
+        "gateway": "z-cgjgj-ollamahftraemonitor",
+        "model": "deepseek-r1",
+        "src": "zeusdesigns",
+        "ok": true,
+        "ms": 1302,
+        "status": 200
+      },
+      "status": "live"
+    },
+    "deepseek-v3": {
+      "label": "DeepSeek V3",
+      "tested": 6,
+      "live": 3,
+      "best": {
+        "gateway": "z-bun008-freellmapi",
+        "model": "DeepSeek-V3.2",
+        "src": "zeusdesigns",
+        "ok": true,
+        "ms": 374,
+        "status": 200
+      },
+      "status": "live"
+    },
+    "qwen3-235b": {
+      "label": "Qwen 3 235B",
+      "tested": 2,
+      "live": 1,
+      "best": {
+        "gateway": "z-bun008-freellmapi",
+        "model": "qwen3-235b",
+        "src": "zeusdesigns",
+        "ok": true,
+        "ms": 386,
+        "status": 200
+      },
+      "status": "live"
+    },
+    "qwen3-coder": {
+      "label": "Qwen 3 Coder",
+      "tested": 6,
+      "live": 2,
+      "best": {
+        "gateway": "z-cgjgj-ollamahftraemonitor",
+        "model": "qwen3-coder-next",
+        "src": "zeusdesigns",
+        "ok": true,
+        "ms": 622,
+        "status": 200
+      },
+      "status": "live"
+    },
+    "llama-4-maverick": {
+      "label": "Llama 4 Maverick",
+      "tested": 3,
+      "live": 1,
+      "best": {
+        "gateway": "z-bun008-freellmapi",
+        "model": "Llama-4-Maverick-17B-128E-Instruct",
+        "src": "zeusdesigns",
+        "ok": true,
+        "ms": 301,
+        "status": 200
+      },
+      "status": "live"
+    },
+    "llama-4-scout": {
+      "label": "Llama 4 Scout",
+      "tested": 2,
+      "live": 1,
+      "best": {
+        "gateway": "z-bun008-freellmapi",
+        "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+        "src": "zeusdesigns",
+        "ok": true,
+        "ms": 447,
+        "status": 200
+      },
+      "status": "live"
+    },
+    "llama-3-3-70b": {
+      "label": "Llama 3.3 70B",
+      "tested": 4,
+      "live": 3,
+      "best": {
+        "gateway": "z-bun008-freellmapi",
+        "model": "Meta-Llama-3.3-70B-Instruct",
+        "src": "zeusdesigns",
+        "ok": true,
+        "ms": 254,
+        "status": 200
+      },
+      "status": "live"
+    },
+    "gpt-4-1-mini": {
+      "label": "GPT-4.1 Mini",
+      "tested": 2,
+      "live": 1,
+      "best": {
+        "gateway": "z-w902287-ai-bridge",
+        "model": "gpt-4.1-mini",
+        "src": "zeusdesigns",
+        "ok": true,
+        "ms": 979,
+        "status": 200
+      },
+      "status": "live"
+    },
+    "uncensored": {
+      "label": "Uncensored",
+      "tested": 6,
+      "live": 4,
+      "best": {
+        "gateway": "z-deleriousson-llama-cpp",
+        "model": "llama-3.1-8b-abliterated",
+        "src": "zeusdesigns",
+        "ok": true,
+        "ms": 1231,
+        "status": 200
+      },
+      "status": "live"
+    }
+  }
+}

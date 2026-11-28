@@ -1,9 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useImperativeHandle, useRef, useState, type Ref } from "react";
+import { useCallback, useImperativeHandle, useRef, useState, type Ref, useEffect } from "react";
 import { readAttachment, TEXT_ACCEPT, type Attachment } from "@/lib/attachments";
 import { SKILLS, toggleSkill, useSkills } from "@/lib/skills";
+import { drainAttachments, onAttachQueued } from "@/lib/pending-attach";
 import { useVoice } from "@/components/app/useVoice";
 import { CIcon, KeyIcon } from "./icons";
 
@@ -51,13 +52,27 @@ export function Composer({ ref, compact, value, setValue, busy, onStop, onSend, 
     },
     [setValue, value],
   );
-  const { voice, toggleVoice } = useVoice(commitVoice);
+  const base = useRef("");
+  const { voice, toggleVoice } = useVoice(commitVoice, (t) => setValue(base.current ? `${base.current} ${t}` : t));
   const toggleMic = () => {
-    if (!voice.recording) t0.current = performance.now();
+    if (!voice.recording) {
+      t0.current = performance.now();
+      base.current = value.trim();
+    }
     void toggleVoice();
   };
 
   useImperativeHandle(ref, () => ({ attach: () => fileRef.current?.click(), voice: toggleMic, focus: () => textRef.current?.focus() }));
+
+  useEffect(() => {
+    const drain = () => {
+      const q = drainAttachments();
+      if (!q.length) return;
+      void Promise.all(q.map((x) => readAttachment(new File([x.text], x.name, { type: "text/plain" }), "text"))).then((read) => setAtts((a) => [...a, ...read]));
+    };
+    drain();
+    return onAttachQueued(drain);
+  }, []);
 
   const pick = async (files: FileList | null, kind: "text" | "image") => {
     if (!files) return;

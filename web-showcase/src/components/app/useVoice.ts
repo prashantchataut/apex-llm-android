@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { haptic } from "@/lib/haptics";
+import { getVoicePrefs, startInstantStt } from "@/services/voiceEngine";
 import { ASR_LABEL, loadAsr, micSupported, onAsrStatus, startMic, systemRecognizer, transcribe, type AsrStatus, type MicSession } from "@/lib/voice";
 import type { VoiceState } from "./PromptBar";
 
@@ -11,7 +12,7 @@ const MB = 1_000_000;
  * Real dictation: microphone -> AnalyserNode (live FFT bars) -> Whisper tiny.en on-device -> text in the prompt bar.
  * If Whisper cannot be fetched (first use while offline) the platform recogniser is used and labelled as such.
  */
-export function useVoice(commit: (text: string) => void) {
+export function useVoice(commit: (text: string) => void, interim?: (text: string) => void) {
   const [state, setState] = useState<VoiceState>({ recording: false, transcript: "", latencyMs: 0 });
   const session = useRef<MicSession | null>(null);
   const system = useRef<{ stop: () => void } | null>(null);
@@ -42,7 +43,7 @@ export function useVoice(commit: (text: string) => void) {
       session.current?.cancel();
       session.current = null;
       setState({ recording: false, transcript: "", latencyMs: 0, asr: "system" });
-      if (sysText.current) commit(sysText.current);
+      if (sysText.current && !interim) commit(sysText.current);
       return;
     }
     const s = session.current;
@@ -77,19 +78,24 @@ export function useVoice(commit: (text: string) => void) {
       session.current = s;
       haptic("detentClick");
       sysText.current = "";
-      const failed = asrStatus.current.phase === "failed";
-      const Rec = failed ? systemRecognizer() : null;
-      if (Rec) {
-        const r = new Rec();
-        r.lang = "en-US";
-        r.interimResults = true;
-        r.continuous = true;
-        r.onresult = (e) => {
-          sysText.current = Array.from(e.results, (x) => x[0].transcript).join(" ").trim();
-          setState((p) => ({ ...p, transcript: sysText.current }));
-        };
-        r.start();
-        system.current = r;
+      // Instant mode (default): interim words stream into the prompt box on the first tap. On-device mode: Whisper after you stop.
+      const wantInstant = getVoicePrefs().stt === "instant" || asrStatus.current.phase === "failed";
+      const inst = wantInstant
+        ? startInstantStt(
+            (t) => {
+              sysText.current = t;
+              setState((p) => ({ ...p, transcript: t }));
+              interim?.(t);
+            },
+            () => undefined,
+            (code) => {
+              if (code === "not-allowed" || code === "service-not-allowed") flash("Speech recognition permission was denied.");
+              else if (code === "network") flash("Instant recognition needs a connection. Switch to On-device in Settings to work offline.");
+            },
+          )
+        : null;
+      if (inst) {
+        system.current = inst;
       } else void loadAsr().catch(() => undefined); // warm the model while the user speaks
       setState({ recording: true, transcript: "", latencyMs: 0, analyser: s.analyser, asr: system.current ? "system" : "whisper" });
     } catch (e) {

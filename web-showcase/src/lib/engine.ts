@@ -295,7 +295,7 @@ export async function routerChat(cfg: RouterConfig, messages: ChatTurn[], opts: 
     method: "POST",
     signal: opts.signal,
     headers: { "Content-Type": "application/json", ...(cfg.key ? { Authorization: `Bearer ${cfg.key}` } : {}) },
-    body: JSON.stringify({ model: cfg.model, messages, stream: true, max_tokens: opts.maxTokens ?? 512, temperature: opts.temperature ?? 0.7 }),
+    body: JSON.stringify({ model: cfg.model, messages, stream: true, max_tokens: opts.maxTokens ?? 8192, temperature: opts.temperature ?? 0.7 }),
   });
   if (!res.ok || !res.body) throw new Error(`Router answered ${res.status}`);
   const reader = res.body.getReader();

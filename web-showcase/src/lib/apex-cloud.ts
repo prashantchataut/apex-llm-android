@@ -161,8 +161,8 @@ async function attemptCore(endpoint: string, api: string, messages: ChatTurn[], 
       headers: { "Content-Type": "application/json", ...extra.headers },
       body: JSON.stringify(
         extra.format === "anthropic"
-          ? { model: api, max_tokens: opts.maxTokens ?? 4096, stream: true, temperature: opts.temperature ?? 0.7, system: messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n") || undefined, messages: messages.filter((m) => m.role !== "system") }
-          : { model: api, messages, stream: true, temperature: opts.temperature ?? 0.7 },
+          ? { model: api, max_tokens: opts.maxTokens ?? 8192, stream: true, temperature: opts.temperature ?? 0.7, system: messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n") || undefined, messages: messages.filter((m) => m.role !== "system") }
+          : { model: api, messages, stream: true, max_tokens: opts.maxTokens ?? 8192, temperature: opts.temperature ?? 0.7 },
       ),
     });
     if (res.status !== 429 || !extra.retry429) break;
@@ -209,7 +209,7 @@ async function attemptCore(endpoint: string, api: string, messages: ChatTurn[], 
           continue;
         }
         const d = (JSON.parse(data) as Delta).choices?.[0]?.delta;
-        const th = d?.reasoning ?? d?.reasoning_content;
+        const th = d?.reasoning_content ?? d?.reasoning;
         if (th) thought += th;
         if (d?.content) text += d.content;
         for (const tc of d?.tool_calls ?? []) {

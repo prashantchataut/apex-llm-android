@@ -9,6 +9,9 @@ import { downloadImage, fetchImage } from "@/lib/images";
 import { CIcon } from "./icons";
 import { ThinkingTrace } from "@/components/chat/ThinkingTrace";
 import { SelectionActionsBar, type RewriteFn } from "@/components/chat/SelectionActionsBar";
+import { ReadAloud } from "@/components/chat/ReadAloud";
+import { PptxExportButton } from "@/components/chat/PptxCard";
+import { getVoicePrefs, speak as speakAloud } from "@/services/voiceEngine";
 import { LivePreviewViewer, type PreviewArtifact } from "@/components/chat/LivePreviewViewer";
 
 function useNow(active: boolean) {
@@ -174,6 +177,15 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
   const [copied, setCopied] = useState<number | null>(null);
   const [preview, setPreview] = useState<PreviewArtifact | null>(null);
   const [edited, setEdited] = useState<Record<number, string>>({});
+  const wasBusy = useRef(false);
+  useEffect(() => {
+    if (wasBusy.current && !busy && getVoicePrefs().autoSpeak) {
+      const last = [...msgs].reverse().find((x) => x.role === "assistant" && x.text && !x.notice);
+      if (last) void speakAloud(last.id, last.text);
+    }
+    wasBusy.current = busy;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy]);
   const refine = (id: number) => {
     const el = scroller.current?.querySelector(`[data-sel-msg="${id}"]`);
     const sel = window.getSelection();
@@ -274,9 +286,8 @@ export function Conversation({ msgs, busy, title, modelLabel, memCount, branchIn
                         <button type="button" aria-label="Refine passage" className="ibtn !h-9 !w-9" onClick={() => refine(m.id)}>
                           <CIcon name="wand" size={15} />
                         </button>
-                        <button type="button" aria-label="Read aloud" className="ibtn !h-9 !w-9" onClick={() => speak(m.text, true)}>
-                          <CIcon name="speaker" size={15} />
-                        </button>
+                        <ReadAloud id={m.id} text={m.text} />
+                        <PptxExportButton text={m.text} />
                       </>
                     )}
                     {!busy && !m.images?.length && (

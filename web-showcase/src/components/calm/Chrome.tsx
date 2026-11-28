@@ -15,7 +15,7 @@ import { APP_VERSION } from "@/lib/version";
 import type { Choice, Convo } from "@/lib/store";
 import { ApexMark } from "./ApexMark";
 import { CIcon, type CIconName } from "./icons";
-import { ModelSwitcher } from "./ModelSwitcher";
+import { ModelSwitcher } from "@/components/modals/ModelSwitcher";
 import type { DlItem } from "@/lib/downloader";
 
 export type View = "chat" | "hub" | "studio" | "memory" | "vault" | "mcp" | "lan" | "settings";
@@ -145,103 +145,7 @@ export function ModelSheet({ open, onClose, choice, onPick, dl, onHub, loading, 
         <>
           <motion.div className="fixed inset-0 z-40 bg-zinc-950/70 backdrop-blur-xl" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} aria-hidden="true" />
           <motion.div role="dialog" aria-label="Choose a model" data-testid="model-popover" initial={{ opacity: 0, y: -8, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ type: "spring", stiffness: 460, damping: 34 }} className="calm-card pop-in absolute left-1/2 top-pop z-40 max-h-[min(80dvh,720px)] w-[min(460px,calc(100vw-24px))] -translate-x-1/2 overflow-y-auto p-2">
-            <Row active={choice.kind === "auto"} onClick={() => { onPick({ kind: "auto", id: "auto" }); onClose(); }}>
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[16px]" style={{ background: "var(--halo-a)", color: "var(--halo-ink)" }} aria-hidden="true"><CIcon name="bolt" size={18} /></span>
-              <span className="min-w-0">
-                <span className="block truncate text-[14px] font-medium">Apex Auto (Smart Router)</span>
-                <span className={sub}>Picks the best model for each message · adds under 1 ms · offline falls back to on-device</span>
-              </span>
-            </Row>
-            <div className="rounded-2xl bg-[var(--surface-2)] p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[12px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Memory in use</p>
-                  <p className="tnum truncate text-[14px] font-medium">{loadedModel ? `${shortModelName(loadedModel)} · ${usedMb >= 1000 ? `${(usedMb / 1000).toFixed(1)} GB` : `${usedMb} MB`}` : "No model loaded"}</p>
-                </div>
-                <button type="button" onClick={() => void unloadWllama("a")} disabled={!loadedModel} aria-label="Eject the loaded model from memory" className="calm-btn !min-h-9 !px-3.5 disabled:opacity-40">
-                  <CIcon name="eject" size={15} /> Eject
-                </button>
-              </div>
-              <div className="meter mt-2.5" role="progressbar" aria-label="Estimated model memory" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-                <i style={{ width: `${loadedModel ? Math.max(4, pct) : 0}%` }} />
-              </div>
-              <p className="mt-1.5 text-[11.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{devGb ? `of about ${(capMb / 1000).toFixed(1)} GB usable on this ${devGb} GB device` : "Estimated against 4.8 GB of usable memory"}</p>
-            </div>
-
-            <div className="seg mt-2 w-full" style={{ gridAutoColumns: "1fr" }} role="tablist" aria-label="Model source">
-              {([["cloud", "Frontier & Cloud"], ["local", "Local"], ["uncensored", "Uncensored"]] as const).map(([id, l]) => (
-                <button key={id} type="button" role="tab" aria-selected={tab === id} aria-pressed={tab === id} onClick={() => setTab(id)}>
-                  {l}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-1.5">
-              {tab !== "cloud" && (
-                <>
-                  {list.length === 0 && <p className="px-3 py-3 text-[13px] leading-snug text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{tab === "uncensored" ? "No uncensored models installed yet." : "No local models mounted yet."}</p>}
-                  {list.map((m) => (
-                    <Row key={m.id} disabled={loading === m.id} active={choice.kind === "local" && choice.id === m.id} onClick={() => { onPick({ kind: "local", id: m.id }); onClose(); }}>
-                      <span className="min-w-0">
-                        <span className="block truncate text-[14px]">{shortModelName(m)}</span>
-                        <span className={sub}>{loading === m.id ? "Loading into memory…" : eng.loaded.a === m.id ? `${(m.sizeGB * 1000).toFixed(0)} MB · In memory` : `${(m.sizeGB * 1000).toFixed(0)} MB · On device`}</span>
-                      </span>
-                    </Row>
-                  ))}
-                  <Row active={false} onClick={() => go(tab === "uncensored" ? "uncensored" : "trending")}>
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--surface-2)]"><CIcon name={tab === "uncensored" ? "unlock" : "download"} size={16} /></span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-[14px]">{tab === "uncensored" ? "Get uncensored models" : "Get more models"}</span>
-                      <span className={sub}>{tab === "uncensored" ? `${CATALOG.filter((m) => m.uncensored).length} abliterated GGUFs` : "Trending, search or import a .gguf file"}</span>
-                    </span>
-                    <CIcon name="chevron" size={14} className="ml-auto -rotate-90 opacity-40" />
-                  </Row>
-                </>
-              )}
-              {tab === "cloud" && (
-                <>
-                  <ModelSwitcher choice={choice} onPick={(c) => { onPick(c); onClose(); }} locals={installed.map((m) => ({ id: m.id, label: shortModelName(m), sub: `${(m.sizeGB * 1000).toFixed(0)} MB · ${eng.loaded.a === m.id ? "In memory" : "On device"}` }))} onPickLocal={(id) => { onPick({ kind: "local", id }); onClose(); }} />
-                  {!apex.unlocked && (
-                    <button type="button" data-testid="apex-locked-card" onClick={() => { onClose(); onKey(); }} className="mt-3 flex min-h-[48px] w-full items-center gap-3 rounded-2xl bg-[var(--surface-2)] px-3 text-left">
-                      <CIcon name="key" size={16} className="shrink-0" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13.5px] font-medium">Connect an Apex API key</span>
-                        <span className={sub}>Unlocks the private vault catalog on top of the live mesh</span>
-                      </span>
-                    </button>
-                  )}
-                </>
-              )}
-              {tab === "cloud" && apex.unlocked && (
-                <>
-                  <div className="flex items-center justify-between px-3 pb-1 pt-1.5">
-                    <p className="text-[12.5px] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">Apex API · {apex.models.length} models</p>
-                    <button type="button" onClick={() => { onClose(); onKey(); }} className="calm-chip" style={{ background: "var(--halo-a)", color: "var(--halo-ink)" }}>
-                      <CIcon name="key" size={12} /> Key active
-                    </button>
-                  </div>
-                  {[...new Set(apex.models.map((m) => m.group))].map((g) => (
-                    <div key={g}>
-                      <p className="px-3 pb-0.5 pt-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-[rgb(var(--ink-rgb)/var(--ink-3-a))]">{g}</p>
-                      {apex.models.filter((m) => m.group === g).map((m) => {
-                        const served = isServed(m, apex.live);
-                        const fb = access.catalog ? servedLabel(access.catalog.fallbackApi) : "the always-on model";
-                        const isImg = m.kind === "image";
-                        return (
-                          <Row key={m.id} active={!isImg && choice.kind === "apex" && choice.id === m.id} onClick={() => { if (isImg) { onClose(); window.dispatchEvent(new CustomEvent("apex:goto", { detail: "studio" })); return; } onPick({ kind: "apex", id: m.id }); onClose(); }}>
-                            <span className="min-w-0">
-                              <span className="block truncate text-[14px]">{m.label}</span>
-                              <span className={sub}>{m.tag} · {served ? "Live" : isImg ? "Image Studio · routes to the fast engine" : `Routes to ${fb} right now`}</span>
-                            </span>
-                            {isImg && <CIcon name="image" size={15} className="ml-auto shrink-0 opacity-45" />}
-                          </Row>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
+            <ModelSwitcher choice={choice} onPick={(c) => { onPick(c); onClose(); }} installed={installed} loadedId={eng.loaded.a ?? undefined} loading={loading} unlocked={apex.unlocked} onKey={() => { onClose(); onKey(); }} onHub={(t) => { onClose(); onHub(t); }} />
           </motion.div>
         </>
       )}

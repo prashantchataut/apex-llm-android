@@ -1,3 +1,13 @@
+# STATE — last updated: Session 19 (branch feat/v170-flagship-studio)
+
+## [SESSION 19 — WHAT ACTUALLY HAPPENED]
+- Truncation root cause: OpenAI-format cloud requests sent no `max_tokens` and `useChat` capped turns at 900. Now 8192. `lib/stream.ts` `splitReasoning` routes reasoning_content / `<think>` / pre-fence planning into ThinkingTrace and fences raw HTML. Studio instructions live in `lib/templates.ts` `STUDIO_SYSTEM` (system role only).
+- `scripts/probe-flagships.mjs`: real completions against zeusdesigns catalog + stormy keyless gateways. LIVE: Claude 4 Opus/Sonnet, GPT-4.1, GPT-4.1 Mini, Gemini 2.5 Flash, DeepSeek R1/V3, Qwen 3 235B/Coder, Llama 4 Maverick/Scout, Llama 3.3 70B, uncensored. NO LIVE ROUTE: Claude 3.7, GPT-4.5, Grok 3 (no route in any source); o3, o4-mini, Gemini 2.5 Pro (all routes failed).
+- New: `components/modals/ModelSwitcher.tsx` (4 tabs), `services/pptxGenerator.ts` (pptxgenjs), `components/chat/LivePreviewServer.tsx`, `services/voiceEngine.ts`, `components/modals/GitHubConnectModal.tsx`, `RepoBrowser`, starter cards + pill bar.
+- Playwright: `web-showcase/e2e/v170.mjs`, 390x844 and 412x915, screenshots in `docs/qa/v170-flagship-studio/`.
+- **NOT DONE / STUB**: no signed APK built here (sandbox has no Android SDK or keystore; CI `android-apk.yml` signs on a `v*` tag). Neural TTS success path untested (relay rate-limited from the sandbox; fallback to device voice is tested). Parakeet / Moonshine STT not added: on-device mode is the existing Whisper tiny. `public/favicon.svg` is a copy of `src/app/icon.svg`. gh-pages not used: Pages deploys from main via workflow.
+- Security: a PAT was pasted in chat again. Used via HTTP extraheader only, never stored. Revoke it.
+
 # STATE — last updated: Session 18 (branch feat/v140-local-runner-studio)
 
 ## [SESSION 18 — WHAT ACTUALLY HAPPENED]

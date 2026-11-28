@@ -1,5 +1,7 @@
 /** Fenced-code extraction and the "Apex Artifacts" preview pipeline (sandboxed, offline). */
 
+import { autoCloseHtml } from "./previewExtract";
+
 export type ArtifactKind = "html" | "svg" | "mermaid" | "js";
 
 export type Part = { kind: "md"; value: string } | { kind: "code"; lang: string; code: string; closed: boolean };
@@ -38,6 +40,7 @@ const BASE_CSS = "html,body{margin:0;min-height:100%;background:#0b0b10;color:#f
 export function buildSrcDoc(kind: ArtifactKind, code: string): string {
   if (kind === "svg") return `<!doctype html><meta charset="utf-8"><style>${BASE_CSS}body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;box-sizing:border-box;overflow:hidden}svg{width:min(100%,78vmin);height:auto;max-height:86vh;overflow:visible}</style>${code}`;
   if (kind === "js") return `<!doctype html><meta charset="utf-8"><style>${BASE_CSS}body{padding:12px;box-sizing:border-box}</style><div id="app"></div><script>try{${code.replace(/<\/script/gi, "<\\/script")}}catch(e){document.body.insertAdjacentHTML("beforeend","<pre style='color:#ff8a8a'>"+e+"</pre>")}</script>`;
+  code = autoCloseHtml(code);
   if (/<html[\s>]/i.test(code)) return code;
   return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${BASE_CSS}</style>${code}`;
 }
