@@ -1,3 +1,13 @@
+# STATE — last updated: Session 20 (main)
+
+## [SESSION 20 — WHAT ACTUALLY HAPPENED]
+- Audit-first: main already carried v1.7.0 (PR #17). Re-ran `probe-flagships.mjs` (same result: Claude 3.7, GPT-4.5, Grok 3, o3, o4-mini, Gemini 2.5 Pro have no live route; shown as such, not faked).
+- Added Moonshine Tiny (`onnx-community/moonshine-tiny-ONNX`, q8, ~28 MB) as the default on-device STT with Whisper tiny selectable (`lib/voice.ts`, `VoiceSettings`). Verified in headless Chromium: loads in ~3 s, 2 s of audio in ~275 ms. Parakeet-CTC NOT added (no phone-sized browser ONNX build). Mic capture itself only tested with Chromium's fake device.
+- New `e2e/live.mjs`: unlocks Apex API through the real dialog and runs the prompt on live Claude 4 Sonnet (PASS, ~107 s). Full suite `e2e/v170.mjs`: 59/59 offline checks pass.
+- Fresh screenshots in `docs/qa/v170-flagship-studio/`; README and release notes updated.
+- Release: signing happens in CI (`android-apk.yml`, repo secrets) on tag `v1.7.0`; this sandbox has no Android SDK, so no APK was built or signed locally.
+- Security: PAT used through an HTTP extraheader only, never written to the repo or .git/config. Revoke it.
+
 # STATE — last updated: Session 19 (branch feat/v170-flagship-studio)
 
 ## [SESSION 19 — WHAT ACTUALLY HAPPENED]

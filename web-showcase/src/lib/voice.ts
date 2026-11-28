@@ -4,7 +4,7 @@
  * Real microphone pipeline.
  *  1. `getUserMedia` -> `AudioContext` -> `AnalyserNode`: the waveform reads `getByteFrequencyData` at display rate.
  *  2. `MediaRecorder` keeps the take; on stop it is decoded to 16 kHz mono PCM.
- *  3. Whisper-tiny.en (ONNX Runtime WebAssembly via transformers.js, int8 ≈ 40 MB) transcribes it on-device.
+ *  3. Moonshine-Tiny (default, ≈ 28 MB) or Whisper-tiny.en (≈ 40 MB), ONNX Runtime WebAssembly via transformers.js, int8, transcribes it on-device.
  *     The model is fetched once from Hugging Face and then served from the browser Cache API (offline afterwards).
  *  Fallback: the platform speech recogniser (`SpeechRecognition`) when Whisper cannot load. That one may use the cloud.
  *  NOT implemented: Android `SpeechRecognizer` through a Tauri command (STUB — no such command exists in the Rust core).
@@ -12,8 +12,18 @@
 
 import { absoluteAssetUrl } from "./paths";
 
-const ASR_REPO = "Xenova/whisper-tiny.en";
-export const ASR_LABEL = "Whisper tiny.en · int8";
+import { getVoicePrefs } from "@/services/voiceEngine";
+
+/** On-device speech models (ONNX, int8). Moonshine-Tiny is the default: about 28 MB and built for short phone dictation. */
+export const ASR_MODELS = {
+  moonshine: { repo: "onnx-community/moonshine-tiny-ONNX", label: "Moonshine tiny · int8", mb: 28 },
+  whisper: { repo: "Xenova/whisper-tiny.en", label: "Whisper tiny.en · int8", mb: 40 },
+} as const;
+export type AsrModelKey = keyof typeof ASR_MODELS;
+const activeModel = (): AsrModelKey => (getVoicePrefs().asrModel === "whisper" ? "whisper" : "moonshine");
+/** Label of the model currently selected in Settings. */
+export const asrLabel = () => ASR_MODELS[activeModel()].label;
+export const ASR_LABEL = ASR_MODELS.moonshine.label;
 
 export interface MicSession {
   analyser: AnalyserNode;
@@ -94,7 +104,7 @@ interface TransformersModule {
   pipeline: (task: string, model: string, opts: Record<string, unknown>) => Promise<AsrPipeline>;
 }
 
-let asr: Promise<AsrPipeline> | null = null;
+const asrCache = new Map<AsrModelKey, Promise<AsrPipeline>>();
 export type AsrStatus = { phase: "idle" | "downloading" | "ready" | "failed"; loaded: number; total: number };
 let status: AsrStatus = { phase: "idle", loaded: 0, total: 0 };
 const subs = new Set<(s: AsrStatus) => void>();
@@ -110,8 +120,10 @@ export function onAsrStatus(f: (s: AsrStatus) => void): () => void {
 
 /** Load (once) the on-device ASR pipeline. */
 export function loadAsr(): Promise<AsrPipeline> {
-  if (asr) return asr;
-  asr = (async () => {
+  const which = activeModel();
+  const hit = asrCache.get(which);
+  if (hit) return hit;
+  const job = (async () => {
     const root = absoluteAssetUrl("vendor/transformers/");
     const mod = (await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ `${root}transformers.web.min.js`)) as TransformersModule;
     mod.env.allowLocalModels = false;
@@ -119,7 +131,7 @@ export function loadAsr(): Promise<AsrPipeline> {
     mod.env.backends.onnx.wasm.wasmPaths = root;
     const files = new Map<string, { loaded: number; total: number }>();
     setStatus({ phase: "downloading", loaded: 0, total: 0 });
-    const p = await mod.pipeline("automatic-speech-recognition", ASR_REPO, {
+    const p = await mod.pipeline("automatic-speech-recognition", ASR_MODELS[which].repo, {
       dtype: "q8",
       device: "wasm",
       progress_callback: (e: { status?: string; file?: string; loaded?: number; total?: number }) => {
@@ -133,16 +145,17 @@ export function loadAsr(): Promise<AsrPipeline> {
     setStatus({ phase: "ready", loaded: 1, total: 1 });
     return p;
   })().catch((e: unknown) => {
-    asr = null;
+    asrCache.delete(which);
     setStatus({ phase: "failed", loaded: 0, total: 0 });
     throw e;
   });
-  return asr;
+  asrCache.set(which, job);
+  return job;
 }
 
 export async function transcribe(pcm: Float32Array): Promise<string> {
   const pipe = await loadAsr();
-  const out = await pipe(pcm, { chunk_length_s: 30, stride_length_s: 5 });
+  const out = await pipe(pcm, activeModel() === "whisper" ? { chunk_length_s: 30, stride_length_s: 5 } : {});
   const r = Array.isArray(out) ? out[0] : out;
   return (r?.text ?? "").replace(/\[[A-Z_ ]+\]|\([a-z ]+\)/gi, "").trim();
 }

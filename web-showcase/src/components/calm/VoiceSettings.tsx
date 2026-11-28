@@ -21,7 +21,7 @@ export function VoiceSettings() {
     <div className="space-y-4" data-testid="voice-settings">
       <div>
         <p className="text-[14.5px] font-medium">Speech input</p>
-        <p className={`mt-0.5 text-[12.5px] leading-snug ${dim}`}>Instant streams words as you speak. On-device runs a small open speech model (Whisper tiny, about 40 MB) and works offline.</p>
+        <p className={`mt-0.5 text-[12.5px] leading-snug ${dim}`}>Instant streams words as you speak. On-device runs a small open speech model and works offline after a one-time download.</p>
         <div className="mt-2 grid grid-cols-2 gap-1 rounded-full bg-[var(--surface-2)] p-1" role="radiogroup" aria-label="Speech input mode">
           {(["instant", "device"] as const).map((m) => (
             <button key={m} type="button" role="radio" aria-checked={p.stt === m} onClick={() => setVoicePrefs({ stt: m })} className="min-h-10 rounded-full text-[13px] font-medium active:scale-[0.97]" style={seg(p.stt === m)} data-testid={`stt-${m}`}>
@@ -29,6 +29,15 @@ export function VoiceSettings() {
             </button>
           ))}
         </div>
+        {p.stt === "device" && (
+          <div className="mt-2 grid grid-cols-2 gap-1 rounded-full bg-[var(--surface-2)] p-1" role="radiogroup" aria-label="On-device speech model">
+            {([["moonshine", "Moonshine 28 MB"], ["whisper", "Whisper 40 MB"]] as const).map(([m, l]) => (
+              <button key={m} type="button" role="radio" aria-checked={p.asrModel === m} onClick={() => setVoicePrefs({ asrModel: m })} className="min-h-10 rounded-full text-[13px] font-medium active:scale-[0.97]" style={seg(p.asrModel === m)} data-testid={`asr-${m}`}>
+                {l}
+              </button>
+            ))}
+          </div>
+        )}
         {p.stt === "instant" && !instantSttSupported() && <p className="mt-2 text-[12px] text-[var(--bad)]">This browser has no instant recogniser. On-device will be used.</p>}
       </div>
       <div className="flex items-center gap-3">

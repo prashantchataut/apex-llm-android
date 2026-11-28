@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Apex API key accepted through the dialog",
+    "pass": true,
+    "detail": ""
+  },
+  {
+    "name": "LIVE Claude 4 Sonnet: .pptx card appears",
+    "pass": true,
+    "detail": "107s"
+  },
+  {
+    "name": "LIVE Claude 4 Sonnet: no raw monologue in the bubble",
+    "pass": true,
+    "detail": "\"Presentation · 6 slides\\nLive preview\\nOpen Preview\\ndigital-education.pptx\\nPowerPo\""
+  },
+  {
+    "name": "LIVE Claude 4 Sonnet: Virtual Localhost renders slides",
+    "pass": true,
+    "detail": "6 sections in the sandboxed iframe"
+  },
+  {
+    "name": "LIVE Claude 4 Sonnet: zero page errors",
+    "pass": true,
+    "detail": ""
+  }
+]

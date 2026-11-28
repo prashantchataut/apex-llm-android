@@ -6,14 +6,23 @@ Run open-weight GGUF models fully offline on your phone, read PDFs, build presen
 
 **Website:** https://prashantchataut.github.io/apex-llm-android/ &nbsp;|&nbsp; **Android APK:** [latest release](https://github.com/prashantchataut/apex-llm-android/releases/latest) (arm64)
 
-**Download:** [Apex-LLM-v1.6.0-arm64-release.apk](https://github.com/prashantchataut/apex-llm-android/releases/download/v1.6.0/Apex-LLM-v1.6.0-arm64-release.apk) (signed, arm64). Source version `1.6.0`, `versionCode 17`. The web UI under `web-showcase/` is the same frontend the APK embeds.
+**Download:** [Apex-LLM-v1.7.0-arm64-release.apk](https://github.com/prashantchataut/apex-llm-android/releases/download/v1.7.0/Apex-LLM-v1.7.0-arm64-release.apk) (signed, arm64). Source version `1.7.0`, `versionCode 18`. The web UI under `web-showcase/` is the same frontend the APK embeds.
 
 <table><tr>
-<td align="center"><img src="docs/qa/v160/01-onboarding.png" width="200" alt="Onboarding"><br><sub>Onboarding</sub></td>
-<td align="center"><img src="docs/qa/v160/03-home.png" width="200" alt="Home"><br><sub>Home</sub></td>
-<td align="center"><img src="docs/qa/v160/06-api-key-dialog-top-aligned.png" width="200" alt="API key dialog"><br><sub>Keyboard-safe key dialog</sub></td>
-<td align="center"><img src="docs/qa/v160/09-live-preview-card.png" width="200" alt="Live preview"><br><sub>Live Preview</sub></td>
+<td align="center"><img src="docs/qa/v170-flagship-studio/01-home.png" width="170" alt="Home"><br><sub>Home</sub></td>
+<td align="center"><img src="docs/qa/v170-flagship-studio/15-switcher-api.png" width="170" alt="Model Switcher"><br><sub>Model Switcher</sub></td>
+<td align="center"><img src="docs/qa/v170-flagship-studio/17-live-claude4-sonnet-final.png" width="170" alt="Live Claude 4 Sonnet deck"><br><sub>Live Claude 4 Sonnet deck</sub></td>
+<td align="center"><img src="docs/qa/v170-flagship-studio/04-localhost-slide1.png" width="170" alt="Virtual Localhost"><br><sub>Virtual Localhost</sub></td>
+<td align="center"><img src="docs/qa/v170-flagship-studio/11-github-browser.png" width="170" alt="GitHub browser"><br><sub>GitHub browser</sub></td>
+<td align="center"><img src="docs/qa/v170-flagship-studio/08-mic.png" width="170" alt="Voice input"><br><sub>Voice input</sub></td>
 </tr></table>
+
+### What's new in 1.7.0
+- **Complete replies.** Cloud requests send `max_tokens: 8192`; reasoning (`reasoning_content`, `<think>`, planning text before a code fence) goes to the collapsible Thinking Trace and the bubble shows only the final answer.
+- **Model Switcher** with four tabs (Auto & Free, Apex API, On-Device, All) and one clean line per model. Free Cloud Models work with no key. `Apex Auto Pro` leads the Apex API tab.
+- **Real `.pptx` export** (`pptxgenjs`) with a Download card in the chat, plus the **Virtual Localhost** live preview (Blob sandbox, reload, phone/desktop, source, downloads, auto-closes truncated HTML).
+- **Voice.** Instant streaming dictation, or on-device Moonshine Tiny (about 28 MB) / Whisper tiny (about 40 MB). Read Aloud with play, pause, stop, Auto-Speak, voice and speed.
+- **GitHub for anyone.** Connect by username with no token, browse repos and attach files to chat, or use a personal token for private repos and Gists. Credentials stay on the device.
 
 ### What's new in 1.6.0
 - **Connect your own GitHub.** No account, token or fallback profile ships with the app. Connect with GitHub device login, a personal token (kept only in this device's `localStorage`), or any public username. One tap to disconnect.

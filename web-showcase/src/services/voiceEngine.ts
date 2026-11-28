@@ -15,9 +15,10 @@ export interface VoicePrefs {
   rate: number;
   neural: boolean;
   stt: "instant" | "device";
+  asrModel: "moonshine" | "whisper";
 }
 const KEY = "apex.voice.v1";
-const DEFAULTS: VoicePrefs = { autoSpeak: false, voice: "", rate: 1, neural: true, stt: "instant" };
+const DEFAULTS: VoicePrefs = { autoSpeak: false, voice: "", rate: 1, neural: true, stt: "instant", asrModel: "moonshine" };
 let prefs: VoicePrefs = DEFAULTS;
 const prefSubs = new Set<() => void>();
 if (typeof window !== "undefined") {

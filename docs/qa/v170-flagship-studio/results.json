@@ -166,8 +166,13 @@
   },
   {
     "name": "admin lists stormy + zeusdesigns flagship models (search 'claude')",
-    "pass": false,
-    "detail": "0 rows"
+    "pass": true,
+    "detail": "60 rows"
+  },
+  {
+    "name": "model toggles ON/OFF",
+    "pass": true,
+    "detail": ""
   },
   {
     "name": "model renames inline",

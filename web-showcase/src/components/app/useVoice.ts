@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { haptic } from "@/lib/haptics";
 import { getVoicePrefs, startInstantStt } from "@/services/voiceEngine";
-import { ASR_LABEL, loadAsr, micSupported, onAsrStatus, startMic, systemRecognizer, transcribe, type AsrStatus, type MicSession } from "@/lib/voice";
+import { asrLabel, loadAsr, micSupported, onAsrStatus, startMic, systemRecognizer, transcribe, type AsrStatus, type MicSession } from "@/lib/voice";
 import type { VoiceState } from "./PromptBar";
 
 const MB = 1_000_000;
@@ -59,7 +59,7 @@ export function useVoice(commit: (text: string) => void, interim?: (text: string
       const t0 = performance.now();
       const text = await transcribe(pcm);
       const latency = Math.round(performance.now() - t0);
-      setState({ recording: false, transcript: "", latencyMs: latency, asr: "whisper", notice: text ? `${ASR_LABEL} · ${latency} ms for ${(pcm.length / 16000).toFixed(1)} s of audio` : "Heard silence — nothing to transcribe." });
+      setState({ recording: false, transcript: "", latencyMs: latency, asr: "whisper", notice: text ? `${asrLabel()} · ${latency} ms for ${(pcm.length / 16000).toFixed(1)} s of audio` : "Heard silence — nothing to transcribe." });
       if (text) {
         haptic("reasoningDone");
         commit(text);
@@ -108,8 +108,8 @@ export function useVoice(commit: (text: string) => void, interim?: (text: string
 
 /** Whisper download progress label (`Whisper tiny.en · 12.4 / 41.3 MB`) for the composer status line. */
 export function asrProgressLabel(s: AsrStatus): string | null {
-  if (s.phase === "downloading" && s.total > 0) return `${ASR_LABEL} · ${(s.loaded / MB).toFixed(1)} / ${(s.total / MB).toFixed(1)} MB`;
-  if (s.phase === "ready") return `${ASR_LABEL} · ready, offline`;
+  if (s.phase === "downloading" && s.total > 0) return `${asrLabel()} · ${(s.loaded / MB).toFixed(1)} / ${(s.total / MB).toFixed(1)} MB`;
+  if (s.phase === "ready") return `${asrLabel()} · ready, offline`;
   return null;
 }
 

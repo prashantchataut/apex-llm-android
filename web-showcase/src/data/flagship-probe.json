@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "probedAt": "2026-11-28T09:35:53.082Z",
+  "probedAt": "2026-11-28T10:03:43.917Z",
   "method": "POST chat completion, max_tokens 64, non-empty reply required",
   "targets": {
     "claude-4-opus": {
@@ -12,7 +12,7 @@
         "model": "claude-opus-4-20250514",
         "src": "zeusdesigns",
         "ok": true,
-        "ms": 3512,
+        "ms": 1527,
         "status": 200
       },
       "status": "live"
@@ -26,7 +26,7 @@
         "model": "claude-sonnet-4-20250514",
         "src": "zeusdesigns",
         "ok": true,
-        "ms": 2598,
+        "ms": 10674,
         "status": 200
       },
       "status": "live"
@@ -54,7 +54,7 @@
         "model": "gpt-4.1",
         "src": "zeusdesigns",
         "ok": true,
-        "ms": 1110,
+        "ms": 1137,
         "status": 200
       },
       "status": "live"
@@ -89,7 +89,7 @@
         "model": "gemini-2.5-flash",
         "src": "zeusdesigns",
         "ok": true,
-        "ms": 3749,
+        "ms": 5566,
         "status": 200
       },
       "status": "live"
@@ -104,13 +104,13 @@
     "deepseek-r1": {
       "label": "DeepSeek R1 671B",
       "tested": 5,
-      "live": 1,
+      "live": 2,
       "best": {
         "gateway": "z-cgjgj-ollamahftraemonitor",
         "model": "deepseek-r1",
         "src": "zeusdesigns",
         "ok": true,
-        "ms": 1302,
+        "ms": 1136,
         "status": 200
       },
       "status": "live"
@@ -121,10 +121,10 @@
       "live": 3,
       "best": {
         "gateway": "z-bun008-freellmapi",
-        "model": "DeepSeek-V3.2",
+        "model": "DeepSeek-V3.1-cb",
         "src": "zeusdesigns",
         "ok": true,
-        "ms": 374,
+        "ms": 346,
         "status": 200
       },
       "status": "live"
@@ -138,7 +138,7 @@
         "model": "qwen3-235b",
         "src": "zeusdesigns",
         "ok": true,
-        "ms": 386,
+        "ms": 413,
         "status": 200
       },
       "status": "live"
@@ -152,7 +152,7 @@
         "model": "qwen3-coder-next",
         "src": "zeusdesigns",
         "ok": true,
-        "ms": 622,
+        "ms": 404,
         "status": 200
       },
       "status": "live"
@@ -166,7 +166,7 @@
         "model": "Llama-4-Maverick-17B-128E-Instruct",
         "src": "zeusdesigns",
         "ok": true,
-        "ms": 301,
+        "ms": 572,
         "status": 200
       },
       "status": "live"
@@ -180,7 +180,7 @@
         "model": "meta-llama/llama-4-scout-17b-16e-instruct",
         "src": "zeusdesigns",
         "ok": true,
-        "ms": 447,
+        "ms": 420,
         "status": 200
       },
       "status": "live"
@@ -194,7 +194,7 @@
         "model": "Meta-Llama-3.3-70B-Instruct",
         "src": "zeusdesigns",
         "ok": true,
-        "ms": 254,
+        "ms": 458,
         "status": 200
       },
       "status": "live"
@@ -208,7 +208,7 @@
         "model": "gpt-4.1-mini",
         "src": "zeusdesigns",
         "ok": true,
-        "ms": 979,
+        "ms": 945,
         "status": 200
       },
       "status": "live"
@@ -216,13 +216,13 @@
     "uncensored": {
       "label": "Uncensored",
       "tested": 6,
-      "live": 4,
+      "live": 3,
       "best": {
-        "gateway": "z-deleriousson-llama-cpp",
-        "model": "llama-3.1-8b-abliterated",
+        "gateway": "z-usermma-mellum2-12b-a2-5b-thinking-ablit",
+        "model": "Mellum2-12B-A2.5B-Thinking-Abliterated-Q6_K.gguf",
         "src": "zeusdesigns",
         "ok": true,
-        "ms": 1231,
+        "ms": 1438,
         "status": 200
       },
       "status": "live"

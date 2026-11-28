@@ -81,3 +81,4 @@ Open: Rust unverified until CI; GitHub OAuth needs a Client ID; APK build/sign/r
 
 ## Session 19 — v1.7.0 flagship studio
 Max-tokens + reasoning separation fix, live flagship probe, 4-tab Model Switcher with Free Cloud Models, real .pptx export, Virtual Localhost preview, instant STT + Read Aloud, GitHub username/token connect with file browser. See `.agent/STATE.md` for what is and is not verified.
+- Session 20: Moonshine Tiny on-device STT option, live Claude 4 Sonnet e2e (`e2e/live.mjs`), refreshed v1.7.0 screenshots, README for 1.7.0.
