@@ -62,7 +62,7 @@ export function hapticsSupported(): boolean {
 
 export function getHapticLevel(): HapticLevel {
   if (level) return level;
-  let v: HapticLevel = "crisp";
+  let v: HapticLevel = "off"; // app-controlled haptics are OFF unless the user opts in
   try {
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
     if (raw === "off" || raw === "subtle" || raw === "crisp") v = raw;
